@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THOSLOGO - Entorn Educatiu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0;
+        }
+
+        /* Efecte de línia brillant (Neon) */
+        canvas {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+            border: 1px solid #334155;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(167, 139, 250, 0.7);
+        }
+
+        .btn-neon {
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-neon:hover {
+            box-shadow: 0 0 15px currentColor;
+            transform: translateY(-1px);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            background-color: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            box-shadow: 0 0 25px rgba(0,0,0,0.5);
+        }
+
+        /* Help Tables */
+        .help-table th { text-align: left; color: #22d3ee; border-bottom: 1px solid #334155; padding: 8px; }
+        .help-table td { border-bottom: 1px solid #1e293b; padding: 8px; color: #cbd5e1; }
+        .code-tag { background: #0f172a; padding: 2px 6px; border-radius: 4px; color: #a5f3fc; font-size: 0.9em; border: 1px solid #334155; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* --- SYNTAX HIGHLIGHTING EDITOR --- */
+        .editor-wrapper {
+            position: relative;
+            width: 100%;
+            flex: 1; 
+            min-height: 200px;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            background-color: #1e293b;
+            overflow: hidden;
+        }
+
+        .editor-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1rem;
+            margin: 0;
+            border: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre; 
+            word-wrap: normal;
+            overflow: auto;
+            box-sizing: border-box;
+        }
+
+        #codeHighlight { z-index: 1; color: #e2e8f0; pointer-events: none; }
+        #codeArea { z-index: 2; background: transparent; color: transparent; caret-color: #fff; resize: none; outline: none; }
+
+        /* Active Line Highlight Effect */
+        .line-wrapper { display: block; width: 100%; min-height: 1.5em; }
+        .active-execution { background-color: rgba(34, 211, 238, 0.15); box-shadow: inset 3px 0 0 #22d3ee; }
+        
+        /* Token Colors */
+        .tok-cmd { color: #22d3ee; font-weight: bold; } 
+        .tok-num { color: #facc15; } 
+        .tok-str { color: #a3e635; } 
+        .tok-comment { color: #64748b; font-style: italic; } 
+        .tok-bracket { color: #e879f9; font-weight: bold; } 
+
+        /* Console Output - COMPACT */
+        .console-box {
+            height: 100px; 
+            background-color: #000000;
+            border: 1px solid #334155;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px; 
+            padding: 0.5rem;
+            overflow-y: auto;
+            border-left: 3px solid #334155;
+            margin-top: auto; 
+        }
+        .log-entry { margin-bottom: 2px; border-bottom: 1px solid #111; padding-bottom: 1px;}
+        .log-info { color: #94a3b8; }
+        .log-success { color: #4ade80; }
+        .log-error { color: #f87171; }
+        .log-cmd { color: #22d3ee; }
+        .log-sys { color: #a3e635; font-style: italic;}
+
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Header THOSLOGO -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-purple-500 rounded flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-5 5-2-3-2 3-3-5"/><path d="m22 21-5-5 2-3 2 3 3 5"/><path d="m14 10-2-3-2 3"/><path d="m12 10v11"/><path d="m8 14 4 3 4-3"/></svg>
+            </div>
+            <h1 class="text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 neon-text">THOSLOGO</h1>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="hidden md:flex gap-2 text-xs font-mono text-slate-500 mr-4">
+                <span>X: <span id="dispX" class="text-cyan-400">0</span></span>
+                <span>Y: <span id="dispY" class="text-cyan-400">0</span></span>
+                <span>ANG: <span id="dispAng" class="text-purple-400">0</span></span>
+            </div>
+            
+            <!-- Download Button -->
+            <button id="downloadBtn" class="btn-neon flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-pink-400 border border-pink-900 px-3 py-1.5 rounded-full text-sm font-bold" title="Descarregar Imatge">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <span class="hidden sm:inline">IMATGE</span>
+            </button>
+
+            <!-- Help Button -->
+            <button id="helpBtn" class="btn-neon flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-900 px-3 py-1.5 rounded-full text-sm font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                AJUDA
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+        
+        <!-- EDITOR PANEL -->
+        <div class="w-full md:w-1/3 p-4 flex flex-col gap-4 bg-slate-900 border-r border-slate-800 z-10 shadow-xl overflow-hidden">
+            
+            <div class="flex justify-between items-center shrink-0">
+                <span class="text-slate-400 text-sm font-bold">EDITOR DE CODI</span>
+                <span class="flex items-center gap-2">
+                    <span id="saveIndicator" class="text-[10px] text-slate-500 opacity-0 transition-opacity duration-500">GUARDAT</span>
+                    <span class="text-xs text-slate-600">v1.9 :: FINAL</span>
+                </span>
+            </div>
+
+            <!-- Custom Editor -->
+            <div class="editor-wrapper">
+                <div id="codeHighlight" class="editor-layer" aria-hidden="true"></div>
+                <textarea id="codeArea" class="editor-layer" spellcheck="false" placeholder="// Escriu el codi aquí...">NETEJA
+POSACOLOR "CYAN"
+REPETEIX 4 [
+  AV 100
+  GD 90
+]
+PUJALLAPIS
+GD 45
+AV 20
+BAIXALLAPIS
+POSACOLOR "MAGENTA"
+REPETEIX 36 [
+  AV 5
+  GD 10
+]</textarea>
+            </div>
+            
+            <!-- Controls -->
+            <div class="grid grid-cols-2 gap-3 shrink-0">
+                <button id="runBtn" class="btn-neon bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded font-bold shadow-lg shadow-cyan-900/50 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    EXECUTAR
+                </button>
+                <button id="stopBtn" class="btn-neon border border-red-500 text-red-500 hover:bg-red-500 hover:text-white py-3 rounded font-bold">
+                    ATURAR
+                </button>
+            </div>
+            
+            <!-- Console -->
+            <div class="flex flex-col min-h-0 shrink-0">
+                <div class="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wider">Terminal Output</div>
+                <div id="consoleOutput" class="console-box rounded leading-relaxed">
+                    <div class="log-info">> Sistema v1.9 llest.</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CANVAS PANEL -->
+        <div class="relative w-full md:w-2/3 bg-black flex items-center justify-center overflow-hidden">
+            <!-- Canvas handles the background now for export consistency -->
+            <canvas id="mainCanvas"></canvas>
+            <div id="statusOverlay" class="absolute top-4 right-4 text-xs font-mono text-cyan-500 opacity-50 pointer-events-none">SYSTEM IDLE</div>
+        </div>
+    </main>
+
+    <!-- HELP MODAL -->
+    <div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+        <div class="modal-content w-full max-w-2xl max-h-[85vh] rounded-lg flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800 rounded-t-lg">
+                <h2 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    Manual de l'Estudiant
+                </h2>
+                <button id="closeHelpBtn" class="text-slate-400 hover:text-white transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <div class="p-6 overflow-y-auto text-sm leading-relaxed">
+                <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">🐢 Moviment</h3>
+                <table class="w-full mb-6 help-table">
+                    <tr><th>Comanda</th><th>Sintaxi</th><th>Descripció</th></tr>
+                    <tr><td><span class="font-bold text-white">AV</span> / FD</td><td><span class="code-tag">AV 100</span></td><td>Avança la tortuga X passos.</td></tr>
+                    <tr><td><span class="font-bold text-white">RE</span> / BK</td><td><span class="code-tag">RE 50</span></td><td>Fa retrocedir la tortuga X passos.</td></tr>
+                </table>
+                <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">🔄 Gir</h3>
+                <table class="w-full mb-6 help-table">
+                    <tr><th>Comanda</th><th>Sintaxi</th><th>Descripció</th></tr>
+                    <tr><td><span class="font-bold text-white">GD</span> / RT</td><td><span class="code-tag">GD 90</span></td><td>Gira a la <b>Dreta</b> els graus indicats.</td></tr>
+                    <tr><td><span class="font-bold text-white">GE</span> / LT</td><td><span class="code-tag">GE 45</span></td><td>Gira a l'<b>Esquerra</b> els graus indicats.</td></tr>
+                </table>
+                <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">✏️ Llapis i Colors</h3>
+                <table class="w-full mb-6 help-table">
+                    <tr><th>Comanda</th><th>Exemple</th><th>Descripció</th></tr>
+                    <tr><td><span class="font-bold text-white">PUJALLAPIS</span> / PU</td><td><span class="code-tag">PU</span></td><td>La tortuga es mou sense dibuixar.</td></tr>
+                    <tr><td><span class="font-bold text-white">BAIXALLAPIS</span> / PD</td><td><span class="code-tag">PD</span></td><td>La tortuga torna a dibuixar.</td></tr>
+                    <tr><td><span class="font-bold text-white">POSACOLOR</span></td><td><span class="code-tag">POSACOLOR "VERMELL"</span></td><td>Canvia el color del traç.</td></tr>
+                </table>
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 mb-6"><strong class="text-cyan-400">Colors disponibles:</strong> "CYAN", "MAGENTA", "LIME", "GROC", "VERMELL", "BLANC".</div>
+                <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">🧠 Lògica</h3>
+                <table class="w-full help-table">
+                    <tr><th>Comanda</th><th>Sintaxi</th><th>Descripció</th></tr>
+                    <tr><td><span class="font-bold text-white">NETEJA</span> / CS</td><td><span class="code-tag">NETEJA</span></td><td>Esborra la pantalla i reinicia la tortuga.</td></tr>
+                    <tr><td><span class="font-bold text-white">REPETEIX</span></td><td><span class="code-tag">REPETEIX 4 [ AV 10 GD 90 ]</span></td><td>Fa un bucle amb les comandes de dins els claudàtors.</td></tr>
+                </table>
+            </div>
+            <div class="p-4 border-t border-slate-700 bg-slate-800 rounded-b-lg text-right">
+                <button id="closeHelpBtn2" class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Tancar Manual</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const codeArea = document.getElementById('codeArea');
+        const codeHighlight = document.getElementById('codeHighlight');
+        const runBtn = document.getElementById('runBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const consoleOutput = document.getElementById('consoleOutput');
+        const dispX = document.getElementById('dispX');
+        const dispY = document.getElementById('dispY');
+        const dispAng = document.getElementById('dispAng');
+        const statusOverlay = document.getElementById('statusOverlay');
+        const saveIndicator = document.getElementById('saveIndicator');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        // --- HELP SYSTEM ---
+        const helpBtn = document.getElementById('helpBtn');
+        const helpModal = document.getElementById('helpModal');
+        const closeHelpBtn = document.getElementById('closeHelpBtn');
+        const closeHelpBtn2 = document.getElementById('closeHelpBtn2');
+        function toggleModal() { helpModal.classList.toggle('hidden'); }
+        helpBtn.addEventListener('click', toggleModal);
+        closeHelpBtn.addEventListener('click', toggleModal);
+        closeHelpBtn2.addEventListener('click', toggleModal);
+        helpModal.addEventListener('click', (e) => { if (e.target === helpModal) toggleModal(); });
+
+        // --- DOWNLOAD SYSTEM ---
+        downloadBtn.addEventListener('click', () => {
+            // 1. Convert Canvas to DataURL
+            const image = canvas.toDataURL("image/png");
+            
+            // 2. Create link and click
+            const link = document.createElement('a');
+            link.download = 'thoslogo-art.png';
+            link.href = image;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            log("Imatge descarregada!", 'success');
+        });
+
+        // --- PERSISTENCE ---
+        const STORAGE_KEY = 'thoslogo_v1_code';
+
+        function saveCode() {
+            localStorage.setItem(STORAGE_KEY, codeArea.value);
+            saveIndicator.style.opacity = '1';
+            setTimeout(() => { saveIndicator.style.opacity = '0'; }, 1000);
+        }
+
+        function loadCode() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved !== null && saved.trim() !== "") {
+                codeArea.value = saved;
+                log("Sessió anterior recuperada.", 'sys');
+            } else {
+                log("Sessió nova iniciada.", 'sys');
+            }
+            updateHighlighting();
+        }
+
+        // --- SYNTAX HIGHLIGHTER ---
+        const KEYWORDS = ['AV', 'FD', 'FORWARD', 'RE', 'BK', 'BACK', 'GD', 'RT', 'RIGHT', 'GE', 'LT', 'LEFT', 'NETEJA', 'CS', 'PUJALLAPIS', 'PU', 'BAIXALLAPIS', 'PD', 'POSACOLOR', 'SETPC', 'SETCOLOR', 'REPETEIX', 'REPEAT'];
+        
+        function updateHighlighting() {
+            let text = codeArea.value;
+            const lines = text.split('\n');
+            let html = '';
+            const regex = /(;.*$)|("[a-zA-Z0-9]+)|(\[|\])|(\b\d+(?:\.\d+)?\b)|(\b[a-zA-Z]+\b)/g;
+
+            lines.forEach((line, index) => {
+                let safeLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                let highlightedLine = safeLine.replace(regex, (match, comment, string, bracket, number, word) => {
+                    if (comment) return `<span class="tok-comment">${comment}</span>`;
+                    if (string) return `<span class="tok-str">${string}</span>`;
+                    if (bracket) return `<span class="tok-bracket">${bracket}</span>`;
+                    if (number) return `<span class="tok-num">${number}</span>`;
+                    if (word) {
+                        if (KEYWORDS.includes(word.toUpperCase())) return `<span class="tok-cmd">${word}</span>`;
+                        return word; 
+                    }
+                    return match;
+                });
+                html += `<div id="line-${index}" class="line-wrapper">${highlightedLine || '&nbsp;'}</div>`;
+            });
+            codeHighlight.innerHTML = html;
+        }
+
+        function highlightLine(lineNum) {
+            const prev = codeHighlight.querySelector('.active-execution');
+            if (prev) prev.classList.remove('active-execution');
+            if (lineNum !== undefined && lineNum !== null) {
+                const lineEl = document.getElementById(`line-${lineNum}`);
+                if (lineEl) lineEl.classList.add('active-execution');
+            }
+        }
+
+        codeArea.addEventListener('scroll', () => {
+            codeHighlight.scrollTop = codeArea.scrollTop;
+            codeHighlight.scrollLeft = codeArea.scrollLeft;
+        });
+        
+        codeArea.addEventListener('input', () => {
+            updateHighlighting();
+            saveCode();
+        });
+
+        // --- CONSOLE ---
+        function log(msg, type = 'info') {
+            const el = document.createElement('div');
+            el.className = 'log-entry';
+            if (type === 'error') el.classList.add('log-error');
+            else if (type === 'success') el.classList.add('log-success');
+            else if (type === 'cmd') el.classList.add('log-cmd');
+            else if (type === 'sys') el.classList.add('log-sys');
+            else el.classList.add('log-info');
+            
+            const time = new Date().toLocaleTimeString('ca-ES', {hour12:false, minute:'2-digit', second:'2-digit'});
+            el.innerText = `[${time}] ${msg}`;
+            consoleOutput.appendChild(el);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        // --- GRAPHICS ENGINE ---
+        let width, height, cx, cy;
+        function resize() {
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+            width = canvas.width;
+            height = canvas.height;
+            cx = Math.round((width / 2) / 50) * 50;
+            cy = Math.round((height / 2) / 50) * 50;
+            drawFrame(); 
+        }
+        window.addEventListener('resize', resize);
+        
+        const TURTLE_SPEED = 4;
+        const ROTATE_SPEED = 5;
+
+        let state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true };
+        let drawnLines = []; 
+        let commandQueue = [];
+        let currentAction = null;
+        let isRunning = false;
+        let animationId = null;
+
+        function init() { 
+            resize(); 
+            resetSystem(); 
+            loadCode();
+            loop(); 
+        }
+        
+        function resetSystem() {
+            state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true };
+            drawnLines = [];
+            commandQueue = [];
+            currentAction = null;
+            highlightLine(null); 
+            updateStatus("READY");
+        }
+
+        function updateStatus(msg) {
+            statusOverlay.innerText = `SYSTEM: ${msg}`;
+            dispX.innerText = Math.round(state.x);
+            dispY.innerText = Math.round(state.y);
+            dispAng.innerText = Math.round(state.angle % 360);
+        }
+
+        function t2cX(tx) { return cx + tx; }
+        function t2cY(ty) { return cy - ty; }
+
+        function drawFrame() {
+            // 1. Black Background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. Draw Grid Manually (for export)
+            ctx.strokeStyle = '#334155'; // Slate 700ish
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            
+            // Vertical lines starting from center to match turtle
+            // Draw lines 50px apart
+            const gridSize = 50;
+            
+            // Find start X (leftmost line that aligns with center)
+            const startX = cx % gridSize;
+            const startY = cy % gridSize;
+            
+            for(let x = startX; x <= width; x += gridSize) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, height);
+            }
+            for(let y = startY; y <= height; y += gridSize) {
+                ctx.moveTo(0, y); ctx.lineTo(width, y);
+            }
+            ctx.stroke();
+
+            // 3. Draw User Lines
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            drawnLines.forEach(line => {
+                ctx.beginPath();
+                ctx.moveTo(t2cX(line.x1), t2cY(line.y1));
+                ctx.lineTo(t2cX(line.x2), t2cY(line.y2));
+                ctx.strokeStyle = line.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = line.color;
+                ctx.stroke();
+            });
+            ctx.shadowBlur = 0;
+
+            // 4. Draw Turtle
+            if (state.visible) {
+                const rad = (state.angle - 90) * (Math.PI / 180);
+                const screenX = t2cX(state.x);
+                const screenY = t2cY(state.y);
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(rad);
+                ctx.fillStyle = state.color;
+                ctx.beginPath();
+                ctx.moveTo(12, 0);
+                ctx.lineTo(-8, 8);
+                ctx.lineTo(-4, 0);
+                ctx.lineTo(-8, -8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = state.color;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function loop() {
+            if (isRunning) processQueue();
+            drawFrame();
+            updateStatus(isRunning ? "EXECUTING..." : "IDLE");
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function processQueue() {
+            if (currentAction) {
+                if (currentAction.line !== undefined) highlightLine(currentAction.line);
+                const finished = updateAction(currentAction);
+                if (finished) currentAction = null;
+                return;
+            }
+            if (commandQueue.length > 0) {
+                currentAction = commandQueue.shift();
+                if (currentAction.line !== undefined) highlightLine(currentAction.line);
+            } else {
+                isRunning = false; 
+                highlightLine(null);
+                if (animationId) log("Execució completada.", 'success');
+            }
+        }
+
+        function updateAction(action) {
+            if (action.type === 'MOVE') {
+                const mathAngle = (90 - state.angle) * (Math.PI / 180);
+                const totalDist = action.dist;
+                const absTotal = Math.abs(totalDist);
+                const sign = Math.sign(totalDist); 
+                if (typeof action.traveled === 'undefined') action.traveled = 0;
+
+                let step = TURTLE_SPEED;
+                if (action.traveled + step > absTotal) step = absTotal - action.traveled;
+                const moveStep = step * sign; 
+                const oldX = state.x;
+                const oldY = state.y;
+                state.x += Math.cos(mathAngle) * moveStep;
+                state.y += Math.sin(mathAngle) * moveStep;
+                if (state.penDown) {
+                    drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color });
+                }
+                action.traveled += step;
+                return (action.traveled >= absTotal);
+            } 
+            else if (action.type === 'TURN') {
+                if (!action.targetAbs) {
+                    action.targetAbs = state.angle + action.deg;
+                    action.dir = action.deg > 0 ? 1 : -1;
+                }
+                let step = ROTATE_SPEED * action.dir;
+                const remaining = Math.abs(action.targetAbs - state.angle);
+                if (remaining < ROTATE_SPEED) {
+                    state.angle = action.targetAbs;
+                    return true;
+                }
+                state.angle += step;
+                return false;
+            }
+            else if (action.type === 'SET_COLOR') {
+                state.color = action.color;
+                return true;
+            }
+            else if (action.type === 'PEN') {
+                state.penDown = action.down;
+                return true;
+            }
+            else if (action.type === 'CLEAR') {
+                drawnLines = [];
+                state.x = 0; state.y = 0; state.angle = 0;
+                log("Netejant canvas...", 'info');
+                return true;
+            }
+            return true;
+        }
+
+        // --- PARSER ---
+        const COMMANDS = {
+            'AV': 'FD', 'FD': 'FD', 'FORWARD': 'FD',
+            'RE': 'BK', 'BK': 'BK', 'BACK': 'BK',
+            'GD': 'RT', 'RT': 'RT', 'RIGHT': 'RT',
+            'GE': 'LT', 'LT': 'LT', 'LEFT': 'LT',
+            'NETEJA': 'CS', 'CS': 'CS',
+            'PUJALLAPIS': 'PU', 'PU': 'PU',
+            'BAIXALLAPIS': 'PD', 'PD': 'PD',
+            'POSACOLOR': 'SETPC', 'SETCOLOR': 'SETPC',
+            'REPETEIX': 'REPEAT', 'REPEAT': 'REPEAT'
+        };
+        const COLORS = {
+            'CYAN': '#22d3ee', 'MAGENTA': '#e879f9', 'LIME': '#a3e635',
+            'GROC': '#facc15', 'BLANC': '#ffffff', 'VERMELL': '#f87171'
+        };
+
+        function parse(code) {
+            const rawLines = code.split('\n');
+            let allTokens = [];
+            rawLines.forEach((lineText, lineIdx) => {
+                let clean = lineText.replace(/;.*$/gm, '').replace(/\[/g, ' [ ').replace(/\]/g, ' ] ').trim();
+                if (clean.length > 0) {
+                    let parts = clean.split(/\s+/).filter(t => t.length > 0);
+                    parts.forEach(part => allTokens.push({ val: part, line: lineIdx }));
+                }
+            });
+            return parseTokens(allTokens);
+        }
+
+        function parseTokens(tokenList) {
+            let cmds = [];
+            while(tokenList.length > 0) {
+                let tokenObj = tokenList.shift();
+                let t = tokenObj.val.toUpperCase();
+                let currentLine = tokenObj.line;
+                let op = COMMANDS[t];
+                
+                if (t === ']' || t === '[') continue; 
+                if (!op && isNaN(parseFloat(t))) continue;
+                if (!op) continue;
+
+                try {
+                    switch(op) {
+                        case 'FD':
+                            let d1 = tokenList.shift();
+                            if(!d1 || isNaN(parseFloat(d1.val))) throw new Error(`Falta distància`);
+                            cmds.push({ type: 'MOVE', dist: parseFloat(d1.val), line: currentLine });
+                            break;
+                        case 'BK':
+                            let d2 = tokenList.shift();
+                            if(!d2 || isNaN(parseFloat(d2.val))) throw new Error(`Falta distància`);
+                            cmds.push({ type: 'MOVE', dist: -parseFloat(d2.val), line: currentLine });
+                            break;
+                        case 'RT':
+                            let d3 = tokenList.shift();
+                            if(!d3 || isNaN(parseFloat(d3.val))) throw new Error(`Falta angle`);
+                            cmds.push({ type: 'TURN', deg: parseFloat(d3.val), line: currentLine });
+                            break;
+                        case 'LT':
+                            let d4 = tokenList.shift();
+                            if(!d4 || isNaN(parseFloat(d4.val))) throw new Error(`Falta angle`);
+                            cmds.push({ type: 'TURN', deg: -parseFloat(d4.val), line: currentLine });
+                            break;
+                        case 'PU': cmds.push({ type: 'PEN', down: false, line: currentLine }); break;
+                        case 'PD': cmds.push({ type: 'PEN', down: true, line: currentLine }); break;
+                        case 'CS': cmds.push({ type: 'CLEAR', line: currentLine }); break;
+                        case 'SETPC':
+                            let col = tokenList.shift();
+                            if (!col) throw new Error("Falta color");
+                            let colName = col.val.toUpperCase().replace(/"/g, '');
+                            let hex = COLORS[colName] || colName;
+                            cmds.push({ type: 'SET_COLOR', color: hex, line: currentLine });
+                            break;
+                        case 'REPEAT':
+                            let countObj = tokenList.shift();
+                            if (!countObj || isNaN(parseInt(countObj.val))) throw new Error("Falta repeticions");
+                            let count = parseInt(countObj.val);
+                            
+                            let bracketObj = tokenList.shift();
+                            if (!bracketObj || bracketObj.val !== '[') throw new Error("Falta '['");
+                            
+                            let depth = 1;
+                            let blockTokens = [];
+                            while(tokenList.length > 0) {
+                                let bt = tokenList.shift();
+                                if (bt.val === '[') depth++;
+                                if (bt.val === ']') depth--;
+                                if (depth === 0) break;
+                                blockTokens.push(bt);
+                            }
+                            if(depth !== 0) throw new Error("Falta ']'");
+                            
+                            let blockCmds = parseTokens([...blockTokens]);
+                            for(let i=0; i<count; i++) {
+                                blockCmds.forEach(c => cmds.push({...c}));
+                            }
+                            break;
+                    }
+                } catch(err) { throw err; }
+            }
+            return cmds;
+        }
+
+        runBtn.addEventListener('click', () => {
+            if (isRunning) return;
+            const raw = codeArea.value;
+            updateHighlighting();
+            
+            log("Iniciant...", 'cmd');
+            try {
+                const instructions = parse(raw);
+                if(instructions.length === 0) {
+                    log("Codi buit.", 'info');
+                    return;
+                }
+                commandQueue = commandQueue.concat(instructions);
+                isRunning = true;
+            } catch (e) {
+                log(`ERR: ${e.message}`, 'error');
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            isRunning = false;
+            commandQueue = [];
+            currentAction = null;
+            highlightLine(null);
+            updateStatus("HALTED");
+            log("Aturat.", 'error');
+        });
+
+        init();
+    </script>
+</body>
+</html>
