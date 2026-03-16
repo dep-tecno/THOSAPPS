@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THOSCAD - Dibuix Tècnic Escolar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #111827; }
+        #root { height: 100%; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-in { animation: fadeIn 0.2s ease-out; }
+        
+        /* Cursors personalitzats per a l'eina mà */
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
+    </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="module">
+        import React, { useState, useRef, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            MousePointer2, Circle, Square, Hand, Trash2, Download, Ruler, 
+            Sparkles, X, Loader2, Magnet, Type, Hexagon, Image as ImageIcon, 
+            Check, Minus, ChevronDown, Save, FolderOpen, Scissors, PaintBucket,
+            Undo2, Redo2, ZoomIn, ZoomOut
+        } from 'lucide-react';
+
+        /** UTILITATS MATEMÀTIQUES **/
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        // GridSize per defecte a 10 (Snap)
+        const snap = (value, gridSize = 10) => Math.round(value / gridSize) * gridSize;
+        const screenToWorld = (screenX, screenY, pan, zoom) => ({
+            x: (screenX - pan.x) / zoom,
+            y: (screenY - pan.y) / zoom,
+        });
+        const distance = (p1, p2) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        
+        const distanceToSegment = (p, v, w) => {
+            const l2 = distance(v, w) ** 2;
+            if (l2 === 0) return distance(p, v);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return distance(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
+        };
+
+        const getMidPointControl = (p1, p2, offsetFactor = 0.3) => {
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            return { x: midX - dy * offsetFactor, y: midY + dx * offsetFactor };
+        };
+        const getAngle = (p1, p2) => Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI);
+        const calculateOffset = (p1, p2, pMouse) => {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len === 0) return 0;
+            const nx = -dy / len;
+            const ny = dx / len;
+            const vx = pMouse.x - p1.x;
+            const vy = pMouse.y - p1.y;
+            return vx * nx + vy * ny;
+        };
+        const getPolygonPoints = (center, radius, sides, startAngle = -Math.PI / 2) => {
+            const points = [];
+            for (let i = 0; i < sides; i++) {
+                const angle = startAngle + (i * 2 * Math.PI) / sides;
+                points.push({
+                    x: center.x + radius * Math.cos(angle),
+                    y: center.y + radius * Math.sin(angle)
+                });
+            }
+            return points;
+        };
+
+        const describeArcPath = (x, y, radius, startAngle, endAngle) => {
+            const largeArcFlag = (endAngle - startAngle) > Math.PI ? 1 : 0;
+            const p1 = { x: x + radius * Math.cos(startAngle), y: y + radius * Math.sin(startAngle) };
+            const p2 = { x: x + radius * Math.cos(endAngle), y: y + radius * Math.sin(endAngle) };
+            return `M ${p1.x} ${p1.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${p2.x} ${p2.y}`;
+        };
+
+        /** ICONES PERSONALITZADES **/
+        const LineIcon = ({ size = 24, ...props }) => React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", ...props }, React.createElement("line", { x1: "4", y1: "20", x2: "20", y2: "4" }));
+        const PolylineIcon = ({ size = 24, ...props }) => React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", ...props }, React.createElement("polyline", { points: "3 7 9 17 15 7 21 17" }));
+        const ArrowToolIcon = ({ size = 24, ...props }) => React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", ...props }, [React.createElement("line", { key: "l", x1: "5", y1: "19", x2: "19", y2: "5" }), React.createElement("polyline", { key: "p", points: "12 5 19 5 19 12" })]);
+        const ArcIcon = ({ size = 24, ...props }) => React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", ...props }, React.createElement("path", { d: "M3 21c0-9.9 8.1-18 18-18" }));
+
+        /** COMPONENTS **/
+        const IconButton = ({ icon: Icon, active, onClick, title, disabled = false, special = false }) => (
+            React.createElement("button", {
+                onClick: onClick,
+                disabled: disabled,
+                title: title,
+                className: `p-2 rounded-md transition-all duration-200 flex items-center justify-center
+                ${active 
+                    ? 'bg-blue-600 text-white shadow-lg scale-105' 
+                    : special 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-md'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'}
+                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
+            }, React.createElement(Icon, { size: 20 }))
+        );
+
+        const ToolbarDivider = () => React.createElement("div", { className: "w-px h-6 bg-gray-700 mx-1" });
+
+        /** APP PRINCIPAL **/
+        function CADApp() {
+            const [pan, setPan] = useState({ x: 0, y: 0 });
+            const [zoom, setZoom] = useState(1);
+            const [history, setHistory] = useState([[]]); 
+            const [historyStep, setHistoryStep] = useState(0);
+            const [elements, setElements] = useState([]);
+            const [selectedIds, setSelectedIds] = useState(new Set());
+            const [clipboard, setClipboard] = useState([]); 
+
+            const [tool, setTool] = useState('line'); 
+            const [drawingState, setDrawingState] = useState(null); 
+            const [draggingState, setDraggingState] = useState(null); 
+            const [snapIndicator, setSnapIndicator] = useState(null); 
+            
+            const [textInput, setTextInput] = useState(null); 
+            const inputRef = useRef(null); 
+            const fileInputRef = useRef(null);
+
+            const [polygonSides, setPolygonSides] = useState(6);
+            const [properties, setProperties] = useState({ stroke: '#00ff00', strokeWidth: 2 });
+            const [showGrid, setShowGrid] = useState(true);
+            const [gridSnap, setGridSnap] = useState(true); 
+            const [objectSnap, setObjectSnap] = useState(true); 
+
+            const [showColorPicker, setShowColorPicker] = useState(false);
+            const [colorPickerPos, setColorPickerPos] = useState({ x: 0, y: 0 });
+            const colorButtonRef = useRef(null);
+
+            const [showAiModal, setShowAiModal] = useState(false);
+            const [aiPrompt, setAiPrompt] = useState("");
+            const [isAiLoading, setIsAiLoading] = useState(false);
+            const [aiError, setAiError] = useState(null);
+
+            const svgRef = useRef(null);
+            const BASIC_COLORS = ['#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#808080'];
+
+            // --- CANVI EINA SEGUR ---
+            const changeTool = (newTool) => {
+                setTool(newTool);
+                setDrawingState(null);
+                setDraggingState(null);
+                setTextInput(null);
+                setSnapIndicator(null);
+            };
+
+            const saveHistory = (newElements) => {
+                const newHistory = history.slice(0, historyStep + 1);
+                newHistory.push(newElements);
+                setHistory(newHistory);
+                setHistoryStep(newHistory.length - 1);
+                setElements(newElements);
+            };
+
+            const undo = () => {
+                if (historyStep > 0) {
+                    const newStep = historyStep - 1;
+                    setHistoryStep(newStep);
+                    setElements(history[newStep]);
+                    setSelectedIds(new Set()); 
+                }
+            };
+
+            const redo = () => {
+                if (historyStep < history.length - 1) {
+                    const newStep = historyStep + 1;
+                    setHistoryStep(newStep);
+                    setElements(history[newStep]);
+                    setSelectedIds(new Set());
+                }
+            };
+
+            const handleZoomIn = () => setZoom(z => Math.min(z * 1.2, 10));
+            const handleZoomOut = () => setZoom(z => Math.max(z / 1.2, 0.1));
+
+            // --- KEYBOARD SHORTCUTS ---
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (textInput || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                    const isCtrl = e.ctrlKey || e.metaKey;
+                    const key = e.key.toLowerCase();
+
+                    if (isCtrl && key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+                    if ((isCtrl && key === 'y') || (isCtrl && e.shiftKey && key === 'z')) { e.preventDefault(); redo(); return; }
+                    if (isCtrl && key === 'c') {
+                        e.preventDefault();
+                        if (selectedIds.size > 0) {
+                            const toCopy = elements.filter(el => selectedIds.has(el.id));
+                            setClipboard(toCopy);
+                        }
+                        return;
+                    }
+                    if (isCtrl && key === 'v') {
+                        e.preventDefault();
+                        if (clipboard.length > 0) {
+                            const newElements = clipboard.map(el => {
+                                const newId = generateId();
+                                const offset = 20 / zoom; 
+                                let props = { ...el, id: newId };
+                                if (props.x !== undefined) props.x += offset;
+                                if (props.y !== undefined) props.y += offset;
+                                if (props.x1 !== undefined) { props.x1 += offset; props.y1 += offset; }
+                                if (props.x2 !== undefined) { props.x2 += offset; props.y2 += offset; }
+                                if (props.cx !== undefined) { props.cx += offset; props.cy += offset; }
+                                if (props.points) props.points = props.points.map(p => ({ x: p.x + offset, y: p.y + offset }));
+                                
+                                if (props.type === 'dimension') {
+                                    props.attachedToStart = null;
+                                    props.attachedToEnd = null;
+                                }
+                                return props;
+                            });
+                            const nextElements = [...elements, ...newElements];
+                            saveHistory(nextElements);
+                            setSelectedIds(new Set(newElements.map(e => e.id)));
+                        }
+                        return;
+                    }
+
+                    if (key === 'escape') {
+                        if (showAiModal) setShowAiModal(false);
+                        else if (showColorPicker) setShowColorPicker(false);
+                        else if (tool === 'polyline' && drawingState?.points?.length > 1) finishPolyline();
+                        else if (drawingState) setDrawingState(null); 
+                        else if (selectedIds.size > 0) setSelectedIds(new Set()); 
+                    }
+                    if (key === 'enter') {
+                        if (tool === 'polyline' && drawingState?.points?.length > 1) finishPolyline();
+                    }
+                    if (key === 'delete' || key === 'backspace') {
+                        if (!showAiModal) deleteSelected();
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [tool, drawingState, selectedIds, showAiModal, textInput, showColorPicker, clipboard, elements, historyStep, zoom, history]); 
+
+            useEffect(() => { if (textInput && inputRef.current) inputRef.current.focus(); }, [textInput]);
+
+            useEffect(() => {
+                if (selectedIds.size === 1) {
+                    const id = [...selectedIds][0];
+                    const el = elements.find(e => e.id === id);
+                    if (el) setProperties(prev => ({ ...prev, stroke: el.style.stroke, strokeWidth: el.style.strokeWidth }));
+                }
+            }, [selectedIds, elements]);
+
+            const confirmText = () => {
+                if (textInput && textInput.value && textInput.value.trim() !== "") {
+                    const fontSize = 20 / zoom; 
+                    const newElement = {
+                        id: generateId(), type: 'text', x: textInput.x, y: textInput.y,
+                        text: textInput.value, fontSize: fontSize, style: { ...properties }
+                    };
+                    saveHistory([...elements, newElement]);
+                }
+                setTextInput(null);
+            };
+
+            const cancelText = () => setTextInput(null);
+
+            const toggleColorPicker = () => {
+                if (!showColorPicker && colorButtonRef.current) {
+                    const rect = colorButtonRef.current.getBoundingClientRect();
+                    setColorPickerPos({ x: rect.left, y: rect.bottom + 5 });
+                }
+                setShowColorPicker(!showColorPicker);
+            };
+
+            const updateProperties = (key, value) => {
+                setProperties(prev => ({ ...prev, [key]: value }));
+                if (selectedIds.size > 0) {
+                    const updatedElements = elements.map(el => selectedIds.has(el.id) ? { ...el, style: { ...el.style, [key]: value } } : el);
+                    saveHistory(updatedElements);
+                }
+            };
+
+            const finishPolyline = () => {
+                if (!drawingState || !drawingState.points || drawingState.points.length < 2) { setDrawingState(null); return; }
+                const newElement = { id: generateId(), type: 'polyline', points: drawingState.points, style: { ...properties, fill: 'none' } };
+                saveHistory([...elements, newElement]);
+                setDrawingState(null);
+            };
+            
+            const moveElement = (el, dx, dy) => {
+                switch (el.type) {
+                    case 'line': case 'arrow': return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
+                    case 'dimension': 
+                        const angle = Math.atan2(el.y2 - el.y1, el.x2 - el.x1);
+                        const nx = -Math.sin(angle);
+                        const ny = Math.cos(angle);
+                        const deltaOffset = dx * nx + dy * ny;
+                        return { ...el, offset: (el.offset || 0) + deltaOffset };
+                    case 'rect': case 'text': return { ...el, x: el.x + dx, y: el.y + dy };
+                    case 'circle': case 'polygon': return { ...el, cx: el.cx + dx, cy: el.cy + dy };
+                    case 'polyline': return { ...el, points: el.points.map(p => ({ x: p.x + dx, y: p.y + dy })) };
+                    case 'arc': return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy, cx: el.cx + dx, cy: el.cy + dy };
+                    case 'circular_arc': return { ...el, cx: el.cx + dx, cy: el.cy + dy };
+                    default: return el;
+                }
+            };
+
+            const getObjectSnapPoint = (worldPos) => {
+                const threshold = 10 / zoom; let closest = null; let minD = threshold;
+                const check = (x, y, id) => { const d = distance(worldPos, {x, y}); if (d < minD) { minD = d; closest = { x, y, id }; } };
+                elements.forEach(el => {
+                    if (el.type === 'line' || el.type === 'arrow' || el.type === 'dimension') { check(el.x1, el.y1, el.id); check(el.x2, el.y2, el.id); }
+                    else if (el.type === 'rect') { check(el.x, el.y, el.id); check(el.x + el.width, el.y, el.id); check(el.x, el.y + el.height, el.id); check(el.x + el.width, el.y + el.height, el.id); }
+                    else if (el.type === 'polyline') { el.points.forEach(p => check(p.x, p.y, el.id)); }
+                    else if (el.type === 'circle') {
+                        check(el.cx, el.cy, el.id);
+                        check(el.cx + el.r, el.cy, el.id);
+                        check(el.cx - el.r, el.cy, el.id);
+                        check(el.cx, el.cy + el.r, el.id);
+                        check(el.cx, el.cy - el.r, el.id);
+                    }
+                    else if (el.type === 'polygon') {
+                         check(el.cx, el.cy, el.id);
+                         const pts = getPolygonPoints({x: el.cx, y: el.cy}, el.r, el.sides, el.rotation);
+                         pts.forEach(p => check(p.x, p.y, el.id));
+                    }
+                    else if (el.type === 'circular_arc') { 
+                         check(el.cx, el.cy, el.id);
+                         check(el.cx + el.r * Math.cos(el.startAngle), el.cy + el.r * Math.sin(el.startAngle), el.id);
+                         check(el.cx + el.r * Math.cos(el.endAngle), el.cy + el.r * Math.sin(el.endAngle), el.id);
+                    }
+                    else if (el.type === 'arc') { check(el.x1, el.y1, el.id); check(el.x2, el.y2, el.id); }
+                });
+                return closest;
+            };
+
+            const getMouseCoords = (e) => {
+                if (!svgRef.current) return { x: 0, y: 0 };
+                const rect = svgRef.current.getBoundingClientRect();
+                const rawX = e.clientX - rect.left;
+                const rawY = e.clientY - rect.top;
+                const worldPos = screenToWorld(rawX, rawY, pan, zoom);
+                
+                const isDimensionOffset = tool === 'dimension' && drawingState?.phase === 'offset';
+                const isMovingObject = draggingState?.type === 'move';
+
+                if (objectSnap && !isDimensionOffset && !isMovingObject && tool !== 'cut' && tool !== 'fill') {
+                    const snapPoint = getObjectSnapPoint(worldPos);
+                    if (snapPoint) return { ...snapPoint, rawX, rawY, snapped: true, snapId: snapPoint.id };
+                }
+                if (gridSnap && !isDimensionOffset && !isMovingObject && tool !== 'cut' && tool !== 'fill') {
+                    return { x: snap(worldPos.x), y: snap(worldPos.y), rawX, rawY };
+                }
+                return { ...worldPos, rawX, rawY };
+            };
+
+            const handleCut = (coords) => {
+                let closestEl = null; let minD = 20 / zoom; 
+                elements.forEach(el => {
+                    if (el.type === 'line' || el.type === 'arrow') { const d = distanceToSegment(coords, {x: el.x1, y: el.y1}, {x: el.x2, y: el.y2}); if (d < minD) { minD = d; closestEl = el; } }
+                    else if (el.type === 'rect') { const sides = [{p1:{x:el.x,y:el.y},p2:{x:el.x+el.width,y:el.y}},{p1:{x:el.x+el.width,y:el.y},p2:{x:el.x+el.width,y:el.y+el.height}},{p1:{x:el.x+el.width,y:el.y+el.height},p2:{x:el.x,y:el.y+el.height}},{p1:{x:el.x,y:el.y+el.height},p2:{x:el.x,y:el.y}}]; sides.forEach((s, i) => { const d = distanceToSegment(coords, s.p1, s.p2); if (d < minD) { minD = d; closestEl = { ...el, hitSide: i }; } }); }
+                    else if (el.type === 'circle') { const d = Math.abs(distance(coords, {x: el.cx, y: el.cy}) - el.r); if (d < minD) { minD = d; closestEl = el; } }
+                    else if (el.type === 'circular_arc') { 
+                        const d = Math.abs(distance(coords, {x: el.cx, y: el.cy}) - el.r);
+                        if (d < minD) {
+                            const angle = Math.atan2(coords.y - el.cy, coords.x - el.cx);
+                            let normAngle = angle < 0 ? angle + 2*Math.PI : angle;
+                            if (normAngle >= el.startAngle - 0.1 && normAngle <= el.endAngle + 0.1) {
+                                minD = d; closestEl = el; 
+                            }
+                        }
+                    }
+                    else if (el.type === 'arc') { for(let t=0; t<=1; t+=0.1) { const mt = 1-t; const x = mt*mt*el.x1 + 2*mt*t*el.cx + t*t*el.x2; const y = mt*mt*el.y1 + 2*mt*t*el.cy + t*t*el.y2; const d = distance(coords, {x,y}); if (d < minD) { minD = d; closestEl = el; } } }
+                    else if (el.type === 'polyline' || el.type === 'polygon') { const pts = el.type === 'polygon' ? getPolygonPoints({x:el.cx, y:el.cy}, el.r, el.sides, el.rotation) : el.points; for (let i=0; i<pts.length - (el.type==='polyline'?1:0); i++) { const p1 = pts[i]; const p2 = pts[(i+1)%pts.length]; const d = distanceToSegment(coords, p1, p2); if (d < minD) { minD = d; closestEl = { ...el, hitSegment: i }; } } }
+                });
+                if (!closestEl) return;
+
+                const newElementsList = elements.filter(e => e.id !== closestEl.id);
+                const baseStyle = closestEl.style;
+
+                if (closestEl.type === 'line' || closestEl.type === 'arrow') {
+                    const mid = { x: (closestEl.x1 + closestEl.x2)/2, y: (closestEl.y1 + closestEl.y2)/2 };
+                    if (distance(coords, {x: closestEl.x1, y: closestEl.y1}) < distance(coords, {x: closestEl.x2, y: closestEl.y2})) newElementsList.push({ ...closestEl, id: generateId(), x1: mid.x, y1: mid.y }); 
+                    else newElementsList.push({ ...closestEl, id: generateId(), x2: mid.x, y2: mid.y }); 
+                }
+                else if (closestEl.type === 'rect') {
+                    const sides = [{p1:{x:closestEl.x,y:closestEl.y},p2:{x:closestEl.x+closestEl.width,y:closestEl.y}},{p1:{x:closestEl.x+closestEl.width,y:closestEl.y},p2:{x:closestEl.x+closestEl.width,y:closestEl.y+closestEl.height}},{p1:{x:closestEl.x+closestEl.width,y:closestEl.y+closestEl.height},p2:{x:closestEl.x,y:closestEl.y+closestEl.height}},{p1:{x:closestEl.x,y:closestEl.y+closestEl.height},p2:{x:closestEl.x,y:closestEl.y}}];
+                    sides.forEach((s, idx) => { if (idx !== closestEl.hitSide) newElementsList.push({ id: generateId(), type: 'line', x1: s.p1.x, y1: s.p1.y, x2: s.p2.x, y2: s.p2.y, style: baseStyle }); });
+                }
+                else if (closestEl.type === 'polyline' || closestEl.type === 'polygon') {
+                    const pts = closestEl.type === 'polygon' ? getPolygonPoints({x:closestEl.cx, y:closestEl.cy}, closestEl.r, closestEl.sides, closestEl.rotation) : closestEl.points;
+                    for (let i=0; i<pts.length - (closestEl.type==='polygon'?0:1); i++) { if (i !== closestEl.hitSegment) { const p2 = pts[(i+1)%pts.length]; newElementsList.push({ id: generateId(), type: 'line', x1: pts[i].x, y1: pts[i].y, x2: p2.x, y2: p2.y, style: baseStyle }); } }
+                }
+                else if (closestEl.type === 'circle') {
+                    const angle = Math.atan2(coords.y - closestEl.cy, coords.x - closestEl.cx);
+                    let normAngle = angle < 0 ? angle + 2*Math.PI : angle;
+                    const quadrant = Math.floor(normAngle / (Math.PI/2));
+                    for(let q=0; q<4; q++) { if (q !== quadrant) newElementsList.push({ id: generateId(), type: 'circular_arc', cx: closestEl.cx, cy: closestEl.cy, r: closestEl.r, startAngle: q * (Math.PI/2), endAngle: (q+1) * (Math.PI/2), style: baseStyle, fill: 'none' }); }
+                }
+                else if (closestEl.type === 'arc') {
+                    const m = {x: (closestEl.x1+2*closestEl.cx+closestEl.x2)/4, y: (closestEl.y1+2*closestEl.cy+closestEl.y2)/4}; 
+                    const m01 = {x: (closestEl.x1+closestEl.cx)/2, y: (closestEl.y1+closestEl.cy)/2};
+                    const m12 = {x: (closestEl.cx+closestEl.x2)/2, y: (closestEl.cy+closestEl.y2)/2};
+                    const midCurve = {x: (m01.x+m12.x)/2, y: (m01.y+m12.y)/2};
+                    if (distance(coords, {x:closestEl.x1, y:closestEl.y1}) < distance(coords, {x:closestEl.x2, y:closestEl.y2})) 
+                        newElementsList.push({ id: generateId(), type: 'arc', x1: midCurve.x, y1: midCurve.y, x2: closestEl.x2, y2: closestEl.y2, cx: m12.x, cy: m12.y, style: baseStyle });
+                    else 
+                        newElementsList.push({ id: generateId(), type: 'arc', x1: closestEl.x1, y1: closestEl.y1, x2: midCurve.x, y2: midCurve.y, cx: m01.x, cy: m01.y, style: baseStyle });
+                }
+                
+                saveHistory(newElementsList);
+            };
+
+            const handleFill = (coords) => {
+                let closestEl = null; let minDist = 20/zoom;
+                elements.forEach(el => {
+                    if (['rect', 'circle', 'polygon', 'polyline', 'arc', 'circular_arc'].includes(el.type)) {
+                       let d = 9999;
+                       if (el.type === 'rect') {
+                            if (coords.x >= el.x && coords.x <= el.x+el.width && coords.y >= el.y && coords.y <= el.y+el.height) d=0;
+                            else {
+                                d = Math.min(
+                                    distanceToSegment(coords, {x:el.x,y:el.y}, {x:el.x+el.width,y:el.y}),
+                                    distanceToSegment(coords, {x:el.x+el.width,y:el.y}, {x:el.x+el.width,y:el.y+el.height}),
+                                    distanceToSegment(coords, {x:el.x+el.width,y:el.y+el.height}, {x:el.x,y:el.y+el.height}),
+                                    distanceToSegment(coords, {x:el.x,y:el.y+el.height}, {x:el.x,y:el.y})
+                                );
+                            }
+                       } else if (el.type === 'circle') {
+                           const dst = distance(coords, {x: el.cx, y: el.cy});
+                           if (dst <= el.r) d=0; else d = Math.abs(dst - el.r);
+                       }
+                       else if (el.type === 'polyline' || el.type === 'polygon') {
+                            const pts = el.type==='polygon' ? getPolygonPoints({x:el.cx, y:el.cy}, el.r, el.sides, el.rotation) : el.points;
+                            let minSeg = 9999;
+                            for(let i=0; i<pts.length-(el.type==='polyline'?1:0); i++) {
+                                minSeg = Math.min(minSeg, distanceToSegment(coords, pts[i], pts[(i+1)%pts.length]));
+                            }
+                            d = minSeg;
+                       }
+                       if (d < minDist) { minDist = d; closestEl = el; }
+                    }
+                });
+
+                if (closestEl) {
+                    const newElements = elements.map(el => {
+                        if (el.id === closestEl.id) {
+                            const newFill = el.fill === properties.stroke ? 'none' : properties.stroke;
+                            return { ...el, fill: newFill };
+                        }
+                        return el;
+                    });
+                    saveHistory(newElements);
+                }
+            };
+
+            const handleMouseDown = (e) => {
+                if (showAiModal || textInput || showColorPicker) {
+                    if (showColorPicker && !e.target.closest('.color-picker-dropdown')) setShowColorPicker(false);
+                    return; 
+                }
+                const coords = getMouseCoords(e);
+                
+                if (e.button === 1 || tool === 'pan') {
+                    setDraggingState({ type: 'pan', last: { x: e.clientX, y: e.clientY } });
+                    return;
+                }
+
+                if (tool === 'cut') { handleCut(coords); return; }
+                if (tool === 'fill') { handleFill(coords); return; }
+
+                if (tool === 'select') {
+                    const targetElement = e.target.closest('[data-id]');
+                    const targetId = targetElement ? targetElement.getAttribute('data-id') : null;
+                    if (targetId) {
+                        const isSelected = selectedIds.has(targetId);
+                        if (!isSelected && !e.shiftKey) setSelectedIds(new Set([targetId]));
+                        else if (e.shiftKey) {
+                            const newSet = new Set(selectedIds);
+                            if (isSelected) newSet.delete(targetId); else newSet.add(targetId);
+                            setSelectedIds(newSet);
+                            return; 
+                        }
+                        const rawWorld = screenToWorld(coords.rawX, coords.rawY, pan, zoom);
+                        setDraggingState({ type: 'move', last: rawWorld });
+                    } else {
+                        setSelectedIds(new Set());
+                    }
+                    return;
+                }
+
+                if (tool === 'text') {
+                    setTextInput({ x: coords.x, y: coords.y, clientX: e.clientX, clientY: e.clientY, value: "" });
+                    return;
+                }
+
+                if (tool === 'polyline') {
+                    if (!drawingState) setDrawingState({ points: [coords], current: coords });
+                    else {
+                        const lastPoint = drawingState.points[drawingState.points.length - 1];
+                        if (distance(lastPoint, coords) > 0.1) setDrawingState(prev => ({ ...prev, points: [...prev.points, coords], current: coords }));
+                    }
+                    return;
+                }
+
+                if (tool === 'dimension') {
+                    if (!drawingState) {
+                        setDrawingState({ 
+                            start: coords, 
+                            startSnapId: coords.snapId, 
+                            current: coords, 
+                            phase: 'initial' 
+                        });
+                    }
+                    else if (drawingState.phase === 'initial') {
+                        setDrawingState(prev => ({ 
+                            ...prev, 
+                            end: coords, 
+                            endSnapId: coords.snapId,
+                            phase: 'offset' 
+                        }));
+                    }
+                    else if (drawingState.phase === 'offset') {
+                        const off = calculateOffset(drawingState.start, drawingState.end, coords);
+                        const newElement = {
+                            id: generateId(), 
+                            type: 'dimension', 
+                            x1: drawingState.start.x, y1: drawingState.start.y,
+                            x2: drawingState.end.x, y2: drawingState.end.y, 
+                            attachedToStart: drawingState.startSnapId,
+                            attachedToEnd: drawingState.endSnapId,
+                            offset: off, 
+                            style: { ...properties }
+                        };
+                        saveHistory([...elements, newElement]);
+                        setDrawingState(null);
+                    }
+                    return;
+                }
+                setDrawingState({ start: coords, current: coords });
+            };
+
+            const handleMouseMove = (e) => {
+                if (showAiModal || textInput) return;
+                const coords = getMouseCoords(e);
+                
+                // Actualitzar indicador de Snap
+                if (coords.snapped) {
+                    if (!snapIndicator || snapIndicator.x !== coords.x || snapIndicator.y !== coords.y) {
+                        setSnapIndicator({ x: coords.x, y: coords.y });
+                    }
+                } else {
+                    if (snapIndicator) setSnapIndicator(null);
+                }
+
+                if (draggingState) {
+                    if (draggingState.type === 'pan') {
+                        const dx = e.clientX - draggingState.last.x;
+                        const dy = e.clientY - draggingState.last.y;
+                        setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+                        setDraggingState(prev => ({ ...prev, last: { x: e.clientX, y: e.clientY } }));
+                    } 
+                    else if (draggingState.type === 'move') {
+                        const currentWorld = screenToWorld(coords.rawX, coords.rawY, pan, zoom);
+                        const dx = currentWorld.x - draggingState.last.x;
+                        const dy = currentWorld.y - draggingState.last.y;
+                        
+                        setElements(prev => prev.map(el => {
+                            if (selectedIds.has(el.id)) return moveElement(el, dx, dy);
+                            if (el.type === 'dimension') {
+                                let newEl = { ...el }; let changed = false;
+                                if (el.attachedToStart && selectedIds.has(el.attachedToStart)) { newEl.x1 += dx; newEl.y1 += dy; changed = true; }
+                                if (el.attachedToEnd && selectedIds.has(el.attachedToEnd)) { newEl.x2 += dx; newEl.y2 += dy; changed = true; }
+                                if (changed) return newEl;
+                            }
+                            return el;
+                        }));
+                        setDraggingState(prev => ({ ...prev, last: currentWorld }));
+                    }
+                    return;
+                }
+                if (drawingState) setDrawingState(prev => ({ ...prev, current: coords }));
+            };
+
+            const handleMouseUp = () => {
+                if (showAiModal || draggingState || textInput) { 
+                    if (draggingState && draggingState.type === 'move') {
+                         saveHistory(elements); // Commit move
+                    }
+                    setDraggingState(null); 
+                    return; 
+                }
+                if (tool === 'polyline' || tool === 'dimension' || tool === 'text' || tool === 'cut' || tool === 'fill') return;
+                
+                if (drawingState) {
+                    const newElement = createElement(tool, drawingState.start, drawingState.current, properties);
+                    if (newElement) saveHistory([...elements, newElement]);
+                    setDrawingState(null);
+                }
+            };
+
+            const handleWheel = (e) => {
+                if (showAiModal || textInput) return;
+                e.preventDefault();
+                const scaleAmount = -e.deltaY * 0.001;
+                const newZoom = Math.max(0.1, Math.min(10, zoom * (1 + scaleAmount)));
+                const rect = svgRef.current.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                const worldMouseBefore = screenToWorld(mouseX, mouseY, pan, zoom);
+                const newPanX = mouseX - worldMouseBefore.x * newZoom; const newPanY = mouseY - worldMouseBefore.y * newZoom;
+                setZoom(newZoom); setPan({ x: newPanX, y: newPanY });
+            };
+
+            const createElement = (type, start, end, props) => {
+                if (distance(start, end) < 1 && type !== 'text') return null;
+                const base = { id: generateId(), type, style: { ...props }, fill: 'none' }; // Init with no fill
+                switch (type) {
+                    case 'line': case 'arrow': return { ...base, x1: start.x, y1: start.y, x2: end.x, y2: end.y };
+                    case 'rect': return { ...base, x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };
+                    case 'circle': return { ...base, cx: start.x, cy: start.y, r: distance(start, end) };
+                    case 'polygon': 
+                        const rotation = Math.atan2(end.y - start.y, end.x - start.x);
+                        return { ...base, cx: start.x, cy: start.y, r: distance(start, end), sides: polygonSides, rotation: rotation };
+                    case 'arc': 
+                        const control = getMidPointControl(start, end);
+                        return { ...base, x1: start.x, y1: start.y, x2: end.x, y2: end.y, cx: control.x, cy: control.y };
+                    default: return null;
+                }
+            };
+
+            const deleteSelected = () => { 
+                if (selectedIds.size > 0) {
+                    const newElements = elements.filter(el => !selectedIds.has(el.id));
+                    saveHistory(newElements);
+                    setSelectedIds(new Set());
+                }
+            };
+
+            // --- SAVE / LOAD SYSTEM ---
+            const saveProject = () => {
+                const dataStr = JSON.stringify(elements);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', 'projecte_thoscad.json');
+                linkElement.click();
+            };
+
+            const loadProject = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const content = JSON.parse(e.target.result);
+                        if (Array.isArray(content)) { 
+                            setHistory([content]);
+                            setHistoryStep(0);
+                            setElements(content); 
+                            setSelectedIds(new Set()); 
+                        }
+                        else { alert("Arxiu no vàlid"); }
+                    } catch (err) { alert("Error llegint l'arxiu"); }
+                };
+                reader.readAsText(file);
+                e.target.value = null; 
+            };
+
+            const triggerLoad = () => fileInputRef.current.click();
+
+            // --- EXPORT ---
+            const exportPNG = () => {
+                if (!svgRef.current) return;
+                const clonedSvg = svgRef.current.cloneNode(true);
+                const gridRect = clonedSvg.querySelector('rect[fill="url(#grid)"]');
+                if (gridRect) gridRect.remove();
+
+                const svgRect = svgRef.current.getBoundingClientRect();
+                const width = svgRect.width;
+                const height = svgRect.height;
+                const canvas = document.createElement('canvas');
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                // No omplim amb blanc per mantenir transparència
+                // ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height);
+                
+                const svgData = new XMLSerializer().serializeToString(clonedSvg);
+                const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+                const url = URL.createObjectURL(svgBlob);
+                const img = new Image();
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0, width, height); 
+                    const pngUrl = canvas.toDataURL("image/png");
+                    const a = document.createElement('a');
+                    a.href = pngUrl; a.download = 'plano_thoscad.png'; a.click();
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            };
+
+            const handleAiSubmit = async () => {
+                if (!aiPrompt.trim()) return;
+                setIsAiLoading(true); setAiError(null);
+                try {
+                    const apiKey = ""; 
+                    const systemPrompt = `Eres un asistente experto de CAD. Genera JSON array de objetos: line, rect, circle, arrow, polyline.`;
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: aiPrompt }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] },
+                            generationConfig: { temperature: 0.2 }
+                        })
+                    });
+                    if (!response.ok) throw new Error('Error API');
+                    const data = await response.json();
+                    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+                    const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const newElements = JSON.parse(cleanJson);
+                    if (Array.isArray(newElements)) {
+                        const elementsWithIds = newElements.map(el => ({ ...el, id: generateId(), style: { strokeWidth: 2, stroke: '#ffffff', ...el.style }, fill: 'none' }));
+                        saveHistory([...elements, ...elementsWithIds]); // History support for AI
+                        setShowAiModal(false); setAiPrompt("");
+                    } else throw new Error("JSON invàlid");
+                } catch (err) { console.error(err); setAiError("No he entès la instrucció."); } finally { setIsAiLoading(false); }
+            };
+
+            const MeasurementLabel = ({ x, y, text }) => React.createElement("g", { transform: `translate(${x + 15}, ${y - 15})`, style: { pointerEvents: 'none' } }, [React.createElement("rect", { x: "0", y: "-14", width: text.length * 8 + 10, height: "20", fill: "#000", fillOpacity: "0.8", rx: "4" }), React.createElement("text", { x: "5", y: "0", fill: "white", fontSize: "12", fontFamily: "monospace", fontWeight: "bold" }, text)]);
+
+            const renderDimension = (start, end, offset = 0, style, isSelected) => {
+                const dist = distance(start, end);
+                const angle = getAngle(start, end);
+                const rad = Math.atan2(end.y - start.y, end.x - start.x); 
+                const nx = -Math.sin(rad); const ny = Math.cos(rad);
+                const p1 = { x: start.x + nx * offset, y: start.y + ny * offset };
+                const p2 = { x: end.x + nx * offset, y: end.y + ny * offset };
+                const midX = (p1.x + p2.x) / 2; const midY = (p1.y + p2.y) / 2;
+                let textAngle = angle; if (textAngle > 90 || textAngle < -90) textAngle += 180;
+                const strokeColor = isSelected ? '#3b82f6' : style.stroke;
+                
+                // Cotes petites
+                const arrowSize = 5; 
+                const fontSize = 6; 
+                const textStr = dist.toFixed(0);
+                const textPadding = 2; 
+                const textWidth = textStr.length * 4 + textPadding * 2; 
+                const textHeight = 9; 
+
+                // Arrow Angle
+                const arrowAngle = Math.PI / 6;
+                // Vector
+                const dx = p2.x - p1.x; const dy = p2.y - p1.y;
+                const len = Math.sqrt(dx*dx + dy*dy);
+                const ux = len > 0 ? dx/len : 0; const uy = len > 0 ? dy/len : 0;
+
+                const a1x = p1.x + arrowSize * Math.cos(Math.atan2(uy, ux) + arrowAngle);
+                const a1y = p1.y + arrowSize * Math.sin(Math.atan2(uy, ux) + arrowAngle);
+                const a2x = p1.x + arrowSize * Math.cos(Math.atan2(uy, ux) - arrowAngle);
+                const a2y = p1.y + arrowSize * Math.sin(Math.atan2(uy, ux) - arrowAngle);
+                
+                const a3x = p2.x + arrowSize * Math.cos(Math.atan2(-uy, -ux) + arrowAngle);
+                const a3y = p2.y + arrowSize * Math.sin(Math.atan2(-uy, -ux) + arrowAngle);
+                const a4x = p2.x + arrowSize * Math.cos(Math.atan2(-uy, -ux) - arrowAngle);
+                const a4y = p2.y + arrowSize * Math.sin(Math.atan2(-uy, -ux) - arrowAngle);
+
+                return React.createElement("g", {}, [
+                    React.createElement("line", { x1: start.x, y1: start.y, x2: p1.x, y2: p1.y, stroke: strokeColor, strokeWidth: 0.5, opacity: 0.5, strokeDasharray: "2,2" }),
+                    React.createElement("line", { x1: end.x, y1: end.y, x2: p2.x, y2: p2.y, stroke: strokeColor, strokeWidth: 0.5, opacity: 0.5, strokeDasharray: "2,2" }),
+                    React.createElement("line", { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, stroke: strokeColor, strokeWidth: 1 }),
+                    // Fletxa inici
+                    React.createElement("polygon", { points: `${p1.x},${p1.y} ${a1x},${a1y} ${a2x},${a2y}`, fill: strokeColor }),
+                    // Fletxa final
+                    React.createElement("polygon", { points: `${p2.x},${p2.y} ${a3x},${a3y} ${a4x},${a4y}`, fill: strokeColor }),
+                    React.createElement("g", { transform: `translate(${midX}, ${midY}) rotate(${textAngle})` }, [
+                        React.createElement("rect", { x: -textWidth/2, y: -textHeight/2, width: textWidth, height: textHeight, fill: "#000000", fillOpacity: "0.8", rx: "2" }),
+                        React.createElement("text", { x: "0", y: "0", dy: "3", textAnchor: "middle", fill: "white", fontSize: fontSize, fontFamily: "monospace", fontWeight: "bold", style: { pointerEvents: 'none' } }, textStr)
+                    ])
+                ]);
+            };
+
+            const renderGrid = () => {
+                if (!showGrid) return null;
+                // Fix: Force 10 units base size for rendering
+                const size = 10 * zoom; 
+                return React.createElement("defs", {}, 
+                    React.createElement("pattern", { id: "grid", width: size, height: size, patternUnits: "userSpaceOnUse", x: pan.x % size, y: pan.y % size }, 
+                        // Modified line for better visibility
+                        React.createElement("path", { d: `M ${size} 0 L 0 0 0 ${size}`, fill: "none", stroke: "rgba(255,255,255,0.25)", strokeWidth: "1" })
+                    )
+                );
+            };
+
+            const renderElement = (el) => {
+                const isSelected = selectedIds.has(el.id);
+                const strokeColor = isSelected ? '#3b82f6' : el.style.stroke; 
+                // Use stored fill or 'none'
+                const fillColor = el.fill || 'none';
+                
+                const commonProps = { stroke: strokeColor, strokeWidth: el.style.strokeWidth, fill: fillColor, vectorEffect: 'non-scaling-stroke' };
+                if (el.type === 'arrow') commonProps.markerEnd = "url(#arrowhead)";
+
+                const isFilledShape = ['rect', 'circle', 'polygon', 'text', 'circular_arc'].includes(el.type);
+
+                const renderShape = (props, isHitbox = false) => {
+                    if (el.type === 'dimension') return renderDimension({x: el.x1, y: el.y1}, {x: el.x2, y: el.y2}, el.offset, el.style, isSelected);
+                    if (el.type === 'polyline') return React.createElement("polyline", { points: el.points.map(p => `${p.x},${p.y}`).join(' '), ...props });
+                    if (el.type === 'line') return React.createElement("line", { x1: el.x1, y1: el.y1, x2: el.x2, y2: el.y2, ...props });
+                    if (el.type === 'arrow') return React.createElement("line", { x1: el.x1, y1: el.y1, x2: el.x2, y2: el.y2, ...props });
+                    if (el.type === 'rect') return React.createElement("rect", { x: el.x, y: el.y, width: el.width, height: el.height, ...props });
+                    if (el.type === 'circle') return React.createElement("circle", { cx: el.cx, cy: el.cy, r: el.r, ...props });
+                    if (el.type === 'polygon') return React.createElement("polygon", { points: getPolygonPoints({x: el.cx, y: el.cy}, el.r, el.sides, el.rotation).map(p => `${p.x},${p.y}`).join(' '), ...props });
+                    if (el.type === 'arc') return React.createElement("path", { d: `M ${el.x1} ${el.y1} Q ${el.cx} ${el.cy} ${el.x2} ${el.y2}`, ...props });
+                    if (el.type === 'circular_arc') {
+                        const d = describeArcPath(el.cx, el.cy, el.r, el.startAngle, el.endAngle);
+                        return React.createElement("path", { d: d, ...props });
+                    }
+                    if (el.type === 'text') {
+                        if (isHitbox) return React.createElement("rect", { x: el.x, y: el.y - (el.fontSize||20), width: el.text.length * (el.fontSize||20) * 0.7, height: (el.fontSize||20) * 1.5, fill: "white", fillOpacity: "0.01" });
+                        return React.createElement("text", { x: el.x, y: el.y, fill: strokeColor, fontSize: el.fontSize || 20, fontFamily: "monospace", style: { userSelect: 'none' } }, el.text);
+                    }
+                    return null;
+                };
+
+                return React.createElement("g", { key: el.id, "data-id": el.id, style: { cursor: tool === 'select' ? 'move' : 'crosshair' } }, [
+                    React.createElement("g", { stroke: "transparent", strokeWidth: Math.max(15, el.style.strokeWidth + 10), fill: isFilledShape ? "white" : "none", fillOpacity: isFilledShape ? "0.01" : "0", className: "hover:stroke-white/20" }, renderShape({}, true)),
+                    renderShape(commonProps)
+                ]);
+            };
+
+            const renderPreview = () => {
+                if (!drawingState) return null;
+                const { start, current, points, phase, end } = drawingState;
+                const style = { stroke: properties.stroke, strokeWidth: properties.strokeWidth, opacity: 0.5, fill: 'none' };
+                let tooltipText = ""; let previewShape = null;
+
+                if (tool === 'line') { tooltipText = `L: ${distance(start, current).toFixed(0)}`; previewShape = React.createElement("line", { x1: start.x, y1: start.y, x2: current.x, y2: current.y, ...style }); }
+                else if (tool === 'arrow') { tooltipText = `L: ${distance(start, current).toFixed(0)}`; previewShape = React.createElement("line", { x1: start.x, y1: start.y, x2: current.x, y2: current.y, ...style, markerEnd: "url(#arrowhead)" }); }
+                else if (tool === 'polyline') {
+                    const prev = points.length > 1 ? React.createElement("polyline", { points: points.map(p => `${p.x},${p.y}`).join(' '), ...style }) : null;
+                    const last = points[points.length - 1]; tooltipText = `L: ${distance(last, current).toFixed(0)}`;
+                    previewShape = React.createElement("g", {}, [prev, React.createElement("line", { x1: last.x, y1: last.y, x2: current.x, y2: current.y, ...style, strokeDasharray: "5,5" })]);
+                }
+                else if (tool === 'rect') { tooltipText = `W: ${Math.abs(current.x - start.x).toFixed(0)} H: ${Math.abs(current.y - start.y).toFixed(0)}`; previewShape = React.createElement("rect", { x: Math.min(start.x, current.x), y: Math.min(start.y, current.y), width: Math.abs(current.x - start.x), height: Math.abs(current.y - start.y), ...style }); }
+                else if (tool === 'circle') { tooltipText = `R: ${distance(start, current).toFixed(0)}`; previewShape = React.createElement("circle", { cx: start.x, cy: start.y, r: distance(start, current), ...style }); }
+                else if (tool === 'polygon') { 
+                    const rotation = Math.atan2(current.y - start.y, current.x - start.x);
+                    tooltipText = `R: ${distance(start, current).toFixed(0)} (${polygonSides} costats)`; 
+                    previewShape = React.createElement("polygon", { points: getPolygonPoints(start, distance(start, current), polygonSides, rotation).map(p => `${p.x},${p.y}`).join(' '), ...style }); 
+                }
+                else if (tool === 'arc') { tooltipText = `Dist: ${distance(start, current).toFixed(0)}`; const c = getMidPointControl(start, current); previewShape = React.createElement("path", { d: `M ${start.x} ${start.y} Q ${c.x} ${c.y} ${current.x} ${current.y}`, ...style }); }
+                else if (tool === 'dimension') {
+                    if (phase === 'initial') { tooltipText = `L: ${distance(start, current).toFixed(0)}`; previewShape = renderDimension(start, current, 0, properties, false); }
+                    else if (phase === 'offset') { const off = calculateOffset(start, end, current); tooltipText = `Offset: ${Math.abs(off).toFixed(0)}`; previewShape = renderDimension(start, end, off, properties, false); }
+                }
+                return React.createElement("g", { pointerEvents: "none" }, [previewShape, tooltipText && React.createElement(MeasurementLabel, { x: current.x, y: current.y, text: tooltipText })]);
+            };
+
+            return React.createElement("div", { className: `flex flex-col h-screen bg-gray-900 text-gray-100 font-sans overflow-hidden select-none relative ${tool === 'pan' ? (draggingState ? 'cursor-grabbing' : 'cursor-grab') : ''}` }, [
+                // TOOLBAR
+                React.createElement("div", { className: "h-14 bg-gray-800 border-b border-gray-700 flex items-center px-4 space-x-2 shadow-md z-10 shrink-0 overflow-x-auto" }, [
+                    React.createElement("div", { className: "font-bold text-xl tracking-wider text-blue-400 mr-4 hidden md:block" }, ["THOS", React.createElement("span", { className: "text-white" }, "CAD")]),
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: Save, title: "Guardar Projecte", onClick: saveProject }),
+                    React.createElement(IconButton, { icon: FolderOpen, title: "Obrir Projecte", onClick: triggerLoad }),
+                    React.createElement("input", { type: "file", ref: fileInputRef, className: "hidden", accept: ".json", onChange: loadProject }),
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: Undo2, title: "Desfer (Ctrl+Z)", onClick: undo, disabled: historyStep <= 0 }),
+                    React.createElement(IconButton, { icon: Redo2, title: "Refer (Ctrl+Y)", onClick: redo, disabled: historyStep >= history.length - 1 }),
+                    React.createElement(IconButton, { icon: ZoomIn, title: "Zoom +", onClick: handleZoomIn }),
+                    React.createElement(IconButton, { icon: ZoomOut, title: "Zoom -", onClick: handleZoomOut }),
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: MousePointer2, title: "Seleccionar (S)", active: tool === 'select', onClick: () => changeTool('select') }),
+                    React.createElement(IconButton, { icon: Hand, title: "Moure Vista (Pan)", active: tool === 'pan', onClick: () => changeTool('pan') }),
+                    React.createElement(IconButton, { icon: Scissors, title: "Retallar (Cut)", active: tool === 'cut', onClick: () => changeTool('cut') }),
+                    React.createElement(IconButton, { icon: PaintBucket, title: "Emplenar (Fill)", active: tool === 'fill', onClick: () => changeTool('fill') }),
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: Magnet, title: gridSnap ? "Graella Magnètica" : "Graella Lliure", active: gridSnap, onClick: () => setGridSnap(!gridSnap) }),
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: LineIcon, title: "Línia", active: tool === 'line', onClick: () => changeTool('line') }),
+                    React.createElement(IconButton, { icon: ArrowToolIcon, title: "Fletxa", active: tool === 'arrow', onClick: () => changeTool('arrow') }),
+                    React.createElement(IconButton, { icon: PolylineIcon, title: "Polilínia", active: tool === 'polyline', onClick: () => changeTool('polyline') }),
+                    React.createElement(IconButton, { icon: Square, title: "Rectangle", active: tool === 'rect', onClick: () => changeTool('rect') }),
+                    React.createElement(IconButton, { icon: Circle, title: "Cercle", active: tool === 'circle', onClick: () => changeTool('circle') }),
+                    React.createElement("div", { className: "flex items-center gap-1" }, [
+                        React.createElement(IconButton, { icon: Hexagon, title: "Polígon", active: tool === 'polygon', onClick: () => changeTool('polygon') }),
+                        tool === 'polygon' && React.createElement("div", { className: "flex items-center bg-gray-700 rounded border border-gray-600 px-2 py-1 h-9 animate-in" }, [
+                            React.createElement("input", { type: "number", min: "3", max: "20", value: polygonSides, onChange: (e) => setPolygonSides(Math.max(3, parseInt(e.target.value) || 3)), className: "w-10 bg-transparent text-white text-center outline-none text-sm font-bold" })
+                        ])
+                    ]),
+                    React.createElement(IconButton, { icon: ArcIcon, title: "Arc", active: tool === 'arc', onClick: () => changeTool('arc') }),
+                    React.createElement(IconButton, { icon: Type, title: "Text", active: tool === 'text', onClick: () => changeTool('text') }),
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: Ruler, title: "Acotar", active: tool === 'dimension', onClick: () => changeTool('dimension') }),
+                    React.createElement(ToolbarDivider),
+                    
+                    // COLOR PICKER
+                    React.createElement("div", { className: "relative ml-2 color-picker-container" }, [
+                        React.createElement("button", {
+                            ref: colorButtonRef,
+                            onClick: toggleColorPicker,
+                            className: "w-10 h-8 rounded border border-gray-600 flex items-center justify-center bg-gray-900 hover:border-gray-400 transition-colors",
+                            title: "Color"
+                        }, [
+                            React.createElement("div", { className: "w-6 h-6 rounded-sm border border-white/20", style: { backgroundColor: properties.stroke } }),
+                            React.createElement(ChevronDown, { size: 14, className: "ml-1 text-gray-400" })
+                        ])
+                    ]),
+
+                    // STROKE WIDTH
+                    React.createElement("div", { className: "flex items-center bg-gray-900 rounded border border-gray-700 ml-2" }, 
+                        React.createElement("select", { value: properties.strokeWidth, onChange: (e) => updateProperties('strokeWidth', parseInt(e.target.value)), className: "bg-transparent text-white p-1 pl-2 outline-none cursor-pointer text-sm appearance-none w-12 text-center", title: "Gruix" },
+                            [1,2,3,4,5,6,7,8,9,10].map(w => React.createElement("option", { key: w, value: w, className: "bg-gray-800 text-white" }, w))
+                        )
+                    ),
+
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: Sparkles, title: "Assistent IA", special: true, onClick: () => setShowAiModal(true) }),
+                    React.createElement(ToolbarDivider),
+                    React.createElement(IconButton, { icon: Trash2, title: "Esborrar", onClick: deleteSelected, disabled: selectedIds.size === 0 }),
+                    React.createElement(IconButton, { icon: Download, title: "Descarregar Imatge (PNG)", onClick: exportPNG })
+                ]),
+
+                // CANVAS
+                React.createElement("div", { 
+                    className: `flex-1 relative overflow-hidden bg-gray-950 ${tool === 'pan' ? (draggingState ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'}`,
+                }, [
+                    React.createElement("svg", {
+                        ref: svgRef, className: "w-full h-full block touch-none",
+                        onMouseDown: handleMouseDown, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp, onWheel: handleWheel
+                    }, [
+                        React.createElement("defs", {}, [
+                            React.createElement("marker", { id: "arrowhead", markerWidth: "10", markerHeight: "7", refX: "9", refY: "3.5", orient: "auto" }, React.createElement("polygon", { points: "0 0, 10 3.5, 0 7", fill: properties.stroke }))
+                        ]),
+                        React.createElement("rect", { x: "0", y: "0", width: "100%", height: "100%", fill: "url(#grid)" }),
+                        renderGrid(),
+                        React.createElement("g", { transform: `translate(${pan.x}, ${pan.y}) scale(${zoom})` }, [elements.map(renderElement), renderPreview(),
+                            // Snap indicator
+                            snapIndicator && React.createElement("rect", { 
+                                x: snapIndicator.x - 5/zoom, 
+                                y: snapIndicator.y - 5/zoom, 
+                                width: 10/zoom, 
+                                height: 10/zoom, 
+                                fill: "none", 
+                                stroke: "#ff0000", 
+                                strokeWidth: 2/zoom 
+                            })
+                        ])
+                    ]),
+                    // TEXT INPUT
+                    textInput && React.createElement("div", {
+                        style: { position: 'fixed', left: textInput.clientX, top: textInput.clientY - 20, zIndex: 100, display: 'flex', alignItems: 'center', gap: '4px', background: '#222', padding: '4px', borderRadius: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }
+                    }, [
+                        React.createElement("input", {
+                            ref: inputRef, autoFocus: true, type: "text", placeholder: "Escriu text...", value: textInput.value,
+                            onChange: (e) => setTextInput(prev => ({ ...prev, value: e.target.value })),
+                            onKeyDown: (e) => { e.stopPropagation(); if (e.key === 'Enter') confirmText(); if (e.key === 'Escape') cancelText(); },
+                            style: { color: '#000', fontSize: '16px', fontFamily: 'monospace', background: '#fff', border: 'none', padding: '4px 8px', borderRadius: '2px', outline: 'none', minWidth: '150px' }
+                        }),
+                        React.createElement("button", { onClick: confirmText, className: "p-1 bg-green-600 hover:bg-green-500 rounded text-white" }, React.createElement(Check, { size: 16 })),
+                        React.createElement("button", { onClick: cancelText, className: "p-1 bg-red-600 hover:bg-red-500 rounded text-white" }, React.createElement(X, { size: 16 }))
+                    ]),
+                    React.createElement("div", { className: "absolute bottom-4 right-4 bg-gray-800/80 p-2 rounded text-xs text-gray-400 pointer-events-none backdrop-blur-sm border border-gray-700" }, `Zoom: ${(zoom * 100).toFixed(0)}% | X: ${pan.x.toFixed(0)} Y: ${pan.y.toFixed(0)}`)
+                ]),
+
+                // MODAL COLOR
+                showColorPicker && React.createElement("div", {
+                    className: "fixed bg-gray-800 border border-gray-600 p-2 rounded shadow-xl grid grid-cols-2 gap-2 z-50 w-24 color-picker-dropdown",
+                    style: { top: colorPickerPos.y, left: colorPickerPos.x }
+                }, BASIC_COLORS.map(c => React.createElement("button", {
+                    key: c,
+                    className: `w-8 h-8 rounded border transition-transform ${properties.stroke === c ? 'border-white scale-110 shadow-lg' : 'border-transparent hover:border-gray-400 hover:scale-105'}`,
+                    style: { backgroundColor: c },
+                    onClick: () => { updateProperties('stroke', c); setShowColorPicker(false); }
+                }))),
+
+                // MODAL AI
+                showAiModal && React.createElement("div", { className: "absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" },
+                    React.createElement("div", { className: "bg-gray-800 border border-gray-700 rounded-lg shadow-2xl w-full max-w-lg p-6 animate-in" }, [
+                        React.createElement("div", { className: "flex justify-between items-center mb-4" }, [
+                            React.createElement("h2", { className: "text-xl font-bold text-white flex items-center gap-2" }, [React.createElement(Sparkles, { className: "text-purple-400" }), "Assistent Màgic"]),
+                            React.createElement("button", { onClick: () => setShowAiModal(false), className: "text-gray-400 hover:text-white" }, React.createElement(X, { size: 24 }))
+                        ]),
+                        React.createElement("p", { className: "text-gray-300 text-sm mb-4" }, "Descriu el que vols dibuixar."),
+                        React.createElement("textarea", { value: aiPrompt, onChange: (e) => setAiPrompt(e.target.value), placeholder: "Escriu la teva comanda...", className: "w-full bg-gray-900 border border-gray-600 rounded p-3 text-white focus:outline-none focus:border-purple-500 h-32 resize-none mb-4", autoFocus: true }),
+                        aiError && React.createElement("div", { className: "bg-red-900/50 text-red-200 p-2 rounded text-sm mb-4 border border-red-700" }, aiError),
+                        React.createElement("div", { className: "flex justify-end gap-3" }, [
+                            React.createElement("button", { onClick: () => setShowAiModal(false), className: "px-4 py-2 rounded text-gray-300 hover:bg-gray-700" }, "Cancel·lar"),
+                            React.createElement("button", { onClick: handleAiSubmit, disabled: isAiLoading || !aiPrompt.trim(), className: "px-4 py-2 rounded bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" }, 
+                                isAiLoading ? [React.createElement(Loader2, { className: "animate-spin", size: 18 }), "Generant..."] : [React.createElement(Sparkles, { size: 18 }), "Generar"]
+                            )
+                        ])
+                    ])
+                )
+            ]);
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(React.createElement(CADApp));
+    </script>
+</body>
+</html>
