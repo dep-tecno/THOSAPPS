@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THOSMETRIC | Vistes 3D</title>
+
+    <!-- ESTILS (Tailwind + Custom) -->
+    <style>
+        :root {
+            --bg-dark: #0f172a;  /* Slate 900 */
+            --bg-panel: #1e293b; /* Slate 800 */
+            --accent: #38bdf8;   /* Cyan 400 */
+            --brand-blue: #3b82f6; /* Blau Corporatiu */
+            --hidden-line: #fbbf24; /* Amber 400 */
+            --text: #f8fafc;     /* Slate 50 */
+            --border: #475569;   /* Slate 600 */
+            --axis-color: #94a3b8; /* Slate 400 */
+            --grid-line: #334155;  /* Color de les línies de la graella */
+        }
+        
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text); 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden; 
+            user-select: none; 
+            font-size: 14px; 
+        }
+        
+        /* Utilitats */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-row { flex-direction: row; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .gap-2 { gap: 0.5rem; }
+        
+        .h-screen { height: 100vh; }
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .inset-0 { top: 0; left: 0; right: 0; bottom: 0; }
+        
+        /* HEADER */
+        header {
+            height: 50px; /* Més gran */
+            background: rgba(15, 23, 42, 0.98);
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px;
+            flex-shrink: 0;
+        }
+        
+        /* Estils del Logo i Títol */
+        .brand-container { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 24px; height: 24px; color: var(--brand-blue); }
+        h1 { font-size: 1.2rem; margin: 0; letter-spacing: 1px; display: flex; align-items: center; }
+        
+        /* Separador vertical */
+        .header-separator { width: 1px; height: 24px; background: var(--border); margin: 0 20px; }
+
+        .level-selector { font-size: 0.9rem; background: var(--bg-panel); border: 1px solid var(--border); color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
+        .level-selector:hover { border-color: var(--accent); }
+
+        /* Botons */
+        .btn {
+            background: var(--bg-panel); border: 1px solid var(--border); color: white;
+            padding: 4px 12px; cursor: pointer; border-radius: 4px; transition: 0.2s;
+            display: flex; align-items: center; gap: 6px; font-size: 0.9rem;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background: var(--accent); color: black; border: none; font-weight: bold; }
+        .btn-primary:hover { opacity: 0.9; }
+
+        /* ZONA DE DIBUIX */
+        .technical-sheet {
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: 1fr 1fr; 
+            gap: 2px;
+            background-color: var(--axis-color);
+            margin: 10px;
+            border: 2px solid var(--axis-color);
+            flex: 1;
+            /* El truc de l'absolut també aquí per estabilitat */
+            position: relative; 
+            min-height: 0; 
+        }
+
+        .view-quadrant {
+            background-color: var(--bg-panel);
+            position: relative;
+            overflow: hidden;
+            width: 100%; height: 100%;
+        }
+
+        .view-label {
+            position: absolute; top: 6px; left: 6px; 
+            font-size: 0.7rem; letter-spacing: 1px; 
+            color: var(--axis-color); pointer-events: none;
+            text-transform: uppercase; font-weight: bold;
+            background: rgba(15, 23, 42, 0.9); padding: 3px 6px; border-radius: 4px;
+            z-index: 10;
+            border: 1px solid var(--border);
+        }
+
+        .toolbar {
+            display: flex; justify-content: center; gap: 8px; 
+            padding: 6px; border-bottom: 1px solid var(--border);
+            background: var(--bg-panel);
+        }
+        
+        /* Estils d'impressió */
+        @media print {
+            body { background: white; color: black; }
+            header, .toolbar, .p-3 { display: none !important; } 
+            .technical-sheet { border: 2px solid black; margin: 0; height: 100vh; width: 100vw; }
+            .view-quadrant { background: white; border: 1px solid #ccc; }
+            .view-label { color: black; background: transparent; border: none; }
+            circle { fill: #ccc !important; }
+            line { stroke: #eee !important; }
+            line[stroke-width="3"] { stroke: black !important; }
+        }
+
+    </style>
+
+    <!-- LLIBRERIES -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // ==========================================
+        // BASE DE DADES D'EXERCICIS
+        // ==========================================
+        const EXERCISES = {
+            1: [ // NIVELL I (Iniciació - Sòlids Simples sense forats amagats)
+                [[[0,0,0],[0,1,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 1. El Cub Únic (Base)
+                [[[0,0,0],[0,1,0],[0,0,0]], [[0,0,0],[0,1,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 2. Barra de 2
+                [[[0,0,0],[1,1,1],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 3. Barra de 3 (Horitzontal)
+                [[[0,0,0],[1,1,0],[1,0,0]], [[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 4. L Plana petita
+                [[[0,0,0],[1,1,0],[1,1,0]], [[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 5. Quadrat 2x2
+                [[[0,0,0],[1,1,1],[1,1,1]], [[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 6. Rectangle 3x2
+                [[[1,1,1],[1,1,1],[1,1,1]], [[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 7. Plataforma 3x3
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,0,0],[1,0,0],[1,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 8. Esglaó llarg
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,0,0],[1,0,0],[1,1,1]], [[1,0,0],[0,0,0],[0,0,0]]], // 9. Escala simple
+                [[[1,1,1],[1,1,1],[1,1,1]], [[0,1,0],[0,1,0],[0,1,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 10. Pòdium (1-2-1)
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,0,1],[1,0,1],[1,0,1]], [[0,0,0],[0,0,0],[0,0,0]]], // 11. Canal (U plana)
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,1,0],[1,1,0],[0,0,0]], [[1,0,0],[0,0,0],[0,0,0]]], // 12. Cantonada 3D
+                [[[1,1,1],[1,1,1],[1,1,1]], [[0,0,0],[0,1,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 13. Piràmide Voxel
+                [[[1,1,1],[1,0,0],[1,0,0]], [[1,0,0],[1,0,0],[1,0,0]], [[1,0,0],[0,0,0],[0,0,0]]], // 14. Torre cantonera
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,1,0],[1,1,0],[1,1,0]], [[1,1,0],[1,1,0],[1,1,0]]], // 15. Bloc Retallat
+            ],
+            2: [ // NIVELL II (Intermedi - Peces amb forats/ocultes + Rampes senzilles)
+                // --- Peces Mogudes del Nivell 1 (Amb línies ocultes) ---
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,0,1],[1,0,1],[1,0,1]], [[1,1,1],[1,1,1],[1,1,1]]], // 1. Túnel
+                [[[1,0,1],[1,1,1],[1,0,1]], [[1,0,1],[1,1,1],[1,0,1]], [[0,0,0],[0,0,0],[0,0,0]]], // 2. H
+                [[[0,1,0],[1,1,1],[0,1,0]], [[0,1,0],[1,1,1],[0,1,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 3. Creu 3D
+                [[[1,1,1],[1,1,1],[1,1,1]], [[0,1,0],[0,1,0],[0,1,0]], [[0,1,0],[0,1,0],[0,1,0]]], // 4. T Invertida
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,0,0],[1,0,0],[1,0,0]], [[1,1,1],[1,1,1],[1,1,1]]], // 5. C Vertical
+                [[[1,1,1],[1,0,1],[1,1,1]], [[1,1,1],[1,0,1],[1,1,1]], [[0,0,0],[0,0,0],[0,0,0]]], // 6. U
+                
+                // --- Introducció a Rampes ---
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,0,0],[1,2,0],[1,1,1]], [[0,0,0],[0,0,0],[0,0,0]]], // 7. Rampa central
+                [[[2,2,2],[2,2,2],[2,2,2]], [[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 8. Falca Gegant (Tot rampa)
+                [[[1,1,1],[1,1,1],[1,1,1]], [[2,2,2],[1,1,1],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 9. Teulada
+                [[[1,1,1],[1,1,1],[1,1,1]], [[5,1,4],[5,1,4],[5,1,4]], [[0,0,0],[0,0,0],[0,0,0]]], // 10. Piràmide truncada
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,1,1],[1,1,1],[0,0,0]], [[2,2,2],[0,0,0],[0,0,0]]], // 11. Esglaó + Rampa
+                [[[1,1,1],[1,1,1],[1,1,1]], [[4,0,0],[4,0,0],[4,0,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 12. Rampa lateral
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,1,1],[1,1,1],[1,1,1]], [[5,0,0],[0,0,0],[0,0,0]]], // 13. Pic
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,0,1],[1,0,1],[1,0,1]], [[4,0,5],[4,0,5],[4,0,5]]], // 14. Teulades paral·leles
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,2,0],[1,2,0],[1,2,0]], [[0,0,0],[0,0,0],[0,0,0]]], // 15. Mur inclinat
+            ],
+            3: [ // NIVELL III (Avançat - Geometries Complexes)
+                [[[1,1,1],[1,1,1],[1,1,1]], [[2,0,3],[1,0,1],[2,0,3]], [[0,0,0],[0,0,0],[0,0,0]]], // Complex 1
+                [[[1,1,1],[1,1,1],[1,1,1]], [[5,5,1],[1,1,1],[1,4,4]], [[0,0,0],[2,2,0],[0,0,0]]], // Complex 2
+                [[[1,0,1],[1,1,1],[1,0,1]], [[1,0,1],[2,2,2],[1,0,1]], [[0,0,0],[0,0,0],[0,0,0]]], // Pont
+                [[[1,1,1],[1,1,1],[1,1,1]], [[4,1,1],[1,1,1],[1,1,5]], [[0,0,0],[2,1,3],[0,0,0]]], // Abstracte
+                [[[1,1,1],[1,1,1],[1,1,1]], [[5,5,5],[5,5,5],[5,5,5]], [[0,0,0],[0,0,0],[0,0,0]]], // Rampa gegant
+                [[[1,1,1],[1,1,1],[1,1,1]], [[5,0,4],[1,0,1],[5,0,4]], [[0,0,0],[1,0,1],[0,0,0]]], // X complexa
+                [[[1,1,1],[1,1,1],[1,1,1]], [[2,2,2],[1,1,1],[3,3,3]], [[0,0,0],[5,1,4],[0,0,0]]], // Totem
+                [[[1,0,1],[1,1,1],[1,0,1]], [[3,0,3],[1,1,1],[2,0,2]], [[0,0,0],[1,1,1],[0,0,0]]], // Arc Triomf
+                [[[1,1,1],[1,1,1],[1,1,1]], [[0,2,0],[5,1,4],[0,3,0]], [[0,0,0],[0,0,0],[0,0,0]]], // Cràter
+                [[[1,1,1],[1,1,1],[1,1,1]], [[2,1,2],[1,1,1],[3,1,3]], [[0,1,0],[0,1,0],[0,1,0]]], // Cadira
+                [[[1,1,1],[1,1,1],[1,1,1]], [[1,1,1],[1,0,1],[1,1,1]], [[5,1,4],[0,0,0],[5,1,4]]], // Torre buida
+                [[[1,1,1],[1,1,1],[1,1,1]], [[0,0,0],[4,4,4],[1,1,1]], [[0,0,0],[0,0,0],[4,4,4]]], // Escala lateral
+                [[[1,1,1],[1,1,1],[1,1,1]], [[3,3,1],[1,1,1],[1,2,2]], [[0,0,0],[4,1,5],[0,0,0]]], // Trencaclosques
+                [[[1,1,1],[1,1,1],[1,1,1]], [[2,2,2],[0,0,0],[3,3,3]], [[0,0,0],[0,1,0],[0,0,0]]], // Pont llevadís
+                [[[1,1,1],[1,1,1],[1,1,1]], [[5,0,0],[5,1,0],[5,1,1]], [[0,0,0],[0,0,0],[5,0,0]]], // Espiral
+            ]
+        };
+
+        // --- COMPONENT: GRAELLA DE DIBUIX AMB MARGES I QUADRÍCULA ---
+        const Grid = ({ id, lines, onLineAdd, onLineRemove, tool }) => {
+            const [hoverPoint, setHoverPoint] = useState(null); 
+            const [startPoint, setStartPoint] = useState(null); 
+            const svgRef = useRef(null);
+            
+            const GRID_SIZE = 4; 
+            const VIEW_SIZE = 300; 
+            const STEP = VIEW_SIZE / (GRID_SIZE - 1); 
+            const SNAP_DIST = 60; 
+
+            // Funció per obtenir coordenades tenint en compte el padding
+            const getLocalCoords = (e) => {
+                if (!svgRef.current) return { x: 0, y: 0 };
+                const rect = svgRef.current.getBoundingClientRect();
+                
+                // Càlcul bàsic relatiu a l'SVG
+                // El viewBox ara no té marges negatius, sinó que es correspon amb l'interior
+                return {
+                    x: (e.clientX - rect.left) * (VIEW_SIZE / rect.width),
+                    y: (e.clientY - rect.top) * (VIEW_SIZE / rect.height)
+                };
+            };
+
+            const handleMouseMove = (e) => {
+                const pos = getLocalCoords(e);
+                let closest = null;
+                let minDist = SNAP_DIST;
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    for (let j = 0; j < GRID_SIZE; j++) {
+                        const px = i * STEP;
+                        const py = j * STEP;
+                        const dist = Math.sqrt((pos.x - px) ** 2 + (pos.y - py) ** 2);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = { x: px, y: py };
+                        }
+                    }
+                }
+                setHoverPoint(closest);
+            };
+
+            const handleClick = () => {
+                if (tool === 'eraser') return;
+                if (!hoverPoint) return;
+
+                if (!startPoint) {
+                    setStartPoint(hoverPoint);
+                } else {
+                    if (startPoint.x !== hoverPoint.x || startPoint.y !== hoverPoint.y) {
+                        onLineAdd(id, {
+                            x1: startPoint.x, y1: startPoint.y,
+                            x2: hoverPoint.x, y2: hoverPoint.y,
+                            type: tool 
+                        });
+                    }
+                    setStartPoint(null);
+                }
+            };
+
+            const handleContextMenu = (e) => {
+                e.preventDefault(); 
+                setStartPoint(null); 
+            };
+
+            const handleLineClick = (index, e) => {
+                e.stopPropagation(); 
+                if (tool === 'eraser') onLineRemove(id, index);
+            };
+
+            // Afegim un contenidor amb padding per generar els marges
+            return (
+                <div className="w-full h-full cursor-crosshair select-none flex items-center justify-center p-8" onContextMenu={handleContextMenu}>
+                    <svg 
+                        ref={svgRef}
+                        viewBox={`-5 -5 ${VIEW_SIZE + 10} ${VIEW_SIZE + 10}`} 
+                        className="w-full h-full"
+                        style={{overflow: 'visible'}} // Permetre que les línies gruixudes surtin una mica
+                        onMouseMove={handleMouseMove}
+                        onMouseLeave={() => { setHoverPoint(null); setStartPoint(null); }}
+                        onClick={handleClick}
+                    >
+                        {/* LÍNIES DE QUADRÍCULA (GRID LINES) */}
+                        <g stroke="var(--grid-line)" strokeWidth="1" opacity="0.3">
+                            {/* Verticals */}
+                            {Array.from({ length: GRID_SIZE }).map((_, i) => (
+                                <line key={`v-${i}`} x1={i * STEP} y1={0} x2={i * STEP} y2={VIEW_SIZE} />
+                            ))}
+                            {/* Horitzontals */}
+                            {Array.from({ length: GRID_SIZE }).map((_, i) => (
+                                <line key={`h-${i}`} x1={0} y1={i * STEP} x2={VIEW_SIZE} y2={i * STEP} />
+                            ))}
+                        </g>
+
+                        {/* PUNTS DE LA GRAELLA */}
+                        {Array.from({ length: GRID_SIZE }).map((_, i) =>
+                            Array.from({ length: GRID_SIZE }).map((_, j) => (
+                                <circle 
+                                    key={`grid-${i}-${j}`} 
+                                    cx={i * STEP} cy={j * STEP} r={3} 
+                                    fill="var(--grid-line)" 
+                                />
+                            ))
+                        )}
+
+                        {/* LÍNIES DIBUIXADES PER L'ALUMNE */}
+                        {lines.map((line, idx) => (
+                            <g key={idx} onClick={(e) => handleLineClick(idx, e)} className="group cursor-pointer">
+                                {/* Zona d'impacte invisible (més ample per clicar fàcil) */}
+                                <line 
+                                    x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} 
+                                    stroke="transparent" strokeWidth="20" 
+                                />
+                                {/* Línia visible */}
+                                <line 
+                                    x1={line.x1} y1={line.y1}
+                                    x2={line.x2} y2={line.y2}
+                                    stroke={line.type === 'visible' ? 'var(--accent)' : 'var(--hidden-line)'}
+                                    strokeWidth="4"
+                                    strokeDasharray={line.type === 'hidden' ? "15,15" : "0"}
+                                    strokeLinecap="round"
+                                    className="group-hover:opacity-60 transition-opacity"
+                                />
+                            </g>
+                        ))}
+
+                        {/* PREVISUALITZACIÓ LÍNIA EN CURS */}
+                        {startPoint && hoverPoint && (
+                            <line 
+                                x1={startPoint.x} y1={startPoint.y}
+                                x2={hoverPoint.x} y2={hoverPoint.y}
+                                stroke={tool === 'visible' ? 'var(--accent)' : 'var(--hidden-line)'}
+                                strokeWidth="3" opacity="0.5"
+                                strokeDasharray={tool === 'hidden' ? "15,15" : "0"}
+                            />
+                        )}
+
+                        {/* CURSOR SNAP (Punt brillant) */}
+                        {hoverPoint && (
+                            <circle 
+                                cx={hoverPoint.x} cy={hoverPoint.y} r={6} 
+                                fill="transparent"
+                                stroke={tool === 'eraser' ? '#ef4444' : 'var(--accent)'} 
+                                strokeWidth="2"
+                                opacity="0.8"
+                            />
+                        )}
+                        
+                        {/* PUNT D'INICI MARCAT */}
+                        {startPoint && (
+                            <circle 
+                                cx={startPoint.x} cy={startPoint.y} r={4} 
+                                fill="var(--accent)" stroke="white" strokeWidth="1"
+                            />
+                        )}
+                    </svg>
+                </div>
+            );
+        };
+
+        // --- COMPONENT: VISOR 3D ---
+        const Scene3D = ({ matrix, interactive = true, fixedView = false }) => {
+            const mountRef = useRef(null);
+            
+            useEffect(() => {
+                const width = mountRef.current.clientWidth;
+                const height = mountRef.current.clientHeight;
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(fixedView ? 0x1e293b : 0x0f172a);
+
+                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+                // MODIFICACIÓ CLAU: Canvi de posició per a fixedView (referència 2D)
+                // -5 en X ens posa a l'esquerra, veient la cara -X (Groga/Perfil) i la +Z (Blava/Frontal)
+                camera.position.set(fixedView ? -5 : 5, fixedView ? 5 : 4, 5);
+                
+                if (!interactive) camera.lookAt(0,0,0);
+                
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(width, height);
+                mountRef.current.appendChild(renderer.domElement);
+
+                let controls;
+                if (interactive) {
+                    controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    controls.enableDamping = true;
+                }
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(5, 10, 7);
+                scene.add(dirLight);
+                const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+                backLight.position.set(-5, 0, -5);
+                scene.add(backLight);
+
+                const matFront = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
+                const matTop = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+                const matSide = new THREE.MeshStandardMaterial({ color: 0xeab308 });
+                const matGrey = new THREE.MeshStandardMaterial({ color: 0x475569 });
+                const matSlope = new THREE.MeshStandardMaterial({ color: 0xf97316 });
+
+                const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
+                
+                // Rampa amb BufferGeometry manual (més robust)
+                const rampGeo = new THREE.BufferGeometry();
+                const rampVertices = new Float32Array([
+                    0,0,0, 0,1,0, 0,0,1, 1,0,0, 1,0,1, 1,1,0,
+                    0,0,0, 0,0,1, 1,0,0, 1,0,0, 0,0,1, 1,0,1,
+                    0,0,0, 1,0,0, 0,1,0, 0,1,0, 1,0,0, 1,1,0,
+                    0,0,1, 0,1,0, 1,0,1, 1,0,1, 0,1,0, 1,1,0
+                ]);
+                rampGeo.setAttribute('position', new THREE.BufferAttribute(rampVertices, 3));
+                rampGeo.computeVertexNormals();
+
+                const group = new THREE.Group();
+
+                matrix.forEach((layer, y) => {
+                    layer.forEach((row, z) => {
+                        row.forEach((val, x) => {
+                            if (val === 0) return;
+                            let mesh;
+                            if (val === 1) {
+                                mesh = new THREE.Mesh(cubeGeo, [matGrey, matSide, matTop, matGrey, matFront, matGrey]);
+                                mesh.position.set(x - 1, y - 1, z - 1);
+                            } else {
+                                mesh = new THREE.Mesh(rampGeo, matSlope);
+                                mesh.geometry.center(); 
+                                mesh.position.set(x - 1, y - 1, z - 1);
+                                if (val === 2) mesh.rotation.y = -Math.PI / 2;
+                                else if (val === 3) mesh.rotation.y = Math.PI / 2;
+                                else if (val === 4) mesh.rotation.y = 0; 
+                                else if (val === 5) mesh.rotation.y = Math.PI;
+                            }
+                            group.add(mesh);
+                        });
+                    });
+                });
+                scene.add(group);
+
+                let animationId;
+                const animate = () => {
+                    animationId = requestAnimationFrame(animate);
+                    if (controls) controls.update();
+                    renderer.render(scene, camera);
+                };
+                animate();
+
+                const handleResize = () => {
+                   if (!mountRef.current) return;
+                   const w = mountRef.current.clientWidth;
+                   const h = mountRef.current.clientHeight;
+                   renderer.setSize(w, h);
+                   camera.aspect = w/h;
+                   camera.updateProjectionMatrix();
+                };
+                window.addEventListener('resize', handleResize);
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    cancelAnimationFrame(animationId);
+                    if (mountRef.current) mountRef.current.innerHTML = '';
+                    renderer.dispose();
+                };
+            }, [matrix, interactive, fixedView]);
+
+            return <div ref={mountRef} className="w-full h-full" />;
+        };
+
+        // --- APP PRINCIPAL ---
+        const App = () => {
+            const [level, setLevel] = useState(1);
+            const [exIndex, setExIndex] = useState(0);
+            const [tool, setTool] = useState('visible');
+            const [lines, setLines] = useState({ alcat: [], perfil: [], planta: [] });
+            // Estat per l'historial de desfer
+            const [history, setHistory] = useState([]);
+
+            useEffect(() => {
+                setLines({ alcat: [], perfil: [], planta: [] });
+                setHistory([]); // Netejar historial en canviar d'exercici
+            }, [level, exIndex]);
+
+            const currentExercise = EXERCISES[level][exIndex] || EXERCISES[1][0];
+            const totalExercises = EXERCISES[level].length;
+
+            const nextExercise = () => {
+                if (exIndex < totalExercises - 1) setExIndex(exIndex + 1);
+            };
+
+            const prevExercise = () => {
+                if (exIndex > 0) setExIndex(exIndex - 1);
+            };
+
+            const handleLevelChange = (e) => {
+                setLevel(parseInt(e.target.value));
+                setExIndex(0);
+            };
+
+            const addLine = (view, line) => {
+                setLines(prev => ({ ...prev, [view]: [...prev[view], line] }));
+                // Afegir acció a l'historial
+                setHistory(prev => [...prev, { view }]);
+            };
+
+            const removeLine = (view, index) => {
+                setLines(prev => ({ ...prev, [view]: prev[view].filter((_, i) => i !== index) }));
+            };
+
+            // Funció DESFÉS
+            const handleUndo = () => {
+                if (history.length === 0) return;
+                const lastAction = history[history.length - 1];
+                const view = lastAction.view;
+                
+                setLines(prev => {
+                    const viewLines = prev[view];
+                    if (viewLines.length === 0) return prev;
+                    // Treiem l'última línia de la vista corresponent
+                    return { ...prev, [view]: viewLines.slice(0, -1) };
+                });
+                // Treiem l'última acció de l'historial
+                setHistory(prev => prev.slice(0, -1));
+            };
+
+            // Funció FOTO (Imprimir/Guardar PDF)
+            const handleExport = () => {
+                window.print();
+            };
+            
+            return (
+                <div className="flex flex-col h-screen">
+                    <header>
+                        <div className="brand-container">
+                            <svg className="logo-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12.876.64l.318.095 8 2.404.19.083c.193.107.359.259.48.441l.056.107.039.1.031.13.007.086v15.828l-.007.086a1.25 1.25 0 0 1-.575.864l-.107.056-8 2.404-.136.033-.164.007-.164-.007-.136-.033-8-2.404a1.25 1.25 0 0 1-.682-.92l-.007-.086V3.986l.007-.086a1.25 1.25 0 0 1 .575-.864l.107-.056 8-2.404.136-.033.164-.007zM12 2.68l-6.723 2.02L12 6.78l6.723-2.08L12 2.68zm-1.25 17.066V8.932l-6.75-2.09v10.738l6.75 2.166zm8-12.828l-6.75 2.09v10.814l6.75-2.166V6.918z"></path>
+                            </svg>
+                            <h1>
+                                <span style={{color: 'var(--brand-blue)'}}>THOS</span>
+                                <span className="text-accent">METRIC</span>
+                            </h1>
+                        </div>
+                        
+                        <div className="header-separator"></div>
+
+                        <div className="flex items-center gap-4 flex-1">
+                            <select className="level-selector" value={level} onChange={handleLevelChange}>
+                                <option value="1">NIVELL I (Bàsic)</option>
+                                <option value="2">NIVELL II (Intermedi)</option>
+                                <option value="3">NIVELL III (Avançat)</option>
+                            </select>
+                        </div>
+                        <div className="exercise-info" style={{fontSize: '0.9rem', opacity: 0.8}}>EXERCICI {exIndex + 1} / {EXERCISES[level].length}</div>
+                    </header>
+
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* PANELL ESQUERRE */}
+                        <div className="w-full relative" style={{flex: '0 0 40%', borderRight: '1px solid var(--border)'}}>
+                            <div className="absolute top-2 left-2 z-10 bg-black/50 px-2 py-1 rounded text-xs text-accent pointer-events-none">MODEL 3D</div>
+                            <Scene3D matrix={currentExercise} interactive={true} />
+                        </div>
+
+                        {/* PANELL DRET */}
+                        <div className="flex-1 flex flex-col bg-slate-800">
+                            
+                            {/* BARRA D'EINES (Horitzontal, com abans) */}
+                            <div className="toolbar">
+                                <button className={`btn ${tool === 'visible' ? 'active' : ''}`} onClick={() => setTool('visible')}>✏️ Visible</button>
+                                <button className={`btn ${tool === 'hidden' ? 'active' : ''}`} onClick={() => setTool('hidden')} style={{color: tool === 'hidden' ? 'black' : '#fbbf24', borderColor: tool==='hidden' ? '#fbbf24' : ''}}>┄ Oculta</button>
+                                <button className={`btn ${tool === 'eraser' ? 'active' : ''}`} onClick={() => setTool('eraser')}>🧼 Goma</button>
+                                {/* NOUS BOTONS */}
+                                <div style={{width: '1px', background: '#475569', height: '20px', margin: '0 8px'}}></div>
+                                <button className="btn" onClick={handleUndo}>↩️ Desfés</button>
+                                <button className="btn" onClick={handleExport}>📷 Foto</button>
+                            </div>
+
+                            <div className="technical-sheet">
+                                <div className="view-quadrant">
+                                    <div className="view-label" style={{borderLeft: '3px solid #3b82f6'}}>ALÇAT</div>
+                                    <Grid id="alcat" lines={lines.alcat} onLineAdd={addLine} onLineRemove={removeLine} tool={tool} />
+                                </div>
+                                <div className="view-quadrant">
+                                    <div className="view-label" style={{borderLeft: '3px solid #eab308'}}>PERFIL</div>
+                                    <Grid id="perfil" lines={lines.perfil} onLineAdd={addLine} onLineRemove={removeLine} tool={tool} />
+                                </div>
+                                <div className="view-quadrant">
+                                    <div className="view-label" style={{borderLeft: '3px solid #ef4444'}}>PLANTA</div>
+                                    <Grid id="planta" lines={lines.planta} onLineAdd={addLine} onLineRemove={removeLine} tool={tool} />
+                                </div>
+                                <div className="view-quadrant relative">
+                                     <div className="view-label text-white opacity-50">REFERÈNCIA</div>
+                                     <Scene3D matrix={currentExercise} interactive={false} fixedView={true} />
+                                </div>
+                            </div>
+
+                            <div className="p-2 border-t bg-slate-900 flex justify-between items-center">
+                                <button className="btn" onClick={prevExercise} disabled={exIndex === 0}>← Anterior</button>
+                                <button className="btn" onClick={nextExercise} disabled={exIndex === EXERCISES[level].length - 1}>Següent →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
