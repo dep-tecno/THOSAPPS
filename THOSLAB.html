@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THOSLAB - Laboratori de Circuits</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #1a1a1a; 
+            color: white; 
+            font-family: system-ui, -apple-system, sans-serif; 
+        }
+        canvas { 
+            touch-action: none; 
+            display: block;
+        }
+        .logic-menu-btn { 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s;
+            font-size: 0.75rem;
+            color: #d1d5db;
+        }
+        .logic-menu-btn:hover {
+            background-color: #404040;
+            color: white;
+        }
+        .instr-menu-btn { 
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s;
+            font-size: 0.75rem;
+            color: #d1d5db;
+            text-align: left;
+        }
+        .instr-menu-btn:hover {
+            background-color: #404040;
+            color: white;
+        }
+        .prop-input {
+            width: 100%;
+            background-color: #171717;
+            border: 1px solid #404040;
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            color: white;
+            outline: none;
+            font-family: monospace;
+        }
+        .prop-input:focus {
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div id="root" class="h-screen w-screen flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // ==========================================================================================
+        // HELPERS MATEMÀTICS
+        // ==========================================================================================
+
+        const parseValue = (str) => {
+            if (!str) return 0;
+            const clean = str.toString().toUpperCase().replace(/[^0-9.KMG]/g, '');
+            let val = parseFloat(clean);
+            if (isNaN(val)) return 0;
+            if (clean.includes('K')) val *= 1000;
+            if (clean.includes('M')) val *= 1000000;
+            if (clean.includes('G')) val *= 1000000000;
+            return val;
+        };
+
+        const formatValue = (num, unit) => {
+            const abs = Math.abs(num);
+            if (abs < 1e-9) return `0.00 ${unit}`;
+            if (abs < 0.001) return `${(num * 1000000).toFixed(2)} µ${unit}`;
+            if (abs < 0.1) return `${(num * 1000).toFixed(2)} m${unit}`;
+            if (abs >= 1000000) return `${(num / 1000000).toFixed(2)} M${unit}`;
+            if (abs >= 1000) return `${(num / 1000).toFixed(2)} k${unit}`;
+            return `${num.toFixed(2)} ${unit}`;
+        };
+
+        const solveLinearSystem = (A, b) => {
+            const n = A.length;
+            const M = A.map(row => [...row]);
+            const x = [...b];
+
+            for (let i = 0; i < n; i++) {
+                let maxEl = Math.abs(M[i][i]);
+                let maxRow = i;
+                for (let k = i + 1; k < n; k++) {
+                    if (Math.abs(M[k][i]) > maxEl) { maxEl = Math.abs(M[k][i]); maxRow = k; }
+                }
+                for (let k = i; k < n; k++) { const tmp = M[maxRow][k]; M[maxRow][k] = M[i][k]; M[i][k] = tmp; }
+                const tmpVal = x[maxRow]; x[maxRow] = x[i]; x[i] = tmpVal;
+
+                for (let k = i + 1; k < n; k++) {
+                    const c = -M[k][i] / M[i][i];
+                    if (!isFinite(c)) continue;
+                    for (let j = i; j < n; j++) {
+                        if (i === j) M[k][j] = 0;
+                        else M[k][j] += c * M[i][j];
+                    }
+                    x[k] += c * x[i];
+                }
+            }
+
+            const result = new Array(n).fill(0);
+            for (let i = n - 1; i >= 0; i--) {
+                let sum = 0;
+                for (let j = i + 1; j < n; j++) { sum += M[i][j] * result[j]; }
+                result[i] = (x[i] - sum) / M[i][i];
+                if (!isFinite(result[i])) result[i] = 0;
+            }
+            return result;
+        };
+
+        // ==========================================================================================
+        // COMPONENTS GRÀFICS I ICONES
+        // ==========================================================================================
+        
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Activity = (p) => <IconBase {...p}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></IconBase>;
+        const Battery = (p) => <IconBase {...p}><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></IconBase>;
+        const Zap = (p) => <IconBase {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>;
+        const Lightbulb = (p) => <IconBase {...p}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5a6 6 0 0 0-11 0c0 1.5.5 2.5 1.5 3.5 2.5 2 2.5 2 2.5 5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1c0-3 .5-4 1.5-5"/><path d="M9 18h6"/></IconBase>;
+        const LedIcon = (p) => <IconBase {...p}><path d="M12 9v13"/><path d="M9.5 9h5"/><path d="M7 20h10"/><path d="M8.5 6.5 6 9"/><path d="M13.5 6.5 11 9"/><circle cx="12" cy="12" r="9"/></IconBase>;
+        const Settings = (p) => <IconBase {...p}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+        const ToggleLeft = (p) => <IconBase {...p}><rect width="20" height="12" x="2" y="6" rx="6" ry="6"/><circle cx="8" cy="12" r="2"/></IconBase>;
+        const RotateCw = (p) => <IconBase {...p}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></IconBase>;
+        const Trash2 = (p) => <IconBase {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>;
+        const XIcon = (p) => <IconBase {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
+        const CheckSquare = (p) => <IconBase {...p}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></IconBase>;
+        const Square = (p) => <IconBase {...p}><rect width="18" height="18" x="3" y="3" rx="2"/></IconBase>;
+        const Cpu = (p) => <IconBase {...p}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></IconBase>;
+        const Power = (p) => <IconBase {...p}><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" x2="12" y1="2" y2="12"/></IconBase>;
+        const Gauge = (p) => <IconBase {...p}><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></IconBase>;
+        const SaveIcon = (p) => <IconBase {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconBase>;
+        const FolderOpenIcon = (p) => <IconBase {...p}><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-3.25 7a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></IconBase>;
+        const ImageIcon = (p) => <IconBase {...p}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></IconBase>;
+        const UndoIcon = (p) => <IconBase {...p}><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></IconBase>;
+        const TypeIcon = (p) => <IconBase {...p}><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></IconBase>;
+        const TextIcon = (p) => <IconBase {...p}><polyline points="4 7 4 4 20 4 20 7"/><line x1="12" x2="12" y1="4" y2="20"/></IconBase>;
+        const GlobeIcon = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></IconBase>;
+        const MousePointer2 = (p) => <IconBase {...p}><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></IconBase>;
+        const HandIcon = (p) => <IconBase {...p}><path d="M8 2c0 0-1 3-1 5v6"/><path d="M11 4v6"/><path d="M14 6v6"/><path d="M5 14v6a3 3 0 0 0 3 3h6"/></IconBase>;
+
+        // ==========================================================================================
+        // CONSTANTS I CONFIGURACIÓ
+        // ==========================================================================================
+        
+        const COMPONENT_PORTS = {
+            BATTERY: [{ x: -20, y: 0 }, { x: 20, y: 0 }], 
+            RESISTOR: [{ x: -40, y: 0 }, { x: 40, y: 0 }],
+            LIGHT: [{ x: -40, y: 0 }, { x: 40, y: 0 }],
+            LED: [{ x: -20, y: 0 }, { x: 20, y: 0 }],
+            MOTOR: [{ x: 0, y: -40 }, { x: 0, y: 40 }],
+            JUNCTION: [{ x: 0, y: 0 }],
+            SWITCH: [{ x: -40, y: 0 }, { x: 40, y: 0 }],
+            AND: [{ x: -40, y: -20 }, { x: -40, y: 20 }, { x: 40, y: 0 }],
+            OR: [{ x: -40, y: -20 }, { x: -40, y: 20 }, { x: 40, y: 0 }],
+            NOT: [{ x: -40, y: 0 }, { x: 40, y: 0 }],
+            NAND: [{ x: -40, y: -20 }, { x: -40, y: 20 }, { x: 40, y: 0 }],
+            NOR: [{ x: -40, y: -20 }, { x: -40, y: 20 }, { x: 40, y: 0 }],
+            XOR: [{ x: -40, y: -20 }, { x: -40, y: 20 }, { x: 40, y: 0 }],
+            LOGIC_SOURCE: [{ x: 40, y: 0 }], 
+            LOGIC_PROBE: [{ x: -40, y: 0 }],
+            VOLTMETER: [{ x: 20, y: 40 }, { x: -20, y: 40 }], 
+            AMMETER: [{ x: -40, y: 0 }, { x: 40, y: 0 }], 
+            SCOPE: [{ x: -40, y: 0 }],
+            TEXT: [] 
+        };
+        
+        const GRID_SIZE = 20; 
+        
+        const COLORS = {
+            BG: '#1a1a1a', GRID: '#333333', STROKE: '#ffffff', SELECTION: '#00ffcc',
+            PORT: '#ff0055', PORT_HOVER: '#ffff00', 
+            WIRE: '#006600', WIRE_ACTIVE: '#00ff00', WIRE_HOVER: '#00aaff', WIRE_SEL: '#00ffff', WIRE_TEMP: '#ffffff',
+            JUNCTION: '#ffffff',
+            GATE_FILL: '#262626', GATE_STROKE: '#e5e7eb'
+        };
+
+        // ==========================================================================================
+        // APLICACIÓ PRINCIPAL
+        // ==========================================================================================
+
+        function App() {
+            const canvasRef = useRef(null);
+            const containerRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            // Estat inicial buit
+            const [components, setComponents] = useState([]);
+            const [wires, setWires] = useState([]);
+            const [history, setHistory] = useState([]);
+            
+            const [logicSymbolStandard, setLogicSymbolStandard] = useState('ANSI'); 
+            const [dashOffset, setDashOffset] = useState(0);
+
+            const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+            const [isPanning, setIsPanning] = useState(false);
+            const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+            
+            const stateRef = useRef({ components, wires, selection: null });
+            
+            const [selection, setSelection] = useState(null);
+            const [showCompPanel, setShowCompPanel] = useState(null);
+            const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+            const [isDraggingComp, setIsDraggingComp] = useState(false);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+            const [drawingState, setDrawingState] = useState(null);
+            const [mousePos, setMousePos] = useState({ x: 0, y: 0 }); 
+            const [hoveredWireSeg, setHoveredWireSeg] = useState(null);
+            const [draggingWireSeg, setDraggingWireSeg] = useState(null); 
+            const [hoveredPort, setHoveredPort] = useState(null);
+            const [showLogicMenu, setShowLogicMenu] = useState(false);
+            const [showInstrMenu, setShowInstrMenu] = useState(false);
+            const [panMode, setPanMode] = useState(false);
+            const [editingValues, setEditingValues] = useState({});
+                const [truthTable, setTruthTable] = useState(null);
+                const [selectedInputIdsForTable, setSelectedInputIdsForTable] = useState([]);
+
+            useEffect(() => { stateRef.current = { components, wires, selection }; }, [components, wires, selection]);
+
+            const saveToHistory = () => {
+                setHistory(prev => [...prev.slice(-10), { components: JSON.parse(JSON.stringify(components)), wires: JSON.parse(JSON.stringify(wires)) }]);
+            };
+
+            const undo = () => {
+                if (history.length === 0) return;
+                const lastState = history[history.length - 1];
+                setComponents(lastState.components);
+                setWires(lastState.wires);
+                setHistory(prev => prev.slice(0, -1));
+            };
+
+            const saveProject = () => {
+                const data = JSON.stringify({ components, wires }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'circuit_thoslab.json';
+                a.click();
+            };
+
+            const loadProject = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = JSON.parse(evt.target.result);
+                        if (data.components && data.wires) {
+                            saveToHistory();
+                            setComponents(data.components);
+                            setWires(data.wires);
+                        }
+                    } catch (err) {
+                        alert("Error carregant l'arxiu");
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const exportImage = () => {
+                if (canvasRef.current) {
+                    const link = document.createElement('a');
+                    link.download = 'circuit_thoslab.png';
+                    link.href = canvasRef.current.toDataURL('image/png');
+                    link.click();
+                }
+            };
+
+            const activateSelectMode = () => {
+                setDrawingState(null);
+                setDraggingWireSeg(null);
+                setSelection(null);
+            };
+
+            const toggleLogicStandard = () => {
+                setLogicSymbolStandard(prev => prev === 'ANSI' ? 'IEC' : 'ANSI');
+            };
+
+            // Bucle lògic (Calcula física) - 20Hz
+            useEffect(() => {
+                const simulationLoop = setInterval(runPhysicalSimulation, 50); 
+                return () => clearInterval(simulationLoop);
+            }, []);
+
+            // Bucle visual (Anima elements) - 60Hz
+            useEffect(() => {
+                let animId;
+                const animate = () => {
+                    setDashOffset(prev => (prev + 0.5) % 20); 
+
+                    setComponents(prev => {
+                        let changed = false;
+                        const newComps = prev.map(c => {
+                            if (c.type === 'MOTOR' && Math.abs(c.state?.voltage || 0) > 0.1) {
+                                changed = true;
+                                const speed = (c.state.voltage || 0) * 2; 
+                                const currentAngle = c.state.rotationAngle || 0;
+                                return { ...c, state: { ...c.state, rotationAngle: (currentAngle + speed) % 360 } };
+                            }
+                            return c;
+                        });
+                        return changed ? newComps : prev;
+                    });
+                    animId = requestAnimationFrame(animate);
+                };
+                animId = requestAnimationFrame(animate);
+                return () => cancelAnimationFrame(animId);
+            }, []);
+
+            const screenToWorld = (sx, sy) => ({ x: (sx - view.x) / view.scale, y: (sy - view.y) / view.scale });
+
+            const runPhysicalSimulation = () => {
+                const { components: comps, wires } = stateRef.current;
+                
+                const parent = {};
+                const find = (i) => {
+                    if (parent[i] === undefined) parent[i] = i;
+                    if (parent[i] !== i) parent[i] = find(parent[i]);
+                    return parent[i];
+                };
+                const union = (i, j) => {
+                    const rootI = find(i);
+                    const rootJ = find(j);
+                    if (rootI !== rootJ) parent[rootI] = rootJ;
+                };
+
+                // Unir ports interns de components conductors ideals
+                comps.forEach(c => {
+                    if (c.type === 'JUNCTION') union(`${c.id}:0`, `${c.id}:0`);
+                    if (c.type === 'SWITCH' && c.state?.isOn) union(`${c.id}:0`, `${c.id}:1`);
+                });
+
+                const getRoot = (compId, portIdx) => find(`${compId}:${portIdx}`);
+
+                // MNA SETUP
+                const nodeMap = {};
+                let nodeCount = 0;
+                const uniqueRoots = new Set();
+                
+                comps.forEach(c => {
+                    const ports = COMPONENT_PORTS[c.type];
+                    if(ports) ports.forEach((_, idx) => uniqueRoots.add(getRoot(c.id, idx)));
+                });
+                
+                let groundRoot = null;
+                const firstBat = comps.find(c => c.type === 'BATTERY');
+                if (firstBat) {
+                    groundRoot = getRoot(firstBat.id, 0); 
+                    nodeMap[groundRoot] = -1;
+                }
+                
+                uniqueRoots.forEach(root => { if (root !== groundRoot) nodeMap[root] = nodeCount++; });
+                
+                const voltageSources = [];
+                comps.forEach(c => {
+                     if (c.type === 'BATTERY') voltageSources.push({ type: 'BAT', id: c.id, val: parseValue(c.value), p: 1, n: 0 }); 
+                     else if (c.type === 'AMMETER') voltageSources.push({ type: 'AMM', id: c.id, val: 0, p: 1, n: 0 }); 
+                     else if (c.type === 'LOGIC_SOURCE') voltageSources.push({ type: 'LOG', id: c.id, val: c.state?.isOn ? 5 : 0, p: 0, n: null });
+                     else if (['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR'].includes(c.type)) {
+                         const outP = c.type === 'NOT' ? 1 : 2;
+                         const outVal = c.state?.logicOut ? 5 : 0;
+                         voltageSources.push({ type: 'GATE', id: c.id, val: outVal, p: outP, n: null });
+                     }
+                });
+
+                const totalVars = nodeCount + voltageSources.length;
+                const G = Array(totalVars).fill(0).map(() => Array(totalVars).fill(0));
+                const I = Array(totalVars).fill(0);
+
+                const addConductance = (uRoot, vRoot, g) => {
+                    const u = nodeMap[uRoot];
+                    const v = nodeMap[vRoot];
+                    if (u !== undefined && u !== -1) { G[u][u] += g; }
+                    if (v !== undefined && v !== -1) { G[v][v] += g; }
+                    if (u !== undefined && u !== -1 && v !== undefined && v !== -1) { G[u][v] -= g; G[v][u] -= g; }
+                };
+
+                // Components
+                comps.forEach(c => {
+                    let r = 0;
+                    if (c.type === 'RESISTOR') r = parseValue(c.value);
+                    else if (c.type === 'LIGHT') r = 20; 
+                    else if (c.type === 'LED') r = 100;
+                    else if (c.type === 'MOTOR') r = 50; 
+                    if (r > 0) {
+                        const g = 1 / r;
+                        addConductance(getRoot(c.id, 0), getRoot(c.id, 1), g);
+                    }
+                    const ports = COMPONENT_PORTS[c.type];
+                    if (ports) {
+                        ports.forEach((_, idx) => {
+                             const u = nodeMap[getRoot(c.id, idx)];
+                             if (u !== undefined && u !== -1) G[u][u] += 1e-9; 
+                        });
+                        if (['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR', 'LOGIC_PROBE'].includes(c.type)) {
+                             const inputIndices = c.type === 'LOGIC_PROBE' ? [0] : (c.type === 'NOT' ? [0] : [0, 1]);
+                             inputIndices.forEach(idx => {
+                                 const root = getRoot(c.id, idx);
+                                 const u = nodeMap[root];
+                                 if (u !== undefined && u !== -1) { G[u][u] += 1/10000; }
+                             });
+                        }
+                    }
+                });
+
+                // Cables (Visual Pass)
+                if (true) {
+                    wires.forEach(w => {
+                        const rWire = 0.1; 
+                        const g = 1 / rWire;
+                        const uRoot = getRoot(w.fromComp, w.fromPort);
+                        const vRoot = getRoot(w.toComp, w.toPort);
+                        if (uRoot !== vRoot) {
+                            addConductance(uRoot, vRoot, g);
+                        }
+                    });
+                }
+
+                voltageSources.forEach((src, idx) => {
+                    const row = nodeCount + idx;
+                    const u = src.p !== null ? nodeMap[getRoot(src.id, src.p)] : undefined;
+                    const v = src.n !== null ? nodeMap[getRoot(src.id, src.n)] : -1;
+                    if (u !== undefined && u !== -1) { G[row][u] = 1; G[u][row] = 1; }
+                    if (v !== undefined && v !== -1) { G[row][v] = -1; G[v][row] = -1; }
+                    I[row] = src.val;
+                });
+
+                const solution = solveLinearSystem(G, I);
+                const getNodeVoltage = (compId, portIdx) => {
+                    const root = getRoot(compId, portIdx);
+                    const idx = nodeMap[root];
+                    if (idx === -1) return 0; 
+                    if (idx === undefined) return 0; 
+                    return solution[idx];
+                };
+                const getSourceCurrent = (compId) => {
+                    const srcIdx = voltageSources.findIndex(s => s.id === compId);
+                    if (srcIdx !== -1) return solution[nodeCount + srcIdx];
+                    return 0;
+                };
+                
+                // Helper to perform the IDEAL pass separately
+                const solveIdeal = () => {
+                    // Reset matrices
+                    const G2 = Array(totalVars).fill(0).map(() => Array(totalVars).fill(0));
+                    const I2 = Array(totalVars).fill(0);
+                    
+                    const addCond2 = (uRoot, vRoot, g) => {
+                        const u = nodeMap[uRoot];
+                        const v = nodeMap[vRoot];
+                        if (u !== undefined && u !== -1) { G2[u][u] += g; }
+                        if (v !== undefined && v !== -1) { G2[v][v] += g; }
+                        if (u !== undefined && u !== -1 && v !== undefined && v !== -1) { G2[u][v] -= g; G2[v][u] -= g; }
+                    };
+
+                    // Re-add components
+                    comps.forEach(c => {
+                        let r = 0;
+                        if (c.type === 'RESISTOR') r = parseValue(c.value);
+                        else if (c.type === 'LIGHT') r = 20; 
+                        else if (c.type === 'LED') r = 100;
+                        else if (c.type === 'MOTOR') r = 50; 
+                        if (r > 0) {
+                            const g = 1 / r;
+                            addCond2(getRoot(c.id, 0), getRoot(c.id, 1), g);
+                        }
+                        const ports = COMPONENT_PORTS[c.type];
+                        if (ports) {
+                            ports.forEach((_, idx) => {
+                                 const u = nodeMap[getRoot(c.id, idx)];
+                                 if (u !== undefined && u !== -1) G2[u][u] += 1e-9; 
+                            });
+                             if (['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR', 'LOGIC_PROBE'].includes(c.type)) {
+                                 const inputIndices = c.type === 'LOGIC_PROBE' ? [0] : (c.type === 'NOT' ? [0] : [0, 1]);
+                                 inputIndices.forEach(idx => {
+                                     const root = getRoot(c.id, idx);
+                                     const u = nodeMap[root];
+                                     if (u !== undefined && u !== -1) { G2[u][u] += 1/10000; }
+                                 });
+                            }
+                        }
+                    });
+
+                    // IDEAL WIRES (Very low R)
+                    wires.forEach(w => {
+                        const rWire = 0.000001; 
+                        const g = 1 / rWire;
+                        const uRoot = getRoot(w.fromComp, w.fromPort);
+                        const vRoot = getRoot(w.toComp, w.toPort);
+                        if (uRoot !== vRoot) {
+                            addCond2(uRoot, vRoot, g);
+                        }
+                    });
+
+                    // Sources
+                    voltageSources.forEach((src, idx) => {
+                        const row = nodeCount + idx;
+                        const u = src.p !== null ? nodeMap[getRoot(src.id, src.p)] : undefined;
+                        const v = src.n !== null ? nodeMap[getRoot(src.id, src.n)] : -1;
+                        if (u !== undefined && u !== -1) { G2[row][u] = 1; G2[u][row] = 1; }
+                        if (v !== undefined && v !== -1) { G2[row][v] = -1; G2[v][row] = -1; }
+                        I2[row] = src.val;
+                    });
+                    
+                    const sol2 = solveLinearSystem(G2, I2);
+                    const getNodeV2 = (cId, pIdx) => {
+                        const r = getRoot(cId, pIdx);
+                        const idx = nodeMap[r];
+                        if (idx === -1) return 0; if (idx === undefined) return 0; return sol2[idx];
+                    };
+                    const getSourceI2 = (cId) => {
+                        const sIdx = voltageSources.findIndex(s => s.id === cId);
+                        if (sIdx !== -1) return sol2[nodeCount + sIdx];
+                        return 0;
+                    };
+                    return { getNodeVoltage: getNodeV2, getSourceCurrent: getSourceI2 };
+                };
+
+                const ideal = solveIdeal();
+                const visual = { getNodeVoltage, getSourceCurrent }; // The main pass was visual (R=0.1)
+
+                // Topology for visual loop activation
+                const adj = new Map(); 
+                const registerConn = (root, compId) => {
+                    if (!adj.has(root)) adj.set(root, new Set());
+                    adj.get(root).add(compId);
+                };
+                const parentV = {}; const findV = (i) => { if(parentV[i]===undefined)parentV[i]=i; if(parentV[i]!==i)parentV[i]=findV(parentV[i]); return parentV[i]; };
+                const unionV = (i, j) => { const rI = findV(i); const rJ = findV(j); if(rI!==rJ)parentV[rI]=rJ; };
+                comps.forEach(c => { if(c.type==='JUNCTION') unionV(`${c.id}:0`, `${c.id}:0`); if(c.type==='SWITCH'&&c.state?.isOn) unionV(`${c.id}:0`,`${c.id}:1`); });
+                const getRootV = (c, p) => findV(`${c}:${p}`);
+
+                comps.forEach(c => {
+                    if (['BATTERY', 'RESISTOR', 'LIGHT', 'LED', 'MOTOR', 'AMMETER'].includes(c.type) || (c.type === 'SWITCH' && c.state?.isOn)) {
+                        const r0 = getRootV(c.id, 0); const r1 = getRootV(c.id, 1);
+                        if (r0 !== r1) { registerConn(r0, c.id); registerConn(r1, c.id); }
+                    }
+                    if (['LOGIC_SOURCE', 'LOGIC_PROBE', 'AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR'].includes(c.type)) {
+                        const ports = COMPONENT_PORTS[c.type];
+                        ports.forEach((_, idx) => registerConn(getRootV(c.id, idx), c.id));
+                    }
+                });
+                wires.forEach(w => {
+                     const rS = getRootV(w.fromComp, w.fromPort); const rE = getRootV(w.toComp, w.toPort);
+                     const wId = "WIRE_" + w.id; registerConn(rS, wId); registerConn(rE, wId);
+                });
+                let activeNodes = new Set(adj.keys());
+                const anchorNodes = new Set();
+                comps.forEach(c => {
+                    if (['LOGIC_SOURCE', 'BATTERY'].includes(c.type)) { const ports = COMPONENT_PORTS[c.type]; ports.forEach((_, idx) => anchorNodes.add(getRootV(c.id, idx))); }
+                    if (['LOGIC_PROBE', 'AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR'].includes(c.type)) { if(c.type==='NOT'||c.type==='LOGIC_PROBE') anchorNodes.add(getRootV(c.id, 0)); else { anchorNodes.add(getRootV(c.id, 0)); anchorNodes.add(getRootV(c.id, 1)); } }
+                });
+                let pruning = true;
+                while (pruning) {
+                    pruning = false; const toRemove = [];
+                    activeNodes.forEach(node => {
+                        if (anchorNodes.has(node)) return; 
+                        const connectedItems = adj.get(node);
+                        let validConnections = 0;
+                        if (connectedItems) {
+                            connectedItems.forEach(itemId => {
+                                let otherNode = null;
+                                if (itemId.startsWith("WIRE_")) {
+                                    const w = wires.find(x => "WIRE_" + x.id === itemId);
+                                    if(w) { otherNode = (getRootV(w.fromComp, w.fromPort) === node) ? getRootV(w.toComp, w.toPort) : getRootV(w.fromComp, w.fromPort); }
+                                } else {
+                                    const c = comps.find(k => k.id === itemId);
+                                    if(c) {
+                                        if(['RESISTOR', 'LIGHT', 'LED', 'MOTOR', 'AMMETER'].includes(c.type) || (c.type === 'SWITCH' && c.state?.isOn)) {
+                                            otherNode = (getRootV(c.id, 0) === node) ? getRootV(c.id, 1) : getRootV(c.id, 0);
+                                        }
+                                    }
+                                }
+                                if (otherNode && activeNodes.has(otherNode)) validConnections++;
+                            });
+                        }
+                        if (validConnections <= 1) toRemove.push(node);
+                    });
+                    if (toRemove.length > 0) { toRemove.forEach(n => activeNodes.delete(n)); pruning = true; }
+                }
+
+                setWires(prevWires => {
+                    let wChanged = false;
+                    const updatedWires = prevWires.map(w => {
+                        const vStart = visual.getNodeVoltage(w.fromComp, w.fromPort);
+                        const vEnd = visual.getNodeVoltage(w.toComp, w.toPort);
+                        const rootStart = getRootV(w.fromComp, w.fromPort);
+                        const rootEnd = getRootV(w.toComp, w.toPort);
+                        const inTopology = activeNodes.has(rootStart) && activeNodes.has(rootEnd);
+                        const current = (vStart - vEnd) / 0.1; 
+                        const hasCurrent = Math.abs(current) > 0.000001; 
+                        const hasVoltage = vStart > 2.0 || vEnd > 2.0;
+                        const isPowered = (inTopology && hasCurrent) || hasVoltage;
+                        const isReverse = vEnd > vStart; // CONVENTIONAL is + to -
+                        
+                        let speedFactor = 1;
+                        if (hasCurrent) { speedFactor = Math.max(0.5, Math.min(4, Math.log10(Math.abs(current) / 1e-6) * 0.5)); }
+                        if (w.isPowered !== isPowered || w.isReverse !== isReverse || w.speedFactor !== speedFactor) { wChanged = true; return { ...w, isPowered, isReverse, speedFactor }; }
+                        return w;
+                    });
+                    return wChanged ? updatedWires : prevWires;
+                });
+
+                setComponents(currentComponents => {
+                    let changed = false;
+                    const newComps = currentComponents.map(c => {
+                        let newState = { ...c.state };
+                        let newVal = c.value;
+                        let hasUpdate = false;
+
+                        const v0_ideal = ideal.getNodeVoltage(c.id, 0);
+                        const v1_ideal = (c.type !== 'LOGIC_SOURCE' && c.type !== 'LOGIC_PROBE' && c.type !== 'SCOPE') ? ideal.getNodeVoltage(c.id, 1) : 0;
+                        const v0_vis = visual.getNodeVoltage(c.id, 0);
+                        const v1_vis = (c.type !== 'LOGIC_SOURCE' && c.type !== 'LOGIC_PROBE' && c.type !== 'SCOPE') ? visual.getNodeVoltage(c.id, 1) : 0;
+                        const vDrop_vis = v0_vis - v1_vis;
+
+                        if (['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR'].includes(c.type)) {
+                            const inA = v0_ideal > 2.5; 
+                            const inB = c.type !== 'NOT' && v1_ideal > 2.5;
+                            let out = false;
+                            if (c.type === 'AND') out = inA && inB;
+                            else if (c.type === 'OR') out = inA || inB;
+                            else if (c.type === 'NOT') out = !inA;
+                            else if (c.type === 'NAND') out = !(inA && inB);
+                            else if (c.type === 'NOR') out = !(inA || inB);
+                            else if (c.type === 'XOR') out = (inA && !inB) || (!inA && inB);
+                            if (newState.logicOut !== out) { newState.logicOut = out; hasUpdate = true; }
+                        }
+
+                        if (['LIGHT', 'LED', 'MOTOR'].includes(c.type)) {
+                            const root0 = getRootV(c.id, 0); const root1 = getRootV(c.id, 1);
+                            const inLoop = activeNodes.has(root0) && activeNodes.has(root1);
+                            const hasVol = Math.abs(vDrop_vis) > 0.5; 
+                            const isActive = inLoop && hasVol;
+                            if (newState.isActive !== isActive) { newState.isActive = isActive; hasUpdate = true; }
+                            if (c.type === 'MOTOR') { newState.voltage = vDrop_vis; hasUpdate = true; }
+                        }
+
+                        if (c.type === 'VOLTMETER') {
+                            const vDrop_ideal = v0_ideal - v1_ideal;
+                            const txt = formatValue(vDrop_ideal, 'V');
+                            if (newVal !== txt) { newVal = txt; hasUpdate = true; }
+                        }
+                        if (c.type === 'AMMETER') {
+                            const current = ideal.getSourceCurrent(c.id);
+                            const txt = formatValue(current, 'A');
+                            if (newVal !== txt) { newVal = txt; hasUpdate = true; }
+                        }
+                        if (c.type === 'SCOPE') {
+                            const history = newState.history || Array(50).fill(0);
+                            const newHistory = [...history.slice(1), v0_ideal];
+                            newState.history = newHistory; hasUpdate = true;
+                        }
+                        if (c.type === 'LOGIC_PROBE') {
+                            const isActive = v0_ideal > 2.5;
+                            if (newState.isActive !== isActive) { newState.isActive = isActive; hasUpdate = true; }
+                        }
+
+                        if (c.type === 'BATTERY' || c.type === 'RESISTOR') {
+                            // res
+                        } else {
+                            if (newVal !== c.value) { hasUpdate = true; }
+                        }
+
+                        if (hasUpdate) {
+                            changed = true;
+                            return { ...c, state: newState, value: newVal };
+                        }
+                        return c;
+                    });
+                    return changed ? newComps : currentComponents;
+                });
+            };
+
+            const calculateGhostPoint = (target, last) => {
+                const dx = Math.abs(target.x - last.x);
+                const dy = Math.abs(target.y - last.y);
+                const snappedX = Math.round(target.x / GRID_SIZE) * GRID_SIZE;
+                const snappedY = Math.round(target.y / GRID_SIZE) * GRID_SIZE;
+                return dx > dy ? { x: snappedX, y: last.y } : { x: last.x, y: snappedY };
+            };
+
+            const getGlobalPortPosition = (comp, port) => {
+                const angleRad = (comp.rotation * Math.PI) / 180;
+                const rotatedX = port.x * Math.cos(angleRad) - port.y * Math.sin(angleRad);
+                const rotatedY = port.x * Math.sin(angleRad) + port.y * Math.cos(angleRad);
+                return { x: comp.x + comp.width / 2 + rotatedX, y: comp.y + comp.height / 2 + rotatedY };
+            };
+
+            const isPointNearSegment = (p, a, b, tolerance) => {
+                const minX = Math.min(a.x, b.x) - tolerance;
+                const maxX = Math.max(a.x, b.x) + tolerance;
+                const minY = Math.min(a.y, b.y) - tolerance;
+                const maxY = Math.max(a.y, b.y) + tolerance;
+                if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) return false;
+                const dist = Math.abs((b.y - a.y) * p.x - (b.x - a.x) * p.y + b.x * a.y - b.y * a.x) / Math.sqrt(Math.pow(b.y - a.y, 2) + Math.pow(b.x - a.x, 2));
+                return dist < tolerance;
+            };
+
+            const splitWireAt = (wireId, segIdx, splitPoint) => {
+                const wire = wires.find(w => w.id === wireId);
+                if (!wire) return null;
+                const junctionId = `junc_${Date.now()}`;
+                const junction = { id: junctionId, type: 'JUNCTION', x: splitPoint.x - 5, y: splitPoint.y - 5, width: 10, height: 10, rotation: 0, label: '', value: '', showLabel: false };
+                const waypointsA = wire.waypoints.slice(0, segIdx); 
+                const waypointsB = wire.waypoints.slice(segIdx);
+                const wireA = { id: `wire_${Date.now()}_a`, fromComp: wire.fromComp, fromPort: wire.fromPort, toComp: junctionId, toPort: 0, waypoints: waypointsA };
+                const wireB = { id: `wire_${Date.now()}_b`, fromComp: junctionId, fromPort: 0, toComp: wire.toComp, toPort: wire.toPort, waypoints: waypointsB };
+                return { junction, wireA, wireB, originalWireId: wire.id };
+            };
+
+            const rotateSelected = () => { if (selection?.type === 'COMP') { saveToHistory(); setComponents(prev => prev.map(c => c.id === selection.id ? { ...c, rotation: (c.rotation + 90) % 360 } : c)); } };
+            
+            const deleteSelected = () => {
+                if (!selection) return;
+                saveToHistory();
+                if (selection.type === 'COMP') {
+                    setComponents(components.filter(c => c.id !== selection.id));
+                    setWires(wires.filter(w => w.fromComp !== selection.id && w.toComp !== selection.id));
+                    if (showCompPanel === selection.id) setShowCompPanel(null);
+                } else if (selection.type === 'WIRE') setWires(wires.filter(w => w.id !== selection.id));
+                setSelection(null);
+            };
+
+            const clearAll = () => {
+                if (confirm("Estàs segur de borrar tot el circuit?")) {
+                    saveToHistory();
+                    setComponents([]);
+                    setWires([]);
+                    setSelection(null);
+                }
+            };
+
+            const toggleSwitch = (compId) => setComponents(prev => prev.map(c => c.id === compId && (c.type === 'SWITCH' || c.type === 'LOGIC_SOURCE') ? { ...c, state: { ...c.state, isOn: !c.state?.isOn } } : c));
+            
+            const UNIT_BY_TYPE = { RESISTOR: 'Ω', BATTERY: 'V', VOLTMETER: 'V', AMMETER: 'A' };
+
+            const updateComponentProp = (id, field, val) => {
+                if (field === 'value') {
+                    const comp = components.find(c => c.id === id);
+                    if (comp) {
+                        if (typeof val === 'string' && val.trim() === '') {
+                            setComponents(prev => prev.map(c => c.id === id ? { ...c, [field]: '' } : c));
+                            return;
+                        }
+                        const unit = UNIT_BY_TYPE[comp.type] || '';
+                        const num = parseValue(val);
+                        const formatted = unit ? formatValue(num, unit) : val;
+                        setComponents(prev => prev.map(c => c.id === id ? { ...c, [field]: formatted } : c));
+                        return;
+                    }
+                }
+                setComponents(prev => prev.map(c => c.id === id ? { ...c, [field]: val } : c));
+            };
+
+            const isAreaFree = (x, y, w, h) => {
+                for (const c of components) {
+                    const pad = 8;
+                    const ox = c.x - pad; const oy = c.y - pad; const ow = c.width + pad * 2; const oh = c.height + pad * 2;
+                    if (x < ox + ow && x + w > ox && y < oy + oh && y + h > oy) return false;
+                }
+                return true;
+            };
+
+            const commitValue = (id) => {
+                const val = editingValues[id];
+                updateComponentProp(id, 'value', val);
+                setEditingValues(prev => { const np = { ...prev }; delete np[id]; return np; });
+            };
+
+            useEffect(() => {
+                if (showCompPanel) {
+                    const comp = components.find(c => c.id === showCompPanel);
+                    if (comp) setEditingValues(prev => ({ ...prev, [comp.id]: comp.value || '' }));
+                    // init truth table input selection
+                    const sources = components.filter(c => c.type === 'LOGIC_SOURCE').map(s => s.id);
+                    if (sources.length > 0) {
+                        if (sources.length <= 4) setSelectedInputIdsForTable(sources.slice());
+                        else setSelectedInputIdsForTable(sources.slice(0,4));
+                    } else setSelectedInputIdsForTable([]);
+                    setTruthTable(null);
+                }
+            }, [showCompPanel]);
+
+            // ==================== LOGIC TABLE HELPERS ====================
+            const buildLogicNets = () => {
+                const parent = {};
+                const find = (k) => { if (parent[k] === undefined) parent[k] = k; if (parent[k] !== k) parent[k] = find(parent[k]); return parent[k]; };
+                const union = (a, b) => { const ra = find(a); const rb = find(b); if (ra !== rb) parent[ra] = rb; };
+
+                // connect via wires
+                wires.forEach(w => {
+                    union(`${w.fromComp}:${w.fromPort}`, `${w.toComp}:${w.toPort}`);
+                });
+
+                // build map from comp:port -> root and collect unique roots
+                const compPortToRoot = {};
+                components.forEach(c => {
+                    const ports = COMPONENT_PORTS[c.type] || [];
+                    ports.forEach((p, idx) => {
+                        compPortToRoot[`${c.id}:${idx}`] = find(`${c.id}:${idx}`);
+                    });
+                });
+                const roots = new Set(Object.values(compPortToRoot));
+                return { compPortToRoot, roots: Array.from(roots), find, parent };
+            };
+
+            const evalGate = (type, inVals) => {
+                if (type === 'NOT') return inVals[0] === undefined ? undefined : !inVals[0];
+                const a = inVals[0]; const b = inVals[1];
+                if (a === undefined || b === undefined) return undefined;
+                if (type === 'AND') return a && b;
+                if (type === 'OR') return a || b;
+                if (type === 'NAND') return !(a && b);
+                if (type === 'NOR') return !(a || b);
+                if (type === 'XOR') return (a && !b) || (!a && b);
+                return undefined;
+            };
+
+            const generateTruthTable = (probeId, selectedInputIds) => {
+                const { compPortToRoot } = buildLogicNets();
+                // inputs: selected LOGIC_SOURCE ids
+                const inputs = components.filter(c => c.type === 'LOGIC_SOURCE' && selectedInputIds.includes(c.id));
+                const gates = components.filter(c => ['AND','OR','NOT','NAND','NOR','XOR'].includes(c.type));
+                // find probe output root
+                const probe = components.find(c => c.id === probeId);
+                if (!probe) return { error: 'Probe not found' };
+                const probeRoot = compPortToRoot[`${probe.id}:0`];
+
+                const n = inputs.length;
+                const maxRows = 1 << n;
+                const rows = [];
+
+                for (let m = 0; m < maxRows; m++) {
+                    const netVals = {}; // root -> bool
+                    // set inputs
+                    inputs.forEach((inp, idx) => {
+                        const r = compPortToRoot[`${inp.id}:0`];
+                        const bit = ((m >> (n - 1 - idx)) & 1) === 1;
+                        netVals[r] = bit;
+                    });
+
+                    // propagate iteratively
+                    let changed = true; let iter = 0; const maxIter = gates.length + 5;
+                    while (changed && iter < maxIter) {
+                        changed = false; iter++;
+                        for (const g of gates) {
+                            const ports = COMPONENT_PORTS[g.type] || [];
+                            const inIdxs = g.type === 'NOT' ? [0] : [0,1];
+                            const inVals = inIdxs.map(i => netVals[compPortToRoot[`${g.id}:${i}`]]);
+                            const outVal = evalGate(g.type, inVals);
+                            const outRoot = compPortToRoot[`${g.id}:${ports.length-1}`];
+                            if (outVal !== undefined && netVals[outRoot] !== outVal) { netVals[outRoot] = outVal; changed = true; }
+                        }
+                    }
+
+                    const probeVal = !!netVals[probeRoot];
+                    const inputBits = inputs.map((_, idx) => ((m >> (n - 1 - idx)) & 1) ? 1 : 0);
+                    rows.push({ inputs: inputBits, output: probeVal ? 1 : 0 });
+                }
+                return { inputs: inputs.map(i => ({ id: i.id, label: i.label || i.id })), rows };
+            };
+
+            const findFreePosition = (startX, startY, w, h) => {
+                const snap = (v) => Math.round(v / GRID_SIZE) * GRID_SIZE;
+                const sx = snap(startX); const sy = snap(startY);
+                let x = 0, y = 0, dx = 0, dy = -1;
+                const maxSteps = 400;
+                for (let i = 0; i < maxSteps; i++) {
+                    const candX = sx + x * GRID_SIZE - w / 2;
+                    const candY = sy + y * GRID_SIZE - h / 2;
+                    if (isAreaFree(candX, candY, w, h)) return { x: candX, y: candY };
+                    if (x === y || (x < 0 && x === -y) || (x > 0 && x === 1 - y)) {
+                        const t = dx; dx = -dy; dy = t;
+                    }
+                    x += dx; y += dy;
+                }
+                return { x: sx - w / 2, y: sy - h / 2 };
+            };
+
+            const addComponent = (type) => {
+                saveToHistory();
+                const newId = `comp_${Date.now()}`;
+                let newComp = { id: newId, type, x: 0, y: 0, width: 60, height: 40, rotation: 0, label: type, value: '', showLabel: true };
+                
+                if (type === 'BATTERY') { newComp = { ...newComp, width: 40, height: 40, value: '9V', label: '9V' }; }
+                else if (type === 'RESISTOR') { newComp = { ...newComp, width: 80, height: 40, value: '1k', label: '1k' }; }
+                else if (type === 'SWITCH') { newComp = { ...newComp, width: 80, height: 40 }; }
+                else if (type === 'AMMETER') { newComp = { ...newComp, width: 80, height: 60, label: 'A', value: '0mA' }; }
+                else if (type === 'LED' || type === 'MOTOR') { newComp = { ...newComp, width: 40, height: 40 }; }
+                else if (type === 'LIGHT') { newComp = { ...newComp, width: 80, height: 40 }; }
+                else if (['AND', 'OR', 'NAND', 'NOR', 'XOR', 'NOT'].includes(type)) { newComp = { ...newComp, width: 80, height: 40 }; }
+                else if (type === 'LOGIC_SOURCE') { newComp = { ...newComp, width: 40, height: 40, state: { isOn: false }, label: 'IN' }; }
+                else if (type === 'LOGIC_PROBE') { newComp = { ...newComp, width: 40, height: 40, state: { isActive: false }, label: 'PRB' }; }
+                else if (type === 'SCOPE') { newComp = { ...newComp, width: 80, height: 60, label: 'SCOPE', state: { history: [] } }; }
+                else if (type === 'VOLTMETER') { newComp = { ...newComp, width: 60, height: 80, label: 'V', value: '0V', rotation: 0 }; }
+                else if (type === 'TEXT') { newComp = { ...newComp, width: 100, height: 40, label: 'Text', showLabel: true }; } 
+                
+                // Determine placement: prefer current mouse position if available, else center of view
+                let preferred = null;
+                try {
+                    if (mousePos && typeof mousePos.x === 'number') preferred = { x: mousePos.x, y: mousePos.y };
+                    else if (containerRef.current) preferred = screenToWorld(containerRef.current.offsetWidth / 2, containerRef.current.offsetHeight / 2);
+                } catch (e) { preferred = { x: -view.x + 400, y: -view.y + 300 }; }
+                // Ensure component is not placed under the top toolbar: keep a screen margin
+                const toolbarPx = 64; // approximate header height + margin
+                const worldTop = screenToWorld(0, toolbarPx).y;
+                if (preferred.y < worldTop + newComp.height / 2 + GRID_SIZE) preferred.y = worldTop + newComp.height / 2 + GRID_SIZE;
+                const place = findFreePosition(preferred.x, preferred.y, newComp.width, newComp.height);
+                newComp.x = place.x; newComp.y = place.y;
+                setComponents([...components, newComp]); 
+                setShowLogicMenu(false); setShowInstrMenu(false); 
+            };
+
+            
+
+            useEffect(() => { 
+                const handleResize = () => containerRef.current && setCanvasSize({ width: containerRef.current.offsetWidth, height: containerRef.current.offsetHeight }); 
+                const handleKeyDown = (e) => { 
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    if (e.key === 'Escape') { setDrawingState(null); setDraggingWireSeg(null); setIsDraggingComp(false); setShowLogicMenu(false); setShowInstrMenu(false); } 
+                    if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); 
+                    if (e.key.toLowerCase() === 'r') rotateSelected(); 
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+                }; 
+                window.addEventListener('resize', handleResize); window.addEventListener('keydown', handleKeyDown); handleResize(); 
+                return () => { window.removeEventListener('resize', handleResize); window.removeEventListener('keydown', handleKeyDown); };
+            }, [selection, components, wires]);
+
+            const handleMouseDown = (e) => {
+                const canvas = canvasRef.current; if (!canvas) return;
+                const rect = canvas.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                if (e.button === 1 || (e.button === 0 && (e.altKey || panMode))) { setIsPanning(true); setPanStart({ x: mouseX - view.x, y: mouseY - view.y }); return; }
+                const worldPos = screenToWorld(mouseX, mouseY);
+                const snappedMouse = { x: Math.round(worldPos.x / GRID_SIZE) * GRID_SIZE, y: Math.round(worldPos.y / GRID_SIZE) * GRID_SIZE };
+
+                if (showLogicMenu || showInstrMenu) { setShowLogicMenu(false); setShowInstrMenu(false); return; } 
+                
+                if (drawingState) { 
+                    if (hoveredPort) { 
+                        if (hoveredPort.compId === drawingState.startCompId && hoveredPort.portIndex === drawingState.startPortIdx) return;
+                        saveToHistory();
+                        const targetComp = components.find(c => c.id === hoveredPort.compId); 
+                        const portPos = getGlobalPortPosition(targetComp, COMPONENT_PORTS[targetComp.type][hoveredPort.portIndex]); 
+                        const lastPoint = drawingState.currentPath[drawingState.currentPath.length - 1];
+                        const finalGhost = calculateGhostPoint(portPos, lastPoint); 
+                        const finalWaypoints = [...drawingState.currentPath.slice(1)]; 
+                        if (Math.abs(finalGhost.x - lastPoint.x) > 1 || Math.abs(finalGhost.y - lastPoint.y) > 1) finalWaypoints.push(finalGhost);
+                        const newWire = { id: `wire_${Date.now()}`, fromComp: drawingState.startCompId, fromPort: drawingState.startPortIdx, toComp: hoveredPort.compId, toPort: hoveredPort.portIndex, waypoints: finalWaypoints }; 
+                        setWires([...wires, newWire]); setDrawingState(null);
+                    } else if (hoveredWireSeg) { 
+                         saveToHistory();
+                         const splitRes = splitWireAt(hoveredWireSeg.id, hoveredWireSeg.idx, snappedMouse); 
+                        if (splitRes) { 
+                            const newComps = [...components, splitRes.junction];
+                            const newWires = wires.filter(w => w.id !== splitRes.originalWireId); newWires.push(splitRes.wireA, splitRes.wireB); 
+                            const lastPoint = drawingState.currentPath[drawingState.currentPath.length - 1];
+                            const finalGhost = calculateGhostPoint(snappedMouse, lastPoint); 
+                            const finalWaypoints = [...drawingState.currentPath.slice(1)]; 
+                            if (Math.abs(finalGhost.x - lastPoint.x) > 1 || Math.abs(finalGhost.y - lastPoint.y) > 1) finalWaypoints.push(finalGhost);
+                            const newWire = { id: `wire_${Date.now()}`, fromComp: drawingState.startCompId, fromPort: drawingState.startPortIdx, toComp: splitRes.junction.id, toPort: 0, waypoints: finalWaypoints }; 
+                            setComponents(newComps); setWires([...newWires, newWire]); setDrawingState(null); 
+                        }
+                    } else {
+                        const lastPoint = drawingState.currentPath[drawingState.currentPath.length - 1];
+                        const newPoint = calculateGhostPoint(snappedMouse, lastPoint);
+                        setDrawingState({ ...drawingState, currentPath: [...drawingState.currentPath, newPoint] });
+                    }
+                    return;
+                }
+                if (hoveredPort) {
+                    const comp = components.find(c => c.id === hoveredPort.compId);
+                    const portPos = getGlobalPortPosition(comp, COMPONENT_PORTS[comp.type][hoveredPort.portIndex]);
+                    setDrawingState({ startCompId: comp.id, startPortIdx: hoveredPort.portIndex, currentPath: [portPos] });
+                    return;
+                }
+                let clickedComponent = null;
+                for (let i = components.length - 1; i >= 0; i--) {
+                    const c = components[i];
+                    const cx = c.x + c.width / 2; const cy = c.y + c.height / 2;
+                    const isVertical = (c.rotation / 90) % 2 !== 0;
+                    const w = isVertical ? c.height : c.width; const h = isVertical ? c.width : c.height;
+                    if (worldPos.x >= cx - w/2 && worldPos.x <= cx + w/2 && worldPos.y >= cy - h/2 && worldPos.y <= cy + h/2) { clickedComponent = c; break; } 
+                } 
+                if (clickedComponent) { 
+                    setSelection({ type: 'COMP', id: clickedComponent.id }); 
+                    setIsDraggingComp(true); 
+                    setDragStartPos({ x: worldPos.x, y: worldPos.y });
+                    setDragOffset({ x: worldPos.x - clickedComponent.x, y: worldPos.y - clickedComponent.y }); 
+                } else if (hoveredWireSeg) {
+                    if (e.shiftKey) {
+                        saveToHistory();
+                        const splitRes = splitWireAt(hoveredWireSeg.id, hoveredWireSeg.idx, snappedMouse);
+                        if (splitRes) {
+                            const newComps = [...components, splitRes.junction];
+                            const newWires = wires.filter(w => w.id !== splitRes.originalWireId); newWires.push(splitRes.wireA, splitRes.wireB);
+                            setComponents(newComps); setWires(newWires); setSelection({ type: 'COMP', id: splitRes.junction.id });
+                        }
+                    } else { setSelection({ type: 'WIRE', id: hoveredWireSeg.id }); }
+                } else { setSelection(null); } 
+            };
+
+            const getComponentAtWorldPos = (worldPos) => {
+                let clickedComponent = null;
+                for (let i = components.length - 1; i >= 0; i--) {
+                    const c = components[i];
+                    const cx = c.x + c.width / 2; const cy = c.y + c.height / 2;
+                    const isVertical = (c.rotation / 90) % 2 !== 0;
+                    const w = isVertical ? c.height : c.width; const h = isVertical ? c.width : c.height;
+                    if (worldPos.x >= cx - w/2 && worldPos.x <= cx + w/2 && worldPos.y >= cy - h/2 && worldPos.y <= cy + h/2) { clickedComponent = c; break; }
+                }
+                return clickedComponent;
+            };
+
+            const handleDoubleClick = (e) => {
+                const canvas = canvasRef.current; if (!canvas) return;
+                const rect = canvas.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                const worldPos = screenToWorld(mouseX, mouseY);
+                const comp = getComponentAtWorldPos(worldPos);
+                if (comp) { setSelection({ type: 'COMP', id: comp.id }); setShowCompPanel(comp.id); }
+            };
+
+            const handleMouseMove = (e) => { 
+                const canvas = canvasRef.current; if (!canvas) return; const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                if (isPanning) { setView({ ...view, x: mouseX - panStart.x, y: mouseY - panStart.y }); return; } 
+                const worldPos = screenToWorld(mouseX, mouseY); setMousePos(worldPos); 
+                let foundPort = null; const HOVER_RADIUS = 12 / view.scale;
+                components.forEach(comp => { 
+                    const ports = COMPONENT_PORTS[comp.type]; 
+                    if (!ports) return;
+                    ports.forEach((port, index) => { 
+                        const globalPos = getGlobalPortPosition(comp, port); 
+                        const dist = Math.sqrt(Math.pow(worldPos.x - globalPos.x, 2) + Math.pow(worldPos.y - globalPos.y, 2)); 
+                        if (dist < HOVER_RADIUS) foundPort = { compId: comp.id, portIndex: index }; 
+                    }); 
+                }); 
+                setHoveredPort(foundPort);
+                if (isDraggingComp && selection && selection.type === 'COMP') {
+                    const newX = worldPos.x - dragOffset.x; const newY = worldPos.y - dragOffset.y;
+                    const snappedX = Math.round(newX / GRID_SIZE) * GRID_SIZE; 
+                    const snappedY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+                    setComponents(prev => prev.map(c => c.id === selection.id ? { ...c, x: snappedX, y: snappedY } : c));
+                }
+                if (!foundPort && !isDraggingComp) {
+                    let foundSeg = null;
+                    for (const wire of wires) {
+                        const fromComp = components.find(c => c.id === wire.fromComp); const toComp = components.find(c => c.id === wire.toComp);
+                        if (!fromComp || !toComp) continue; const start = getGlobalPortPosition(fromComp, COMPONENT_PORTS[fromComp.type][wire.fromPort]); const end = getGlobalPortPosition(toComp, COMPONENT_PORTS[toComp.type][wire.toPort]);
+                        const fullPath = [start, ...wire.waypoints, end]; for (let i = 0; i < fullPath.length - 1; i++) { const p1 = fullPath[i];
+                        const p2 = fullPath[i+1]; if (isPointNearSegment(worldPos, p1, p2, 6 / view.scale)) { const isV = Math.abs(p1.x - p2.x) < 1;
+                        foundSeg = { id: wire.id, idx: i, orientation: isV ? 'V' : 'H' }; break; } } if (foundSeg) break;
+                    } if (foundSeg) setHoveredWireSeg(foundSeg); else setHoveredWireSeg(null); 
+                } else setHoveredWireSeg(null); 
+            }; 
+            
+            const handleMouseUp = (e) => { 
+                if (isPanning) { setIsPanning(false); if (panMode) { setPanMode(false); activateSelectMode(); } return; } 
+                if (selection && selection.type === 'COMP' && isDraggingComp) { 
+                    if (isDraggingComp) saveToHistory(); // Guardar historial després de moure
+                    const comp = components.find(c => c.id === selection.id);
+                    if (comp && (comp.type === 'SWITCH' || comp.type === 'LOGIC_SOURCE')) { 
+                        const canvas = canvasRef.current;
+                        if (canvas) { 
+                            const rect = canvas.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                            const worldPos = screenToWorld(mouseX, mouseY); const dist = Math.sqrt(Math.pow(worldPos.x - dragStartPos.x, 2) + Math.pow(worldPos.y - dragStartPos.y, 2));
+                            if (dist < 5) toggleSwitch(comp.id);
+                        }
+                    }
+                    setIsDraggingComp(false); 
+                } 
+            };
+
+            const drawGrid = (ctx) => {
+                const { width, height } = canvasSize;
+                const left = -view.x / view.scale; const top = -view.y / view.scale;
+                const right = left + width / view.scale; const bottom = top + height / view.scale;
+                const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE; const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE; 
+                ctx.beginPath(); ctx.strokeStyle = COLORS.GRID; ctx.lineWidth = 1 / view.scale;
+                for (let x = startX; x <= right; x += GRID_SIZE) { ctx.moveTo(x, top); ctx.lineTo(x, bottom); } 
+                for (let y = startY; y <= bottom; y += GRID_SIZE) { ctx.moveTo(left, y); ctx.lineTo(right, y); } 
+                ctx.stroke();
+            };
+
+            const drawPolyline = (ctx, points, color, isTemp, isPowered, isReverse, speedFactor) => { 
+                if (points.length < 2) return; 
+                
+                ctx.beginPath(); 
+                ctx.strokeStyle = color; 
+                ctx.lineWidth = 3;
+                
+                ctx.setLineDash([]); ctx.lineDashOffset = 0;
+                
+                if (isPowered && !isTemp) {
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#ffff00'; 
+                } else {
+                    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+                }
+                
+                ctx.moveTo(points[0].x, points[0].y); 
+                for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y); 
+                ctx.stroke(); 
+                
+                ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+
+                if (isPowered && !isTemp) {
+                    ctx.fillStyle = '#ffff00'; 
+                    const electronSpacing = 20; 
+
+                    for (let i = 0; i < points.length - 1; i++) {
+                        const p1 = points[i];
+                        const p2 = points[i+1];
+                        
+                        const dx = p2.x - p1.x;
+                        const dy = p2.y - p1.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        const angle = Math.atan2(dy, dx);
+                        
+                        const finalAngle = isReverse ? angle + Math.PI : angle;
+                        let startOffset = (dashOffset * (speedFactor || 1)) % electronSpacing;
+                        
+                        for (let d = startOffset; d < dist; d += electronSpacing) {
+                            let x, y;
+                            if (isReverse) {
+                                x = p2.x + Math.cos(finalAngle) * d;
+                                y = p2.y + Math.sin(finalAngle) * d;
+                            } else {
+                                x = p1.x + Math.cos(finalAngle) * d;
+                                y = p1.y + Math.sin(finalAngle) * d;
+                            }
+                            
+                            ctx.beginPath();
+                            ctx.arc(x, y, 2, 0, 2*Math.PI); 
+                            ctx.fill();
+                        }
+                    }
+                }
+
+                if (!isTemp) { 
+                    ctx.fillStyle = color; 
+                    ctx.beginPath(); ctx.arc(points[0].x, points[0].y, 4, 0, 2*Math.PI); ctx.fill(); 
+                    ctx.beginPath(); ctx.arc(points[points.length-1].x, points[points.length-1].y, 4, 0, 2*Math.PI); ctx.fill(); 
+                } 
+            }; 
+
+            useEffect(() => {
+                const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d');
+                canvas.width = canvasSize.width; canvas.height = canvasSize.height;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save(); ctx.translate(view.x, view.y); ctx.scale(view.scale, view.scale);
+                drawGrid(ctx);
+
+                wires.forEach(wire => { 
+                    const fromComp = components.find(c => c.id === wire.fromComp); const toComp = components.find(c => c.id === wire.toComp); 
+                    if (fromComp && toComp) { 
+                        const start = getGlobalPortPosition(fromComp, COMPONENT_PORTS[fromComp.type][wire.fromPort]); 
+                        const end = getGlobalPortPosition(toComp, COMPONENT_PORTS[toComp.type][wire.toPort]); 
+                        const fullPath = [start, ...wire.waypoints, end]; 
+                        const isHovered = hoveredWireSeg?.id === wire.id; const isSelected = selection?.type === 'WIRE' && selection.id === wire.id;
+                        let color = wire.isPowered ? COLORS.WIRE_ACTIVE : COLORS.WIRE;
+                        if (isSelected) color = COLORS.WIRE_SEL; else if (isHovered) color = COLORS.WIRE_HOVER;
+                        drawPolyline(ctx, fullPath, color, false, wire.isPowered, wire.isReverse, wire.speedFactor);
+                    } 
+                });
+                if (drawingState) {
+                    const lastPoint = drawingState.currentPath[drawingState.currentPath.length - 1];
+                    const snappedMouse = { x: Math.round(mousePos.x / GRID_SIZE) * GRID_SIZE, y: Math.round(mousePos.y / GRID_SIZE) * GRID_SIZE };
+                    const ghost = calculateGhostPoint(snappedMouse, lastPoint);
+                    drawPolyline(ctx, [...drawingState.currentPath, ghost], COLORS.WIRE_TEMP, true, false, false, 1);
+                }
+
+                components.forEach(comp => {
+                    ctx.save(); ctx.translate(comp.x + comp.width / 2, comp.y + comp.height / 2); ctx.rotate((comp.rotation * Math.PI) / 180);
+                    const isSelected = selection?.type === 'COMP' && selection.id === comp.id;
+                    if (isSelected) { ctx.strokeStyle = COLORS.SELECTION; ctx.lineWidth = 2; ctx.strokeRect(-comp.width / 2 - 4, -comp.height / 2 - 4, comp.width + 8, comp.height + 8); }
+                    
+                    // RENDERITZAT DE TEXT
+                    if (comp.type === 'TEXT') {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(comp.label, 0, 0);
+                    } else {
+                        ctx.strokeStyle = COLORS.STROKE; ctx.lineWidth = 2; ctx.fillStyle = '#000000'; 
+                        
+                        if (comp.type === 'RESISTOR') { 
+                            ctx.fillStyle = '#222'; ctx.fillRect(-30, -10, 60, 20); 
+                            ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-30, 0); ctx.lineTo(-25, -10); ctx.lineTo(-15, 10); ctx.lineTo(-5, -10); ctx.lineTo(5, 10); ctx.lineTo(15, -10); ctx.lineTo(25, 10); ctx.lineTo(30, 0); ctx.lineTo(40, 0); ctx.stroke(); 
+                        } else if (comp.type === 'BATTERY') { 
+                            ctx.fillRect(-10, -20, 20, 40); 
+                            ctx.beginPath(); 
+                            ctx.moveTo(-20, 0); ctx.lineTo(-4, 0); 
+                            ctx.moveTo(-4, -15); ctx.lineTo(-4, 15); 
+                            ctx.moveTo(4, -8); ctx.lineTo(4, 8); 
+                            ctx.moveTo(4, 0); ctx.lineTo(20, 0); 
+                            ctx.stroke(); ctx.font = '10px Arial'; ctx.fillStyle = '#aaa'; ctx.fillText('+', 8, -10); 
+                        } else if (comp.type === 'LIGHT') { 
+                            if (comp.state?.isActive) { ctx.save(); ctx.shadowBlur = 50; ctx.shadowColor = '#ffff00'; ctx.fillStyle = '#ffffe0'; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 2 * Math.PI); ctx.fill(); ctx.restore(); } else { ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 2 * Math.PI); ctx.fill(); }
+                            ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.stroke(); 
+                            ctx.strokeStyle = comp.state?.isActive ? '#ffffff' : '#555'; ctx.lineWidth = 2;
+                            ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-5, -10); ctx.lineTo(0, 10); ctx.lineTo(5, -10); ctx.lineTo(10, 0); ctx.stroke();
+                            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+                            ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-18, 0); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(40, 0); ctx.lineTo(18, 0); ctx.stroke();
+                        } else if (comp.type === 'LED') {
+                            if (comp.state?.isActive) { ctx.save(); ctx.shadowBlur = 20; ctx.shadowColor = '#ff0000'; ctx.fillStyle = '#ff3333'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2 * Math.PI); ctx.fill(); ctx.restore(); } else { ctx.fillStyle = '#400'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 2 * Math.PI); ctx.fill(); } ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(-15, -10); ctx.lineTo(15, -10); ctx.lineTo(0, 10); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-15, 10); ctx.lineTo(15, 10); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-10, 0); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(10, 0); ctx.stroke();
+                        } else if (comp.type === 'MOTOR') {
+                            ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(0, 0, 20, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ccc'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('M', 0, 0);
+                            ctx.save(); ctx.rotate(((comp.state?.rotationAngle || 0) * Math.PI) / 180); ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(0, 15); ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.stroke(); ctx.restore();
+                            ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(0, -40); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(0, 40); ctx.stroke();
+                        } else if (comp.type === 'SWITCH') {
+                            ctx.fillStyle = '#222'; ctx.fillRect(-20, -10, 40, 20); ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-20, 0); ctx.stroke(); ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(40, 0); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(-20, 0); if (comp.state?.isOn) ctx.lineTo(20, 0); else ctx.lineTo(20, -20); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-20, 0, 2, 0, 2*Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(20, 0, 2, 0, 2*Math.PI); ctx.fill();
+                        } else if (comp.type === 'LOGIC_SOURCE') { 
+                            ctx.fillStyle = comp.state?.isOn ? '#00cc00' : '#444'; ctx.fillRect(-20, -20, 40, 40); ctx.strokeStyle = '#fff'; ctx.strokeRect(-20, -20, 40, 40); ctx.fillStyle = '#fff'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(comp.state?.isOn ? '1' : '0', 0, 0); ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(40, 0); ctx.stroke();
+                        } else if (comp.type === 'LOGIC_PROBE') { 
+                            ctx.fillStyle = comp.state?.isActive ? '#ff5555' : '#222'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-40, 0); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(comp.state?.isActive ? 'HI' : 'LO', 0, 0);
+                        } else if (comp.type === 'JUNCTION') {
+                            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, 2*Math.PI); ctx.fill();
+                        } else if (['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR'].includes(comp.type)) {
+                            const isNot = comp.type.includes('N') || comp.type === 'NOT'; 
+                            const isXor = comp.type === 'XOR';
+                            ctx.strokeStyle = COLORS.STROKE;
+                            if (comp.type !== 'NOT') {
+                                ctx.beginPath(); ctx.moveTo(-40, -20); ctx.lineTo(-20, -20); ctx.stroke(); 
+                                ctx.beginPath(); ctx.moveTo(-40, 20); ctx.lineTo(-20, 20); ctx.stroke(); 
+                            } else {
+                                ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-20, 0); ctx.stroke(); 
+                            }
+                            ctx.beginPath(); ctx.moveTo(isNot ? 26 : 20, 0); ctx.lineTo(40, 0); ctx.stroke();
+                            ctx.fillStyle = COLORS.GATE_FILL; ctx.strokeStyle = COLORS.GATE_STROKE; ctx.lineWidth = 2; ctx.beginPath();
+                            if (logicSymbolStandard === 'ANSI') {
+                                if (comp.type === 'AND' || comp.type === 'NAND') { ctx.beginPath(); ctx.moveTo(-20, -25); ctx.lineTo(0, -25); ctx.bezierCurveTo(25, -25, 25, 25, 0, 25); ctx.lineTo(-20, 25); ctx.closePath(); ctx.fill(); ctx.stroke(); } 
+                                else if (comp.type === 'OR' || comp.type === 'NOR' || comp.type === 'XOR') { ctx.beginPath(); ctx.moveTo(-20, -25); ctx.quadraticCurveTo(5, -25, 20, 0); ctx.quadraticCurveTo(5, 25, -20, 25); ctx.quadraticCurveTo(-10, 0, -20, -25); ctx.closePath(); ctx.fill(); ctx.stroke(); } 
+                                else if (comp.type === 'NOT') { ctx.beginPath(); ctx.moveTo(-20, -15); ctx.lineTo(20, 0); ctx.lineTo(-20, 15); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+                                if (isXor) { ctx.beginPath(); ctx.strokeStyle = COLORS.GATE_STROKE; ctx.lineWidth = 2; ctx.moveTo(-28, -25); ctx.quadraticCurveTo(-18, 0, -28, 25); ctx.stroke(); }
+                                if (isNot) { ctx.beginPath(); ctx.fillStyle = COLORS.BG; ctx.strokeStyle = COLORS.GATE_STROKE; ctx.lineWidth = 2; const bubbleX = (comp.type === 'NOT') ? 23 : 23; ctx.arc(bubbleX, 0, 3, 0, 2 * Math.PI); ctx.stroke(); }
+                            } else {
+                                ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(40, 0); ctx.stroke(); 
+                                ctx.fillStyle = COLORS.GATE_FILL; ctx.fillRect(-20, -25, 40, 50); ctx.strokeRect(-20, -25, 40, 50);
+                                ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                                let symbol = ''; if (comp.type === 'AND' || comp.type === 'NAND') symbol = '&'; else if (comp.type === 'OR' || comp.type === 'NOR') symbol = '≥1'; else if (comp.type === 'XOR') symbol = '=1'; else if (comp.type === 'NOT') symbol = '1';
+                                ctx.fillText(symbol, 0, 0);
+                                if (isNot) { ctx.beginPath(); ctx.fillStyle = COLORS.BG; ctx.strokeStyle = COLORS.GATE_STROKE; ctx.arc(23, 0, 3, 0, 2 * Math.PI); ctx.stroke(); }
+                            }
+                        } else if (comp.type === 'VOLTMETER') { 
+                            ctx.fillStyle = '#f59e0b'; ctx.fillRect(-25, -35, 50, 70); ctx.strokeStyle = '#b45309'; ctx.strokeRect(-25, -35, 50, 70);
+                            ctx.fillStyle = '#d1fae5'; ctx.fillRect(-20, -30, 40, 20); ctx.strokeStyle = '#6ee7b7'; ctx.strokeRect(-20, -30, 40, 20);
+                            ctx.save(); ctx.fillStyle = '#000'; ctx.font = 'bold 12px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(comp.value || '0V', 0, -20, 38); ctx.restore(); 
+                            ctx.fillStyle = '#000'; ctx.font = '8px Arial'; ctx.textAlign = 'center'; ctx.fillText('V', 15, 25); ctx.fillText('COM', -15, 25);
+                            ctx.beginPath(); ctx.arc(15, 40, 2, 0, 2*Math.PI); ctx.fillStyle = '#cc0000'; ctx.fill(); 
+                            ctx.beginPath(); ctx.arc(-15, 40, 2, 0, 2*Math.PI); ctx.fillStyle = '#000000'; ctx.fill(); 
+                        } else if (comp.type === 'AMMETER') {
+                            ctx.fillStyle = '#f59e0b'; ctx.fillRect(-35, -25, 70, 50); ctx.strokeStyle = '#b45309'; ctx.strokeRect(-35, -25, 70, 50);
+                            ctx.fillStyle = '#d1fae5'; ctx.fillRect(-30, -20, 60, 25); ctx.strokeStyle = '#6ee7b7'; ctx.strokeRect(-30, -20, 60, 25);
+                            ctx.save(); ctx.fillStyle = '#000'; ctx.font = 'bold 16px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(comp.value || '0A', 0, -8, 58); ctx.restore(); 
+                            ctx.beginPath(); ctx.moveTo(-35, 0); ctx.lineTo(-40, 0); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(35, 0); ctx.lineTo(40, 0); ctx.stroke();
+                            ctx.fillStyle = '#000'; ctx.font = 'bold 10px Arial'; ctx.fillText('A', 0, 15);
+                        } else if (comp.type === 'SCOPE') {
+                            ctx.fillStyle = '#111'; ctx.fillRect(-40, -30, 80, 60); ctx.strokeStyle = '#444'; ctx.strokeRect(-40, -30, 80, 60);
+                            ctx.strokeStyle = '#224422'; ctx.beginPath(); for(let i=-35; i<=35; i+=10) { ctx.moveTo(i, -25); ctx.lineTo(i, 25); } for(let i=-25; i<=25; i+=10) { ctx.moveTo(-35, i); ctx.lineTo(35, i); } ctx.stroke();
+                            ctx.strokeStyle = '#00ff00'; ctx.lineWidth = 1.5; ctx.beginPath();
+                            const h = comp.state.history || []; const step = 70 / 50;
+                            h.forEach((val, i) => { const x = -35 + i * step; const plotY = 25 - (val / 5) * 50; if (i === 0) ctx.moveTo(x, plotY); else ctx.lineTo(x, plotY); }); ctx.stroke();
+                            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-50, 0); ctx.stroke(); 
+                        }
+                    }
+
+                    if (comp.showLabel && comp.type !== 'JUNCTION' && comp.type !== 'VOLTMETER' && comp.type !== 'AMMETER' && comp.type !== 'TEXT') { 
+                        ctx.fillStyle = '#ffffff'; ctx.font = '10px monospace'; ctx.textAlign = 'center'; ctx.save(); ctx.fillStyle = '#888'; ctx.fillText(comp.label, 0, -comp.height / 2 - 10); ctx.restore(); 
+                    } 
+                    const ports = COMPONENT_PORTS[comp.type];
+                    if (ports) {
+                        ports.forEach((port, index) => { 
+                            if (comp.type === 'JUNCTION') return; 
+                            const isHovered = hoveredPort?.compId === comp.id && hoveredPort?.portIndex === index; 
+                            const isStartingPort = drawingState?.startCompId === comp.id && drawingState?.startPortIdx === index; 
+                            ctx.beginPath(); ctx.arc(port.x, port.y, (isHovered || isStartingPort) ? 6 : 3.5, 0, 2 * Math.PI); 
+                            let baseColor = COLORS.PORT; 
+                            if (comp.type === 'BATTERY' || comp.type === 'LOGIC_SOURCE') { if (index === 0) baseColor = '#ff2222'; else if (index === 1) baseColor = '#666666'; } 
+                            if (comp.type === 'VOLTMETER') { if (index === 0) baseColor = '#ff2222'; else if (index === 1) baseColor = '#333'; } // 0: Red, 1: Black
+                            ctx.fillStyle = (isHovered || isStartingPort) ? COLORS.PORT_HOVER : baseColor; ctx.fill(); 
+                        });
+                    }
+                    ctx.restore();
+                });
+                ctx.restore();
+            }, [components, wires, view, selection, drawingState, mousePos, hoveredPort, hoveredWireSeg, canvasSize, dashOffset, logicSymbolStandard]);
+
+            const selectedComp = selection?.type === 'COMP' ? components.find(c => c.id === selection.id) : null;
+            const panelComp = showCompPanel ? components.find(c => c.id === showCompPanel) : null;
+
+            return (
+                <div className="flex flex-col h-full bg-neutral-900 relative">
+                    <div className="bg-neutral-800 border-b border-neutral-700 flex flex-wrap items-center px-3 py-2 justify-between z-10 overflow-visible">
+                        <div className="flex items-center gap-2 font-bold text-lg tracking-wider">
+                             <Activity className="text-blue-400"/> 
+                             <div>
+                                <span className="text-blue-400">THOS</span>
+                                <span className="text-white">LAB</span>
+                             </div>
+                        </div>
+                        <div className="flex-1 flex items-center space-x-1 overflow-visible">
+                            {/* GRUP ACCIONS ARXIU (SEPARAT) */}
+                            <div className="flex items-center space-x-1 bg-neutral-900 p-1 rounded-lg border border-neutral-700 mr-2">
+                                <input type="file" ref={fileInputRef} onChange={loadProject} style={{ display: 'none' }} accept=".json" />
+                                <ToolButton icon={<FolderOpenIcon size={18} />} label="Obrir" onClick={() => fileInputRef.current.click()} />
+                                <ToolButton icon={<SaveIcon size={18} />} label="Guardar" onClick={saveProject} />
+                                <ToolButton icon={<ImageIcon size={18} />} label="Imatge" onClick={exportImage} />
+                                <div className="w-px h-6 bg-neutral-700 mx-1"></div>
+                                <ToolButton icon={<UndoIcon size={18} />} label="Desfer" onClick={undo} />
+                                <ToolButton icon={<HandIcon size={18} />} label="PAN" onClick={() => { setPanMode(prev => { const next = !prev; if (!next) activateSelectMode(); return next; }); }} />
+                            </div>
+
+                            {/* GRUP EINES COMPONENTS */}
+                            <div className="flex items-center space-x-1 bg-neutral-900 p-1 rounded-lg border border-neutral-700">
+                                <ToolButton icon={<TextIcon size={18} />} label="Text" onClick={() => addComponent('TEXT')} />
+                                <div className="w-px h-6 bg-neutral-700 mx-1"></div>
+                                <ToolButton icon={<Battery size={18} />} label="Font" onClick={() => addComponent('BATTERY')} />
+                                <ToolButton icon={<Zap size={18} />} label="Resist." onClick={() => addComponent('RESISTOR')} />
+                                <ToolButton icon={<Lightbulb size={18} />} label="Bombeta" onClick={() => addComponent('LIGHT')} />
+                                <ToolButton icon={<LedIcon size={18} />} label="LED" onClick={() => addComponent('LED')} />
+                                <ToolButton icon={<Settings size={18} />} label="Motor" onClick={() => addComponent('MOTOR')} />
+                                <ToolButton icon={<ToggleLeft size={18} />} label="Switch" onClick={() => addComponent('SWITCH')} />
+                                <div className="w-px h-6 bg-neutral-700 mx-1"></div>
+                                <ToolButton icon={<Power size={18} />} label="Font 0/1" onClick={() => addComponent('LOGIC_SOURCE')} />
+                                <ToolButton icon={<Gauge size={18} />} label="Sonda" onClick={() => addComponent('LOGIC_PROBE')} />
+                                <div className="w-px h-6 bg-neutral-700 mx-1"></div>
+                                
+                                <div className="relative">
+                                    <ToolButton icon={<GlobeIcon size={18} />} label={logicSymbolStandard} onClick={toggleLogicStandard} />
+                                </div>
+
+                                <div className="relative">
+                                    <ToolButton icon={<Cpu size={18} />} label="Lògica" onClick={() => setShowLogicMenu(!showLogicMenu)} />
+                                    {showLogicMenu && (
+                                        <div className="absolute top-full left-0 mt-1 bg-neutral-800 border border-neutral-600 rounded shadow-xl p-1 grid grid-cols-2 gap-1 z-50 w-32 overflow-visible max-h-none">
+                                            {['AND','OR','NOT','NAND','NOR','XOR'].map(t => <button key={t} onClick={() => addComponent(t)} className="logic-menu-btn">{t}</button>)}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="relative">
+                                    <ToolButton icon={<Activity size={18} />} label="Instrum." onClick={() => setShowInstrMenu(!showInstrMenu)} />
+                                    {showInstrMenu && (
+                                        <div className="absolute top-full left-0 mt-1 bg-neutral-800 border border-neutral-600 rounded shadow-xl p-1 flex flex-col gap-1 z-50 w-32 overflow-visible max-h-none">
+                                            <button onClick={() => addComponent('VOLTMETER')} className="instr-menu-btn"><Activity size={16}/><span>Voltímetre</span></button>
+                                            <button onClick={() => addComponent('AMMETER')} className="instr-menu-btn"><Activity size={16}/><span>Amperímetre</span></button>
+                                            <button onClick={() => addComponent('SCOPE')} className="instr-menu-btn"><Activity size={16}/><span>Oscil·los.</span></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2"></div>
+                    </div>
+
+                    <div className="flex-1 relative overflow-hidden" ref={containerRef}>
+                        <canvas
+                            ref={canvasRef}
+                            className={`absolute inset-0 block w-full h-full bg-[#1a1a1a] ${panMode ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'}`}
+                            onMouseDown={handleMouseDown}
+                            onDoubleClick={handleDoubleClick}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onWheel={(e) => {
+                                const newScale = Math.max(0.1, Math.min(5, view.scale - e.deltaY * 0.001));
+                                setView({ ...view, scale: newScale });
+                            }}
+                        />
+                        
+                        {panelComp && (
+                            <div className="absolute top-4 right-4 w-64 bg-neutral-800/90 backdrop-blur border border-neutral-600 p-4 rounded-lg shadow-xl text-xs">
+                                <div className="flex justify-between items-center mb-3">
+                                    <span className="font-bold text-white uppercase tracking-wider">{panelComp.type}</span>
+                                    <button onClick={() => setShowCompPanel(null)}><XIcon size={14}/></button>
+                                </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-gray-400 mb-1">Etiqueta</label>
+                                        <input 
+                                            type="text" 
+                                            value={panelComp.label} 
+                                            onChange={(e) => updateComponentProp(panelComp.id, 'label', e.target.value)} 
+                                            className="prop-input"
+                                        />
+                                    </div>
+                                    {panelComp.type !== 'SWITCH' && !['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR', 'LOGIC_SOURCE', 'LOGIC_PROBE', 'SCOPE', 'VOLTMETER', 'AMMETER', 'TEXT'].includes(panelComp.type) && (
+                                        <div>
+                                            <label className="block text-gray-400 mb-1">Valor (Ex: 1k, 100, 9V)</label>
+                                            <input 
+                                                type="text" 
+                                                value={editingValues[panelComp.id] ?? panelComp.value} 
+                                                onChange={(e) => setEditingValues(prev => ({ ...prev, [panelComp.id]: e.target.value }))} 
+                                                onBlur={() => commitValue(panelComp.id)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { commitValue(panelComp.id); e.currentTarget.blur(); } }}
+                                                className="prop-input"
+                                            />
+                                        </div>
+                                    )}
+                                    {panelComp.type === 'LOGIC_PROBE' && (
+                                        <div className="mt-3">
+                                            <label className="block text-gray-400 mb-1 font-bold">Taula de Veritat</label>
+                                            <div className="text-xs text-gray-300 mb-2">Entrades detectades:</div>
+                                            <div className="max-h-28 overflow-y-auto mb-2">
+                                                {components.filter(c => c.type === 'LOGIC_SOURCE').map(src => (
+                                                    <div key={src.id} className="flex items-center gap-2">
+                                                        <input type="checkbox" checked={selectedInputIdsForTable.includes(src.id)} onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            setSelectedInputIdsForTable(prev => {
+                                                                let nxt = prev.slice();
+                                                                if (checked) { if (!nxt.includes(src.id) && nxt.length < 4) nxt.push(src.id); }
+                                                                else nxt = nxt.filter(id => id !== src.id);
+                                                                return nxt;
+                                                            });
+                                                        }} />
+                                                        <span className="text-sm text-gray-200">{src.label || src.id}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => {
+                                                    if (selectedInputIdsForTable.length === 0) { alert('Selecciona almenys 1 entrada'); return; }
+                                                    const res = generateTruthTable(panelComp.id, selectedInputIdsForTable);
+                                                    if (res.error) alert(res.error);
+                                                    else setTruthTable(res);
+                                                }} className="bg-blue-600 hover:bg-blue-500 py-1 px-2 rounded text-xs">Generar Taula</button>
+                                                {truthTable && (
+                                                    <button onClick={() => {
+                                                        // export CSV
+                                                        const hdr = truthTable.inputs.map(i => i.label).concat(['OUT']);
+                                                        const lines = [hdr.join(',')];
+                                                        truthTable.rows.forEach(r => {
+                                                            lines.push(r.inputs.join(',') + ',' + (r.output ? '1' : '0'));
+                                                        });
+                                                        const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+                                                        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'truth_table.csv'; a.click();
+                                                    }} className="bg-green-600 hover:bg-green-500 py-1 px-2 rounded text-xs">Exportar CSV</button>
+                                                )}
+                                            </div>
+                                            {truthTable && (
+                                                <div className="mt-2 text-xs overflow-auto max-h-40">
+                                                    <table className="w-full text-[12px] table-auto">
+                                                        <thead>
+                                                            <tr>
+                                                                {truthTable.inputs.map(i => <th key={i.id} className="px-1 text-left">{i.label}</th>)}
+                                                                <th className="px-1 text-left">OUT</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {truthTable.rows.map((r, idx) => (
+                                                                <tr key={idx} className="odd:bg-neutral-800 even:bg-neutral-900">
+                                                                    {r.inputs.map((b, j) => <td key={j} className="px-1">{b}</td>)}
+                                                                    <td className="px-1">{r.output ? '1' : '0'}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2 mt-4 pt-4 border-t border-neutral-700">
+                                        <button onClick={rotateSelected} className="flex-1 bg-neutral-700 hover:bg-neutral-600 py-1.5 rounded flex items-center justify-center gap-2"><RotateCw size={14}/> Rotar</button>
+                                        <button onClick={() => { deleteSelected(); setShowCompPanel(null); }} className="flex-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 py-1.5 rounded flex items-center justify-center gap-2"><Trash2 size={14}/> Eliminar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        
+                    </div>
+                </div>
+            );
+        }
+
+        function ToolButton({ icon, label, onClick }) {
+            return (
+                <button onClick={onClick} className="flex flex-col items-center justify-center w-12 sm:w-16 py-1 hover:bg-neutral-700 rounded transition-all active:scale-95 group">
+                    <div className="text-neutral-300 group-hover:text-white mb-0.5">{icon}</div>
+                    <span className="text-[10px] text-neutral-400 group-hover:text-neutral-200">{label}</span>
+                </button>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
