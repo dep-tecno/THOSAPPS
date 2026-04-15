@@ -151,6 +151,7 @@
             const [aiPrompt, setAiPrompt] = useState("");
             const [isAiLoading, setIsAiLoading] = useState(false);
             const [aiError, setAiError] = useState(null);
+            const [lastAutoSave, setLastAutoSave] = useState(null);
 
             const svgRef = useRef(null);
             const BASIC_COLORS = ['#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#808080'];
@@ -257,6 +258,41 @@
             }, [tool, drawingState, selectedIds, showAiModal, textInput, showColorPicker, clipboard, elements, historyStep, zoom, history]); 
 
             useEffect(() => { if (textInput && inputRef.current) inputRef.current.focus(); }, [textInput]);
+
+            // Recuperació de sessió en carregar la pàgina
+            useEffect(() => {
+                try {
+                    const raw = localStorage.getItem('thoscad_recovery');
+                    if (!raw) return;
+                    const { els, ts } = JSON.parse(raw);
+                    if (!els?.length) return;
+                    const d = new Date(ts);
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    const dd = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+                    if (confirm(`S'ha trobat una còpia automàtica desada el ${dd} a les ${hh}:${mm}.\nVols restaurar el dibuix?`)) {
+                        const DEF = { stroke: '#00ff00', strokeWidth: 2 };
+                        const normalized = els.map(el => ({ ...el, style: el.style || { ...DEF }, fill: el.fill ?? 'none', offset: el.offset ?? 0 }));
+                        setElements(normalized);
+                        setHistory([normalized]);
+                        setHistoryStep(0);
+                        setLastAutoSave(`${hh}:${mm}`);
+                    }
+                } catch(e) {}
+            }, []);
+
+            // Autoguardat cada minut
+            useEffect(() => {
+                const id = setInterval(() => {
+                    if (elements.length === 0) return;
+                    try {
+                        localStorage.setItem('thoscad_recovery', JSON.stringify({ els: elements, ts: Date.now() }));
+                        const t = new Date();
+                        setLastAutoSave(`${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`);
+                    } catch(e) {}
+                }, 60000);
+                return () => clearInterval(id);
+            }, [elements]);
 
             useEffect(() => {
                 if (selectedIds.size === 1) {
@@ -660,6 +696,8 @@
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', 'projecte_thoscad.json');
                 linkElement.click();
+                try { localStorage.removeItem('thoscad_recovery'); } catch(e) {}
+                setLastAutoSave(null);
             };
 
             const loadProject = (e) => {
@@ -977,7 +1015,11 @@
                         React.createElement("button", { onClick: confirmText, className: "p-1 bg-green-600 hover:bg-green-500 rounded text-white" }, React.createElement(Check, { size: 16 })),
                         React.createElement("button", { onClick: cancelText, className: "p-1 bg-red-600 hover:bg-red-500 rounded text-white" }, React.createElement(X, { size: 16 }))
                     ]),
-                    React.createElement("div", { className: "absolute bottom-4 right-4 bg-gray-800/80 p-2 rounded text-xs text-gray-400 pointer-events-none backdrop-blur-sm border border-gray-700" }, `Zoom: ${(zoom * 100).toFixed(0)}% | X: ${pan.x.toFixed(0)} Y: ${pan.y.toFixed(0)}`)
+                    React.createElement("div", { className: "absolute bottom-4 right-4 bg-gray-800/80 p-2 rounded text-xs text-gray-400 pointer-events-none backdrop-blur-sm border border-gray-700" }, `Zoom: ${(zoom * 100).toFixed(0)}% | X: ${pan.x.toFixed(0)} Y: ${pan.y.toFixed(0)}`),
+                    lastAutoSave && React.createElement("div", { className: "absolute bottom-4 left-4 bg-gray-800/90 px-3 py-1.5 rounded text-xs text-green-400 pointer-events-none backdrop-blur-sm border border-green-800 flex items-center gap-1.5" }, [
+                        React.createElement(Save, { size: 12, key: "icon" }),
+                        `Autodesat ${lastAutoSave}`
+                    ])
                 ]),
 
                 // MODAL COLOR
