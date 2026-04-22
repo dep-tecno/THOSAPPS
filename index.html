@@ -246,62 +246,24 @@
     .card-btn svg { transition: transform 0.2s; }
     .card:hover .card-btn svg { transform: translateX(4px); }
 
-    /* ── GRID SECUNDARI (eines extra) ── */
-    .grid-secondary {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1rem;
+    /* ── BADGE PRÒXIMAMENT ── */
+    .card-soon {
+      opacity: 0.7;
+      pointer-events: none;
     }
-
-    .card-small {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.2rem 1.4rem;
-      display: flex;
-      align-items: flex-start;
-      gap: 1rem;
-      text-decoration: none;
-      color: inherit;
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-    }
-    .card-small:hover {
-      transform: translateY(-3px);
-      border-color: var(--green-dim);
-      box-shadow: 0 6px 20px rgba(0,230,118,0.1);
-    }
-    .card-small-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: rgba(0,230,118,0.1);
-      border: 1px solid rgba(0,230,118,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      font-weight: 900;
-      color: var(--green);
-      font-family: monospace;
-      flex-shrink: 0;
-    }
-    .card-small-body {}
-    .card-small-title {
-      font-size: 0.95rem;
+    .card-soon-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 0.65rem;
       font-weight: 700;
-      margin-bottom: 0.25rem;
-    }
-    .card-small-desc {
-      font-size: 0.8rem;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-
-    /* ── DIVIDER ── */
-    hr {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 0 2rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: rgba(255,180,0,0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(255,180,0,0.3);
+      border-radius: 999px;
+      padding: 0.2rem 0.65rem;
     }
 
     /* ── FOOTER ── */
@@ -334,6 +296,9 @@
     <li><a href="THOSMAP.html">THOSMAP v2.0</a></li>
     <li><a href="THOSLOGO v2.0.html">THOSLOGO</a></li>
     <li><a href="THOSMETRIC.html">THOSMETRIC</a></li>
+    <li><a href="#">THOSDRUINO</a></li>
+    <li><a href="#">THOSBRIDGE</a></li>
+    <li><a href="#">THOSROBOT</a></li>
   </ul>
 </nav>
 
@@ -344,9 +309,9 @@
   <p>Aplicacions web interactives per a l'aprenentatge de dibuix tècnic, circuits, programació i molt més. Gratuïtes i sense instal·lació.</p>
 </div>
 
-<!-- ══ EINES PRINCIPALS ══ -->
+<!-- ══ TOTES LES EINES ══ -->
 <section>
-  <p class="section-title">Aplicacions principals</p>
+  <p class="section-title">Aplicacions educatives</p>
   <h2 class="section-heading">Eines de disseny i simulació</h2>
 
   <div class="grid-main">
@@ -421,41 +386,50 @@
       </div>
     </a>
 
-  </div>
-</section>
-
-<hr>
-
-<!-- ══ EINES ADDICIONALS ══ -->
-<section>
-  <p class="section-title">Eines addicionals</p>
-  <h2 class="section-heading">Més recursos</h2>
-
-  <div class="grid-secondary">
-
-    <a class="card-small" href="#">
-      <div class="card-small-icon">ARD</div>
-      <div class="card-small-body">
-        <div class="card-small-title">THOSDRUINO</div>
-        <div class="card-small-desc">Simulador d'Arduino per a projectes de robòtica i electrònica.</div>
+    <!-- THOSDRUINO (pròximament) -->
+    <div class="card card-soon">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thosdruino.png" alt="THOSDRUINO"> -->
+        <span class="card-img-placeholder">ARD</span>
+        <span class="card-soon-badge">Pròximament</span>
       </div>
-    </a>
-
-    <a class="card-small" href="#">
-      <div class="card-small-icon">BRG</div>
-      <div class="card-small-body">
-        <div class="card-small-title">THOSBRIDGE</div>
-        <div class="card-small-desc">Disseny de ponts i simulació d'esforços estructurals.</div>
+      <div class="card-body">
+        <span class="card-tag">Arduino · Robòtica</span>
+        <div class="card-title">THOSDRUINO</div>
+        <div class="card-desc">Simulador d'Arduino per a projectes de robòtica i electrònica. Programa i simula el comportament de plaques Arduino sense hardware físic.</div>
+        <span class="card-btn" style="opacity:0.4">En desenvolupament</span>
       </div>
-    </a>
+    </div>
 
-    <a class="card-small" href="#">
-      <div class="card-small-icon">ROB</div>
-      <div class="card-small-body">
-        <div class="card-small-title">THOSROBOT</div>
-        <div class="card-small-desc">Aplicacions per a l'aprenentatge de robòtica educativa.</div>
+    <!-- THOSBRIDGE (pròximament) -->
+    <div class="card card-soon">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thosbridge.png" alt="THOSBRIDGE"> -->
+        <span class="card-img-placeholder">BRG</span>
+        <span class="card-soon-badge">Pròximament</span>
       </div>
-    </a>
+      <div class="card-body">
+        <span class="card-tag">Estructures</span>
+        <div class="card-title">THOSBRIDGE</div>
+        <div class="card-desc">Disseny de ponts i simulació d'esforços estructurals. Analitza la resistència de diferents tipologies de ponts i estructures.</div>
+        <span class="card-btn" style="opacity:0.4">En desenvolupament</span>
+      </div>
+    </div>
+
+    <!-- THOSROBOT (pròximament) -->
+    <div class="card card-soon">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thosrobot.png" alt="THOSROBOT"> -->
+        <span class="card-img-placeholder">ROB</span>
+        <span class="card-soon-badge">Pròximament</span>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Robòtica educativa</span>
+        <div class="card-title">THOSROBOT</div>
+        <div class="card-desc">Aplicació per a l'aprenentatge de robòtica educativa. Programa robots virtuals i aprèn els fonaments de l'automatització i la programació.</div>
+        <span class="card-btn" style="opacity:0.4">En desenvolupament</span>
+      </div>
+    </div>
 
   </div>
 </section>
