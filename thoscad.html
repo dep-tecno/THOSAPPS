@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>THOSCAD v2.0 — Dep. Tecnologia</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #00e676; --green-dim: #00b854;
+      --muted: #8892a4; --border: #2d3347;
+    }
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; }
+    iframe { flex: 1; border: none; width: 100%; display: block; }
+    nav {
+      position: relative; z-index: 100;
+      background: rgba(15,17,23,0.97);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem; display: flex; align-items: center;
+      height: 72px; flex-shrink: 0; overflow-x: auto;
+    }
+    nav::-webkit-scrollbar { display: none; }
+    .nav-brand {
+      font-size: 0.8rem; font-weight: 700; color: var(--green);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      white-space: nowrap; margin-right: 1.5rem;
+      text-decoration: none; flex-shrink: 0;
+      display: flex; align-items: center; gap: 0.6rem;
+    }
+    .nav-links { display: flex; list-style: none; flex-shrink: 0; }
+    .nav-links a {
+      display: block; padding: 0 0.9rem; height: 72px; line-height: 72px;
+      font-size: 0.82rem; font-weight: 500; color: var(--muted);
+      text-decoration: none; white-space: nowrap;
+      transition: color 0.2s, border-bottom 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--green); border-bottom-color: var(--green); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-brand" href="index.html">
+      <img src="logonew.png" alt="Logo" style="height:40px;width:auto;object-fit:contain;border-radius:6px;">
+      Dep. Tecnologia
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Inici</a></li>
+      <li><a href="thoscad.html" class="active">THOSCAD v2.0</a></li>
+      <li><a href="thoslab.html">THOSLAB v2.0</a></li>
+      <li><a href="thosmap.html">THOSMAP v2.0</a></li>
+      <li><a href="thoslogo.html">THOSLOGO</a></li>
+      <li><a href="thosmetric.html">THOSMETRIC</a></li>
+      <li><a href="#">THOSDRUINO</a></li>
+      <li><a href="#">THOSBRIDGE</a></li>
+      <li><a href="#">THOSROBOT</a></li>
+    </ul>
+  </nav>
+  <iframe src="THOSCAD v.2.HTML" title="THOSCAD v2.0"></iframe>
+</body>
+</html>
