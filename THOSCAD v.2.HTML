@@ -653,7 +653,6 @@
 
             const handleWheel = (e) => {
                 if (showAiModal || textInput) return;
-                e.preventDefault();
                 const scaleAmount = -e.deltaY * 0.001;
                 const newZoom = Math.max(0.1, Math.min(10, zoom * (1 + scaleAmount)));
                 const rect = svgRef.current.getBoundingClientRect();
@@ -662,6 +661,14 @@
                 const newPanX = mouseX - worldMouseBefore.x * newZoom; const newPanY = mouseY - worldMouseBefore.y * newZoom;
                 setZoom(newZoom); setPan({ x: newPanX, y: newPanY });
             };
+
+            useEffect(() => {
+                const el = svgRef.current;
+                if (!el) return;
+                const listener = (e) => { e.preventDefault(); handleWheel(e); };
+                el.addEventListener('wheel', listener, { passive: false });
+                return () => el.removeEventListener('wheel', listener);
+            }, [zoom, pan, showAiModal, textInput]);
 
             const createElement = (type, start, end, props) => {
                 if (distance(start, end) < 1 && type !== 'text') return null;
@@ -982,7 +989,7 @@
                 }, [
                     React.createElement("svg", {
                         ref: svgRef, className: "w-full h-full block touch-none",
-                        onMouseDown: handleMouseDown, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp, onWheel: handleWheel
+                        onMouseDown: handleMouseDown, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp
                     }, [
                         React.createElement("defs", {}, [
                             React.createElement("marker", { id: "arrowhead", markerWidth: "10", markerHeight: "7", refX: "9", refY: "3.5", orient: "auto" }, React.createElement("polygon", { points: "0 0, 10 3.5, 0 7", fill: properties.stroke }))
