@@ -150,6 +150,7 @@
             const [lastAutoSave, setLastAutoSave] = useState(null);
 
             const svgRef = useRef(null);
+            const elementsRef = useRef(elements);
             const BASIC_COLORS = ['#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#808080'];
 
             // --- CANVI EINA SEGUR ---
@@ -254,6 +255,9 @@
 
             useEffect(() => { if (textInput && inputRef.current) inputRef.current.focus(); }, [textInput]);
 
+            // Mantenir ref sincronitzada amb l'estat actual (sense stale closure)
+            useEffect(() => { elementsRef.current = elements; }, [elements]);
+
             // Recuperació de sessió en carregar la pàgina
             useEffect(() => {
                 try {
@@ -276,18 +280,20 @@
                 } catch(e) {}
             }, []);
 
-            // Autoguardat cada minut
+            // Autoguardat: interval fixe + beforeunload (usa ref, no es reinicia mai)
             useEffect(() => {
-                const id = setInterval(() => {
-                    if (elements.length === 0) return;
+                const doSave = () => {
+                    if (elementsRef.current.length === 0) return;
                     try {
-                        localStorage.setItem('thoscad_recovery', JSON.stringify({ els: elements, ts: Date.now() }));
+                        localStorage.setItem('thoscad_recovery', JSON.stringify({ els: elementsRef.current, ts: Date.now() }));
                         const t = new Date();
                         setLastAutoSave(`${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`);
                     } catch(e) {}
-                }, 60000);
-                return () => clearInterval(id);
-            }, [elements]);
+                };
+                const id = setInterval(doSave, 60000);
+                window.addEventListener('beforeunload', doSave);
+                return () => { clearInterval(id); window.removeEventListener('beforeunload', doSave); };
+            }, []);
 
             useEffect(() => {
                 if (selectedIds.size === 1) {
