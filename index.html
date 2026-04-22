@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Departament de Tecnologia</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --bg2:       #1a1d27;
+      --bg3:       #22263a;
+      --green:     #00e676;
+      --green-dim: #00b854;
+      --text:      #e2e8f0;
+      --muted:     #8892a4;
+      --border:    #2d3347;
+      --radius:    12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,17,23,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 56px;
+      overflow-x: auto;
+    }
+    nav::-webkit-scrollbar { display: none; }
+
+    .nav-brand {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      margin-right: 1.5rem;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      list-style: none;
+      gap: 0;
+      flex-shrink: 0;
+    }
+    .nav-links a {
+      display: block;
+      padding: 0 0.9rem;
+      height: 56px;
+      line-height: 56px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color 0.2s, border-bottom 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      padding: 5rem 2rem 4rem;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,230,118,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      background: rgba(0,230,118,0.1);
+      border: 1px solid rgba(0,230,118,0.25);
+      border-radius: 999px;
+      padding: 0.3rem 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .hero h1 {
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    .hero h1 span { color: var(--green); }
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 540px;
+      margin: 0 auto 2rem;
+      line-height: 1.6;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 3rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 0.5rem;
+    }
+    .section-heading {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      color: var(--text);
+    }
+
+    /* ── GRID PRINCIPAL ── */
+    .grid-main {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--green-dim);
+      box-shadow: 0 8px 32px rgba(0,230,118,0.12);
+    }
+
+    .card-img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: -0.04em;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      inset: 0;
+    }
+    .card-img-placeholder {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--green);
+      opacity: 0.6;
+      letter-spacing: -0.04em;
+      font-family: monospace;
+    }
+
+    .card-body {
+      padding: 1.2rem 1.4rem 1.4rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .card-tag {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      opacity: 0.8;
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .card-desc {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.55;
+      flex: 1;
+    }
+    .card-btn {
+      margin-top: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--green);
+      text-decoration: none;
+    }
+    .card-btn svg { transition: transform 0.2s; }
+    .card:hover .card-btn svg { transform: translateX(4px); }
+
+    /* ── GRID SECUNDARI (eines extra) ── */
+    .grid-secondary {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .card-small {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .card-small:hover {
+      transform: translateY(-3px);
+      border-color: var(--green-dim);
+      box-shadow: 0 6px 20px rgba(0,230,118,0.1);
+    }
+    .card-small-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(0,230,118,0.1);
+      border: 1px solid rgba(0,230,118,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: var(--green);
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+    .card-small-body {}
+    .card-small-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .card-small-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    /* ── DIVIDER ── */
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 2rem;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    footer span { color: var(--green); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .hero { padding: 3rem 1.2rem 2.5rem; }
+      section { padding: 2rem 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <a class="nav-brand" href="index.html">&#9632; Dep. Tecnologia</a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Inici</a></li>
+    <li><a href="THOSCAD v.2.HTML">THOSCAD v2.0</a></li>
+    <li><a href="THOSLAB.html">THOSLAB v2.0</a></li>
+    <li><a href="THOSMAP.html">THOSMAP v2.0</a></li>
+    <li><a href="THOSLOGO v2.0.html">THOSLOGO</a></li>
+    <li><a href="THOSMETRIC.html">THOSMETRIC</a></li>
+  </ul>
+</nav>
+
+<!-- ══ HERO ══ -->
+<div class="hero">
+  <div class="hero-badge">Eines educatives de tecnologia</div>
+  <h1>Departament de<br><span>Tecnologia</span></h1>
+  <p>Aplicacions web interactives per a l'aprenentatge de dibuix tècnic, circuits, programació i molt més. Gratuïtes i sense instal·lació.</p>
+</div>
+
+<!-- ══ EINES PRINCIPALS ══ -->
+<section>
+  <p class="section-title">Aplicacions principals</p>
+  <h2 class="section-heading">Eines de disseny i simulació</h2>
+
+  <div class="grid-main">
+
+    <!-- THOSCAD -->
+    <a class="card" href="THOSCAD v.2.HTML">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thoscad.png" alt="THOSCAD"> -->
+        <span class="card-img-placeholder">CAD</span>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Dibuix tècnic 2D</span>
+        <div class="card-title">THOSCAD v2.0</div>
+        <div class="card-desc">Editor de dibuix vectorial 2D. Línies, arcs, cercles, polígons, cotes i molt més. Exporta a SVG i PNG. Funciona directament al navegador.</div>
+        <span class="card-btn">Obrir aplicació <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </div>
+    </a>
+
+    <!-- THOSLAB -->
+    <a class="card" href="THOSLAB.html">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thoslab.png" alt="THOSLAB"> -->
+        <span class="card-img-placeholder">LAB</span>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Circuits elèctrics</span>
+        <div class="card-title">THOSLAB v2.0</div>
+        <div class="card-desc">Simulador de circuits de corrent continu i circuits digitals. Resolució per les lleis de Kirchhoff i taules de veritat. Ideal per a pràctiques de laboratori.</div>
+        <span class="card-btn">Obrir aplicació <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </div>
+    </a>
+
+    <!-- THOSMAP -->
+    <a class="card" href="THOSMAP.html">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thosmap.png" alt="THOSMAP"> -->
+        <span class="card-img-placeholder">MAP</span>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Mapes conceptuals</span>
+        <div class="card-title">THOSMAP v2.0</div>
+        <div class="card-desc">Crea mapes mentals i diagrames conceptuals de manera visual i intuïtiva. Exporta els teus esquemes per usar-los a classe o en presentacions.</div>
+        <span class="card-btn">Obrir aplicació <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </div>
+    </a>
+
+    <!-- THOSLOGO -->
+    <a class="card" href="THOSLOGO v2.0.html">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thoslogo.png" alt="THOSLOGO"> -->
+        <span class="card-img-placeholder">LOGO</span>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Programació</span>
+        <div class="card-title">THOSLOGO</div>
+        <div class="card-desc">Entorn de programació inspirat en Logo. Aprèn els conceptes bàsics de programació amb codi senzill i visualització immediata de resultats.</div>
+        <span class="card-btn">Obrir aplicació <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </div>
+    </a>
+
+    <!-- THOSMETRIC -->
+    <a class="card" href="THOSMETRIC.html">
+      <div class="card-img">
+        <!-- Substitueix per: <img src="img/thosmetric.png" alt="THOSMETRIC"> -->
+        <span class="card-img-placeholder">3D</span>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Geometria descriptiva</span>
+        <div class="card-title">THOSMETRIC</div>
+        <div class="card-desc">Eina per a sistemes dièdric i isomètric en 2D i 3D. Visualitza i construeix figures geomètriques en perspectiva i en planta, alçat i perfil.</div>
+        <span class="card-btn">Obrir aplicació <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<hr>
+
+<!-- ══ EINES ADDICIONALS ══ -->
+<section>
+  <p class="section-title">Eines addicionals</p>
+  <h2 class="section-heading">Més recursos</h2>
+
+  <div class="grid-secondary">
+
+    <a class="card-small" href="#">
+      <div class="card-small-icon">ARD</div>
+      <div class="card-small-body">
+        <div class="card-small-title">THOSDRUINO</div>
+        <div class="card-small-desc">Simulador d'Arduino per a projectes de robòtica i electrònica.</div>
+      </div>
+    </a>
+
+    <a class="card-small" href="#">
+      <div class="card-small-icon">BRG</div>
+      <div class="card-small-body">
+        <div class="card-small-title">THOSBRIDGE</div>
+        <div class="card-small-desc">Disseny de ponts i simulació d'esforços estructurals.</div>
+      </div>
+    </a>
+
+    <a class="card-small" href="#">
+      <div class="card-small-icon">ROB</div>
+      <div class="card-small-body">
+        <div class="card-small-title">THOSROBOT</div>
+        <div class="card-small-desc">Aplicacions per a l'aprenentatge de robòtica educativa.</div>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  © <span>J.Yerga</span> · 2025 · Tots els drets reservats ·
+  Aplicacions disponibles per a ús educatiu
+</footer>
+
+</body>
+</html>
