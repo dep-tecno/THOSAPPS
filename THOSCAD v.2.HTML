@@ -33,7 +33,7 @@
         import { createRoot } from 'react-dom/client';
         import { 
             MousePointer2, Circle, Square, Hand, Trash2, Download, Ruler, 
-            Sparkles, X, Loader2, Magnet, Type, Hexagon, Image as ImageIcon, 
+            X, Magnet, Type, Hexagon, Image as ImageIcon,
             Check, Minus, ChevronDown, Save, FolderOpen, Scissors, PaintBucket,
             Undo2, Redo2, ZoomIn, ZoomOut
         } from 'lucide-react';
@@ -147,10 +147,6 @@
             const [colorPickerPos, setColorPickerPos] = useState({ x: 0, y: 0 });
             const colorButtonRef = useRef(null);
 
-            const [showAiModal, setShowAiModal] = useState(false);
-            const [aiPrompt, setAiPrompt] = useState("");
-            const [isAiLoading, setIsAiLoading] = useState(false);
-            const [aiError, setAiError] = useState(null);
             const [lastAutoSave, setLastAutoSave] = useState(null);
 
             const svgRef = useRef(null);
@@ -240,8 +236,7 @@
                     }
 
                     if (key === 'escape') {
-                        if (showAiModal) setShowAiModal(false);
-                        else if (showColorPicker) setShowColorPicker(false);
+                        if (showColorPicker) setShowColorPicker(false);
                         else if (tool === 'polyline' && drawingState?.points?.length > 1) finishPolyline();
                         else if (drawingState) setDrawingState(null); 
                         else if (selectedIds.size > 0) setSelectedIds(new Set()); 
@@ -250,12 +245,12 @@
                         if (tool === 'polyline' && drawingState?.points?.length > 1) finishPolyline();
                     }
                     if (key === 'delete' || key === 'backspace') {
-                        if (!showAiModal) deleteSelected();
+                        deleteSelected();
                     }
                 };
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [tool, drawingState, selectedIds, showAiModal, textInput, showColorPicker, clipboard, elements, historyStep, zoom, history]); 
+            }, [tool, drawingState, selectedIds, textInput, showColorPicker, clipboard, elements, historyStep, zoom, history]);
 
             useEffect(() => { if (textInput && inputRef.current) inputRef.current.focus(); }, [textInput]);
 
@@ -507,7 +502,7 @@
             };
 
             const handleMouseDown = (e) => {
-                if (showAiModal || textInput || showColorPicker) {
+                if (textInput || showColorPicker) {
                     if (showColorPicker && !e.target.closest('.color-picker-dropdown')) setShowColorPicker(false);
                     return; 
                 }
@@ -593,7 +588,7 @@
             };
 
             const handleMouseMove = (e) => {
-                if (showAiModal || textInput) return;
+                if (textInput) return;
                 const coords = getMouseCoords(e);
                 
                 // Actualitzar indicador de Snap
@@ -635,7 +630,7 @@
             };
 
             const handleMouseUp = () => {
-                if (showAiModal || draggingState || textInput) { 
+                if (draggingState || textInput) { 
                     if (draggingState && draggingState.type === 'move') {
                          saveHistory(elements); // Commit move
                     }
@@ -652,7 +647,7 @@
             };
 
             const handleWheel = (e) => {
-                if (showAiModal || textInput) return;
+                if (textInput) return;
                 const scaleAmount = -e.deltaY * 0.001;
                 const newZoom = Math.max(0.1, Math.min(10, zoom * (1 + scaleAmount)));
                 const rect = svgRef.current.getBoundingClientRect();
@@ -668,7 +663,7 @@
                 const listener = (e) => { e.preventDefault(); handleWheel(e); };
                 el.addEventListener('wheel', listener, { passive: false });
                 return () => el.removeEventListener('wheel', listener);
-            }, [zoom, pan, showAiModal, textInput]);
+            }, [zoom, pan, textInput]);
 
             const createElement = (type, start, end, props) => {
                 if (distance(start, end) < 1 && type !== 'text') return null;
@@ -758,34 +753,6 @@
                     URL.revokeObjectURL(url);
                 };
                 img.src = url;
-            };
-
-            const handleAiSubmit = async () => {
-                if (!aiPrompt.trim()) return;
-                setIsAiLoading(true); setAiError(null);
-                try {
-                    const apiKey = ""; 
-                    const systemPrompt = `Eres un asistente experto de CAD. Genera JSON array de objetos: line, rect, circle, arrow, polyline.`;
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: aiPrompt }] }],
-                            systemInstruction: { parts: [{ text: systemPrompt }] },
-                            generationConfig: { temperature: 0.2 }
-                        })
-                    });
-                    if (!response.ok) throw new Error('Error API');
-                    const data = await response.json();
-                    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
-                    const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const newElements = JSON.parse(cleanJson);
-                    if (Array.isArray(newElements)) {
-                        const elementsWithIds = newElements.map(el => ({ ...el, id: generateId(), style: { strokeWidth: 2, stroke: '#ffffff', ...el.style }, fill: 'none' }));
-                        saveHistory([...elements, ...elementsWithIds]); // History support for AI
-                        setShowAiModal(false); setAiPrompt("");
-                    } else throw new Error("JSON invàlid");
-                } catch (err) { console.error(err); setAiError("No he entès la instrucció."); } finally { setIsAiLoading(false); }
             };
 
             const MeasurementLabel = ({ x, y, text }) => React.createElement("g", { transform: `translate(${x + 15}, ${y - 15})`, style: { pointerEvents: 'none' } }, [React.createElement("rect", { x: "0", y: "-14", width: text.length * 8 + 10, height: "20", fill: "#000", fillOpacity: "0.8", rx: "4" }), React.createElement("text", { x: "5", y: "0", fill: "white", fontSize: "12", fontFamily: "monospace", fontWeight: "bold" }, text)]);
@@ -977,8 +944,6 @@
                     ),
 
                     React.createElement(ToolbarDivider),
-                    React.createElement(IconButton, { icon: Sparkles, title: "Assistent IA", special: true, onClick: () => setShowAiModal(true) }),
-                    React.createElement(ToolbarDivider),
                     React.createElement(IconButton, { icon: Trash2, title: "Esborrar", onClick: deleteSelected, disabled: selectedIds.size === 0 }),
                     React.createElement(IconButton, { icon: Download, title: "Descarregar Imatge (PNG)", onClick: exportPNG })
                 ]),
@@ -1040,24 +1005,6 @@
                     onClick: () => { updateProperties('stroke', c); setShowColorPicker(false); }
                 }))),
 
-                // MODAL AI
-                showAiModal && React.createElement("div", { className: "absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" },
-                    React.createElement("div", { className: "bg-gray-800 border border-gray-700 rounded-lg shadow-2xl w-full max-w-lg p-6 animate-in" }, [
-                        React.createElement("div", { className: "flex justify-between items-center mb-4" }, [
-                            React.createElement("h2", { className: "text-xl font-bold text-white flex items-center gap-2" }, [React.createElement(Sparkles, { className: "text-purple-400" }), "Assistent Màgic"]),
-                            React.createElement("button", { onClick: () => setShowAiModal(false), className: "text-gray-400 hover:text-white" }, React.createElement(X, { size: 24 }))
-                        ]),
-                        React.createElement("p", { className: "text-gray-300 text-sm mb-4" }, "Descriu el que vols dibuixar."),
-                        React.createElement("textarea", { value: aiPrompt, onChange: (e) => setAiPrompt(e.target.value), placeholder: "Escriu la teva comanda...", className: "w-full bg-gray-900 border border-gray-600 rounded p-3 text-white focus:outline-none focus:border-purple-500 h-32 resize-none mb-4", autoFocus: true }),
-                        aiError && React.createElement("div", { className: "bg-red-900/50 text-red-200 p-2 rounded text-sm mb-4 border border-red-700" }, aiError),
-                        React.createElement("div", { className: "flex justify-end gap-3" }, [
-                            React.createElement("button", { onClick: () => setShowAiModal(false), className: "px-4 py-2 rounded text-gray-300 hover:bg-gray-700" }, "Cancel·lar"),
-                            React.createElement("button", { onClick: handleAiSubmit, disabled: isAiLoading || !aiPrompt.trim(), className: "px-4 py-2 rounded bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" }, 
-                                isAiLoading ? [React.createElement(Loader2, { className: "animate-spin", size: 18 }), "Generant..."] : [React.createElement(Sparkles, { size: 18 }), "Generar"]
-                            )
-                        ])
-                    ])
-                )
             ]);
         }
 
