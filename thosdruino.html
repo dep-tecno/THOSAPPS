@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>THOSDRUINO – Simulador Arduino</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;
+  --green:#00e676;--green-dim:#00b854;
+  --text:#e2e8f0;--muted:#8892a4;--border:#2d3347;--radius:12px;
+  --red:#ff5555;--amber:#fbbf24;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;height:72px;overflow-x:auto}
+nav::-webkit-scrollbar{display:none}
+.nav-brand{font-size:.8rem;font-weight:700;color:var(--green);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;margin-right:1.5rem;text-decoration:none;flex-shrink:0;display:flex;align-items:center;gap:.6rem}
+.nav-links{display:flex;list-style:none;flex-shrink:0}
+.nav-links a{display:block;padding:0 .9rem;height:72px;line-height:72px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .2s,border-bottom .2s;border-bottom:2px solid transparent}
+.nav-links a:hover,.nav-links a.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* TOOLBAR */
+#toolbar{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+#toolbar select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;font-size:.82rem;cursor:pointer}
+.btn{border:none;border-radius:8px;padding:.35rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn-run{background:var(--green);color:#0f1117}
+.btn-stop{background:var(--red);color:#fff}
+.btn-clear{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:default}
+#status{margin-left:auto;font-size:.75rem;color:var(--muted);white-space:nowrap}
+#status.running{color:var(--green)}
+#status.error{color:var(--red)}
+
+/* MAIN LAYOUT */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* LEFT: EDITOR */
+#left{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0}
+#editor{flex:1;resize:none;background:var(--bg2);color:var(--text);border:none;outline:none;padding:1rem;font-family:'Fira Code','Consolas','Courier New',monospace;font-size:.85rem;line-height:1.6;tab-size:2}
+
+/* RIGHT PANEL */
+#right{width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+
+/* COMPONENTS */
+#comp-panel{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+#comp-header{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border)}
+#comp-header span{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
+#btn-add{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:.2rem .6rem;font-size:.78rem;cursor:pointer}
+#btn-add:hover{border-color:var(--green);color:var(--green)}
+#add-form{display:none;padding:.6rem 1rem;gap:.5rem;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+#add-form.visible{display:flex}
+#add-form select,#add-form input{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.8rem}
+#add-form input{width:60px}
+#add-form label{font-size:.78rem;color:var(--muted)}
+.btn-add-ok{background:var(--green);color:#0f1117;border:none;border-radius:6px;padding:.3rem .7rem;font-size:.8rem;font-weight:600;cursor:pointer}
+#comp-list{overflow-y:auto;max-height:220px}
+.comp-row{display:flex;align-items:center;gap:.6rem;padding:.5rem 1rem;border-bottom:1px solid var(--border);font-size:.82rem}
+.comp-icon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.led-circle{width:22px;height:22px;border-radius:50%;background:#333;border:2px solid #555;transition:background .1s,box-shadow .1s}
+.led-on{background:var(--green);border-color:var(--green);box-shadow:0 0 8px var(--green),0 0 18px rgba(0,230,118,.4)}
+.btn-comp{padding:.25rem .5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:.78rem;transition:background .1s}
+.btn-comp:active,.btn-comp.pressed{background:var(--green);color:#0f1117;border-color:var(--green)}
+.buzzer-icon{font-size:1.1rem;transition:filter .1s}
+.buzzer-on{filter:drop-shadow(0 0 4px var(--amber))}
+.comp-info{flex:1;min-width:0}
+.comp-name{font-weight:600;font-size:.8rem}
+.comp-pin{font-size:.72rem;color:var(--muted)}
+.comp-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;padding:0 .2rem}
+.comp-del:hover{color:var(--red)}
+
+/* SERIAL MONITOR */
+#serial-panel{display:flex;flex-direction:column;flex:1;overflow:hidden}
+#serial-header{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0}
+#serial-header span{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
+#btn-clear-serial{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:.15rem .5rem;font-size:.72rem;cursor:pointer}
+#btn-clear-serial:hover{border-color:var(--red);color:var(--red)}
+#serial-out{flex:1;overflow-y:auto;padding:.6rem 1rem;font-family:'Fira Code','Consolas',monospace;font-size:.78rem;line-height:1.6;color:#a8ff78;background:var(--bg)}
+#serial-out p{margin:0;white-space:pre-wrap;word-break:break-all}
+#serial-out .err{color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="index.html">
+    <img src="logonew.png" alt="Logo" style="height:40px;width:auto;object-fit:contain;border-radius:6px;">
+    Dep. Tecnologia
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inici</a></li>
+    <li><a href="THOSCAD v.2.HTML">THOSCAD v2.0</a></li>
+    <li><a href="THOSLAB.html">THOSLAB v2.0</a></li>
+    <li><a href="THOSMAP.HTML">THOSMAP v2.0</a></li>
+    <li><a href="THOSLOGO v2.0.html">THOSLOGO</a></li>
+    <li><a href="THOSMETRIC.html">THOSMETRIC</a></li>
+    <li><a href="thosdruino.html" class="active">THOSDRUINO</a></li>
+    <li><a href="#">THOSBRIDGE</a></li>
+    <li><a href="#">THOSROBOT</a></li>
+  </ul>
+</nav>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <select id="examples">
+    <option value="">— Selecciona un exemple —</option>
+    <option value="blink">1. Blink (LED parpellejant)</option>
+    <option value="boto">2. Botó + LED</option>
+    <option value="fade">3. Fade (brillantor gradual)</option>
+    <option value="buzzer">4. Buzzer (melodia)</option>
+  </select>
+  <button class="btn btn-run" id="btnRun">▶ Executar</button>
+  <button class="btn btn-stop" id="btnStop" disabled>■ Aturar</button>
+  <button class="btn btn-clear" id="btnClear">Netejar codi</button>
+  <span id="status">Aturat</span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- EDITOR -->
+  <div id="left">
+    <textarea id="editor" spellcheck="false" placeholder="// Escriu el teu codi Arduino aquí...
+// Funcions disponibles: pinMode, digitalWrite, digitalRead,
+// analogWrite, delay, Serial.println, tone, noTone
+
+void setup() {
+
+}
+
+void loop() {
+
+}"></textarea>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right">
+
+    <!-- COMPONENTS -->
+    <div id="comp-panel">
+      <div id="comp-header">
+        <span>Components</span>
+        <button id="btn-add">+ Afegir</button>
+      </div>
+      <div id="add-form">
+        <label>Tipus</label>
+        <select id="add-type">
+          <option value="led">LED</option>
+          <option value="boto">Botó</option>
+          <option value="buzzer">Buzzer</option>
+        </select>
+        <label>Pin</label>
+        <input type="number" id="add-pin" value="13" min="0" max="19"/>
+        <button class="btn-add-ok" id="btn-add-ok">Afegir</button>
+      </div>
+      <div id="comp-list"></div>
+    </div>
+
+    <!-- SERIAL MONITOR -->
+    <div id="serial-panel">
+      <div id="serial-header">
+        <span>Monitor Sèrie</span>
+        <button id="btn-clear-serial">Netejar</button>
+      </div>
+      <div id="serial-out"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── EXEMPLES ──────────────────────────────────────────────────
+const EXEMPLES = {
+  blink: `// Exemple 1: Blink
+// Necessites: LED al pin 13
+void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+}`,
+
+  boto: `// Exemple 2: Botó + LED
+// Necessites: Botó al pin 2, LED al pin 13
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(2, INPUT);
+}
+
+void loop() {
+  int estat = digitalRead(2);
+  if (estat == HIGH) {
+    digitalWrite(13, HIGH);
+  } else {
+    digitalWrite(13, LOW);
+  }
+  delay(50);
+}`,
+
+  fade: `// Exemple 3: Fade (brillantor gradual)
+// Necessites: LED al pin 9
+int brillantor = 0;
+int pas = 5;
+
+void setup() {
+  pinMode(9, OUTPUT);
+}
+
+void loop() {
+  analogWrite(9, brillantor);
+  brillantor = brillantor + pas;
+  if (brillantor <= 0 || brillantor >= 255) {
+    pas = -pas;
+  }
+  delay(30);
+}`,
+
+  buzzer: `// Exemple 4: Buzzer - Melodia
+// Necessites: Buzzer al pin 8
+int notes[] = {262, 294, 330, 349, 392, 440, 494, 523};
+int duracio = 300;
+
+void setup() {
+  Serial.println("Iniciant melodia...");
+}
+
+void loop() {
+  for (int i = 0; i < 8; i++) {
+    tone(8, notes[i], duracio);
+    delay(duracio + 50);
+  }
+  noTone(8);
+  delay(1000);
+}`
+};
+
+// ── COMPONENTS ────────────────────────────────────────────────
+const components = [];
+let compIdCounter = 0;
+const buttonStates = {};
+
+function renderComponents() {
+  const list = document.getElementById('comp-list');
+  list.innerHTML = '';
+  components.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'comp-row';
+    row.dataset.id = c.id;
+
+    let iconHTML = '';
+    if (c.type === 'led') {
+      iconHTML = `<div class="led-circle" id="led-${c.id}"></div>`;
+    } else if (c.type === 'boto') {
+      iconHTML = `<button class="btn-comp" id="btn-${c.id}"
+        onmousedown="pressButton(${c.pin},true,${c.id})"
+        onmouseup="pressButton(${c.pin},false,${c.id})"
+        onmouseleave="pressButton(${c.pin},false,${c.id})"
+        ontouchstart="pressButton(${c.pin},true,${c.id})"
+        ontouchend="pressButton(${c.pin},false,${c.id})">PREM</button>`;
+    } else if (c.type === 'buzzer') {
+      iconHTML = `<span class="buzzer-icon" id="buz-${c.id}">🔇</span>`;
+    }
+
+    const typeName = c.type === 'led' ? 'LED' : c.type === 'boto' ? 'Botó' : 'Buzzer';
+    row.innerHTML = `
+      <div class="comp-icon">${iconHTML}</div>
+      <div class="comp-info">
+        <div class="comp-name">${typeName}</div>
+        <div class="comp-pin">Pin ${c.pin}</div>
+      </div>
+      <button class="comp-del" onclick="deleteComponent(${c.id})">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function addComponent(type, pin) {
+  pin = parseInt(pin);
+  components.push({ id: compIdCounter++, type, pin, value: 0 });
+  renderComponents();
+}
+
+function deleteComponent(id) {
+  const idx = components.findIndex(c => c.id === id);
+  if (idx !== -1) components.splice(idx, 1);
+  renderComponents();
+}
+
+function pressButton(pin, pressed, id) {
+  buttonStates[pin] = pressed ? 1 : 0;
+  const el = document.getElementById('btn-' + id);
+  if (el) el.classList.toggle('pressed', pressed);
+}
+
+function updateComponents(pin, val) {
+  components.forEach(c => {
+    if (c.pin !== pin) return;
+    c.value = val;
+    if (c.type === 'led') {
+      const el = document.getElementById('led-' + c.id);
+      if (!el) return;
+      if (val === 0) {
+        el.classList.remove('led-on');
+        el.style.opacity = '';
+        el.style.background = '';
+        el.style.boxShadow = '';
+      } else if (val === 1) {
+        el.classList.add('led-on');
+        el.style.opacity = '';
+      } else {
+        const pct = val / 255;
+        el.style.background = `rgba(0,230,118,${pct})`;
+        el.style.boxShadow = `0 0 ${8*pct}px var(--green)`;
+        el.style.opacity = 0.2 + 0.8 * pct;
+      }
+    } else if (c.type === 'buzzer') {
+      const el = document.getElementById('buz-' + c.id);
+      if (!el) return;
+    }
+  });
+}
+
+// ── SERIAL MONITOR ────────────────────────────────────────────
+function appendSerial(text, isError) {
+  const out = document.getElementById('serial-out');
+  const p = document.createElement('p');
+  if (isError) p.className = 'err';
+  p.textContent = text;
+  out.appendChild(p);
+  out.scrollTop = out.scrollHeight;
+}
+
+document.getElementById('btn-clear-serial').onclick = () => {
+  document.getElementById('serial-out').innerHTML = '';
+};
+
+// ── WEB AUDIO (BUZZER) ────────────────────────────────────────
+let audioCtx = null;
+const oscillators = {};
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(pin, freq, duration) {
+  stopTone(pin);
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    gain.gain.value = 0.3;
+    osc.start();
+    oscillators[pin] = { osc, gain };
+    components.forEach(c => {
+      if (c.pin === pin && c.type === 'buzzer') {
+        const el = document.getElementById('buz-' + c.id);
+        if (el) { el.textContent = '🔊'; el.classList.add('buzzer-on'); }
+      }
+    });
+    if (duration) setTimeout(() => stopTone(pin), duration);
+  } catch(e) {}
+}
+
+function stopTone(pin) {
+  if (oscillators[pin]) {
+    try { oscillators[pin].osc.stop(); } catch(e) {}
+    delete oscillators[pin];
+  }
+  components.forEach(c => {
+    if (c.pin === pin && c.type === 'buzzer') {
+      const el = document.getElementById('buz-' + c.id);
+      if (el) { el.textContent = '🔇'; el.classList.remove('buzzer-on'); }
+    }
+  });
+}
+
+function stopAllTones() {
+  Object.keys(oscillators).forEach(p => stopTone(parseInt(p)));
+}
+
+// ── TRANSPILADOR ──────────────────────────────────────────────
+function transpile(code) {
+  // Eliminar arrays literals d'estil Arduino: int arr[] = {1,2,3};
+  // Conservar com a let arr = [1,2,3];
+  code = code.replace(/\b(?:int|float|double|long|bool|boolean|byte|char|String|unsigned\s+int|unsigned\s+long)\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/g,
+    (_, name, vals) => `let ${name} = [${vals}]`);
+
+  // Declaracions de tipus → let (variables globals i locals)
+  code = code.replace(/\b(int|float|double|long|bool|boolean|byte|char|String|unsigned\s+int|unsigned\s+long)\s+(?=\w)/g, 'let ');
+
+  // for(let i → correcte (ja fet)
+  // Constants Arduino
+  code = code.replace(/\bHIGH\b/g, '1');
+  code = code.replace(/\bLOW\b/g, '0');
+  code = code.replace(/\bOUTPUT\b/g, '"OUTPUT"');
+  code = code.replace(/\bINPUT_PULLUP\b/g, '"INPUT_PULLUP"');
+  code = code.replace(/\bINPUT\b/g, '"INPUT"');
+  code = code.replace(/\bLED_BUILTIN\b/g, '13');
+  code = code.replace(/\btrue\b/g, 'true');
+  code = code.replace(/\bfalse\b/g, 'false');
+
+  // Serial
+  code = code.replace(/Serial\.println\s*\(/g, '_serialPrintln(');
+  code = code.replace(/Serial\.print\s*\(/g, '_serialPrint(');
+
+  // Funcions Arduino → privades
+  code = code.replace(/\bdelay\s*\(/g, 'await _delay(');
+  code = code.replace(/\bdigitalWrite\s*\(/g, '_digitalWrite(');
+  code = code.replace(/\bdigitalRead\s*\(/g, '_digitalRead(');
+  code = code.replace(/\banalogWrite\s*\(/g, '_analogWrite(');
+  code = code.replace(/\banalogRead\s*\(/g, '_analogRead(');
+  code = code.replace(/\bpinMode\s*\(/g, '_pinMode(');
+  code = code.replace(/\btone\s*\(/g, '_tone(');
+  code = code.replace(/\bnoTone\s*\(/g, '_noTone(');
+  code = code.replace(/\bmillis\s*\(\s*\)/g, '_millis()');
+  code = code.replace(/\bmap\s*\(/g, '_map(');
+  code = code.replace(/\bconstrain\s*\(/g, '_constrain(');
+
+  // void funcions → async function
+  code = code.replace(/\bvoid\s+(\w+)\s*\(/g, 'async function $1(');
+
+  return code;
+}
+
+// ── RUNTIME API ───────────────────────────────────────────────
+let _stopped = false;
+let _startTime = 0;
+
+const _api = {
+  async _delay(ms) {
+    await new Promise(r => setTimeout(r, Math.max(0, ms)));
+    if (_stopped) throw new Error('__STOP__');
+  },
+  _pinMode(pin, mode) {},
+  _digitalWrite(pin, val) {
+    if (_stopped) throw new Error('__STOP__');
+    updateComponents(pin, val);
+  },
+  _digitalRead(pin) {
+    if (_stopped) throw new Error('__STOP__');
+    return buttonStates[pin] || 0;
+  },
+  _analogWrite(pin, val) {
+    if (_stopped) throw new Error('__STOP__');
+    updateComponents(pin, Math.min(255, Math.max(0, val)));
+  },
+  _analogRead(pin) { return 0; },
+  _serialPrintln(x) { appendSerial(String(x)); },
+  _serialPrint(x) { appendSerial(String(x)); },
+  _tone(pin, freq, duration) { playTone(pin, freq, duration); },
+  _noTone(pin) { stopTone(pin); },
+  _millis() { return Date.now() - _startTime; },
+  _map(x, inMin, inMax, outMin, outMax) {
+    return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+  },
+  _constrain(x, a, b) { return Math.min(Math.max(x, a), b); }
+};
+
+// ── EXECUCIÓ ──────────────────────────────────────────────────
+async function runSketch() {
+  _stopped = false;
+  _startTime = Date.now();
+  setStatus('running', 'Executant...');
+  document.getElementById('btnRun').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+
+  let code = '';
+  try {
+    code = transpile(document.getElementById('editor').value);
+
+    const argNames = Object.keys(_api);
+    const argVals  = Object.values(_api);
+
+    const wrapCode = `
+      ${code}
+      if (typeof setup === 'function') await setup();
+      while (!_stopped) {
+        if (typeof loop === 'function') await loop();
+        else break;
+      }
+    `;
+
+    const AsyncFunc = Object.getPrototypeOf(async function(){}).constructor;
+    const fn = new AsyncFunc('_stopped', ...argNames, wrapCode);
+
+    await fn(_stopped, ...argVals);
+
+  } catch(e) {
+    if (e.message !== '__STOP__') {
+      appendSerial('ERROR: ' + e.message, true);
+      setStatus('error', 'Error');
+    } else {
+      setStatus('', 'Aturat');
+    }
+    onStopped();
+    return;
+  }
+
+  setStatus('', 'Finalitzat');
+  onStopped();
+}
+
+function stopSketch() {
+  _stopped = true;
+  stopAllTones();
+}
+
+function onStopped() {
+  document.getElementById('btnRun').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  stopAllTones();
+  components.forEach(c => updateComponents(c.pin, 0));
+}
+
+function setStatus(cls, text) {
+  const el = document.getElementById('status');
+  el.className = cls;
+  el.textContent = text;
+}
+
+// ── EVENTS ────────────────────────────────────────────────────
+document.getElementById('btnRun').onclick = runSketch;
+document.getElementById('btnStop').onclick = stopSketch;
+document.getElementById('btnClear').onclick = () => {
+  document.getElementById('editor').value = '';
+};
+
+document.getElementById('examples').onchange = function() {
+  const val = this.value;
+  if (val && EXEMPLES[val]) {
+    document.getElementById('editor').value = EXEMPLES[val];
+    this.value = '';
+  }
+};
+
+document.getElementById('btn-add').onclick = () => {
+  document.getElementById('add-form').classList.toggle('visible');
+};
+
+document.getElementById('btn-add-ok').onclick = () => {
+  const type = document.getElementById('add-type').value;
+  const pin  = document.getElementById('add-pin').value;
+  addComponent(type, pin);
+  document.getElementById('add-form').classList.remove('visible');
+};
+
+// Components per defecte
+addComponent('led', 13);
+addComponent('boto', 2);
+</script>
+</body>
+</html>
