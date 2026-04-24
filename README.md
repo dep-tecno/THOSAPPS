@@ -6,7 +6,7 @@
 ## 🚀 Descripció del Projecte
 THOSAPPS és una suite d'eines i simuladors interactius dissenyats específicament per facilitar l'aprenentatge dels continguts de l'àrea de Tecnologia a l'Educació Secundària i Batxillerat. 
 
-L'objectiu principal és oferir recursos digitals d'accés lliure que permetin a l'alumnat experimentar amb conceptes tècnics (lògica, mecanismes, materials) de manera intuïtiva i des de qualsevol dispositiu.
+L'objectiu principal és oferir recursos digitals d'accés lliure que permetin a l'alumnat experimentar amb conceptes tècnics (lògica, mapes metals, programació, simulació, disseny, electrònica...) de manera intuïtiva i des de qualsevol dispositiu.
 
 ## 📱 Accés a les Aplicacions
 Podeu utilitzar les aplicacions directament des del següent enllaç:
@@ -26,4 +26,3 @@ Aquest projecte està sota una **Llicència Creative Commons Reconeixement-NoCom
 * **ND (Sense Obra Derivada):** No es permet la modificació, transformació o creació d'obres derivades a partir d'aquest codi.
 
 ---
-*Aquest material forma part del dossier de mèrits per a la promoció docent i el desenvolupament de la competència digital docent.*
