@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THOSMap - Edició Moodle (Mode Fosc)</title>
+    <!-- SECURITY: Content Security Policy — limita fonts de scripts/estils externs -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://cdn.tailwindcss.com https://html2canvas.hertzen.com; style-src 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+    <title>THOSMap v2.0</title>
+    <!-- SECURITY: cdn.tailwindcss.com és un CDN dinàmic (Play CDN) i no admet SRI estàtic -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
     <!-- FontAwesome per icones -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
     <style>
         body, html {
             margin: 0;
@@ -257,7 +260,7 @@
     <div id="toolbar">
         <div class="flex items-center mr-6">
             <span id="app-title" class="font-bold mr-2" style="font-family: serif;">
-                <span class="text-blue-500">THOS</span>Map
+                <i class="fas fa-project-diagram text-blue-500 mr-1"></i><span class="text-blue-500">THOS</span>Map v2.0
             </span>
         </div>
         <div class="tool-separator"></div>
@@ -280,8 +283,9 @@
         <button onclick="app.adjustFontSize(-2)" class="tool-btn"><i class="fas fa-font"></i>-</button>
         
         <div class="tool-separator"></div>
-        <button onclick="app.toggleLayoutMenu(event)" class="tool-btn"><i class="fas fa-layer-group"></i> Organitzar</button>
-        
+        <button onclick="app.toggleLayoutMenu(event)" class="tool-btn"><i class="fas fa-layer-group"></i> Tipologia</button>
+        <button onclick="app.autoArrange()" class="tool-btn text-green-400" title="Ordenar nodes proporcionalment"><i class="fas fa-magic"></i> Ordenar</button>
+
         <div class="tool-separator"></div>
         
         <button onclick="app.exportPNG()" class="tool-btn text-blue-400 hover:bg-gray-700"><i class="fas fa-image"></i> PNG</button>
@@ -348,6 +352,7 @@
                 this.resizingNodeId = null;
                 this.resizeStartX = 0;
                 this.resizeStartWidth = 0;
+                this.dragMoved = false;
 
                 this.workspace = document.getElementById('workspace');
                 this.nodesLayer = document.getElementById('nodes-layer');
@@ -387,6 +392,22 @@
                 this.render = this.render.bind(this);
             }
 
+            // SECURITY: escapa caràcters HTML perillosos per evitar XSS via innerHTML
+            escapeHTML(str) {
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            // SECURITY: valida que un color sigui un valor CSS segur (hex o rgb)
+            sanitizeColor(color, fallback = '#374151') {
+                const valid = /^#[0-9a-fA-F]{3,8}$|^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/.test(String(color));
+                return valid ? color : fallback;
+            }
+
             init() {
                 this.addRootNode();
                 window.addEventListener('keydown', this.handleKeyDown);
@@ -409,13 +430,6 @@
                     }
                     if (!e.target.closest('#layout-menu') && !e.target.closest('[onclick*="toggleLayoutMenu"]')) {
                         this.layoutMenu.style.display = 'none';
-                    }
-                });
-                this.workspace.addEventListener('dblclick', (e) => {
-                    if (e.target === this.workspace || e.target.closest('svg')) {
-                        const rawX = (e.clientX - this.panX) / this.zoomLevel;
-                        const rawY = (e.clientY - this.panY) / this.zoomLevel;
-                        this.addNode(null, "Nova Idea", true, rawX, rawY);
                     }
                 });
                 this.render();
@@ -479,8 +493,6 @@
 
                 const newNode = { id, parentId, text, x, y, isRoot, color, image: null, width: null, fontSize: isRoot ? 18 : 14 };
                 this.nodes.push(newNode);
-                
-                if (this.currentLayout === 'hierarchy') this.layoutHierarchy(false);
 
                 this.selectNode(id);
                 this.render();
@@ -508,8 +520,6 @@
                 };
                 deleteRecursive(this.selectedNodeId);
                 this.selectedNodeId = null;
-                // No re-layout en outline per preservar posicions manuals
-                if (this.currentLayout === 'hierarchy') this.layoutHierarchy(false);
                 this.render();
             }
 
@@ -552,8 +562,10 @@
                     });
                     this.layoutMindMap();
                 }
+                this.zoomLevel = 1;
+                this.centerView();
                 this.layoutMenu.style.display = 'none';
-                this.render(); 
+                this.render();
             }
 
             layoutHierarchy(resetView = false) {
@@ -592,8 +604,6 @@
                     assignPositions(root.id, root.x, root.y);
                 });
 
-                if (resetView) { this.panX = window.innerWidth / 2; this.panY = 100; this.zoomLevel = 1; }
-                this.render();
                 if(resetView) this.showToast("Vista Jerarquia aplicada");
             }
 
@@ -630,15 +640,84 @@
                     layoutSubtree(root.id, root.y);
                 });
 
-                if (resetView) { this.panX = 100; this.panY = window.innerHeight / 2; this.zoomLevel = 1; }
-                this.render();
                 if(resetView) this.showToast("Vista d'Esquema aplicada");
+            }
+
+            centerView() {
+                if (this.nodes.length === 0) return;
+                const xs = this.nodes.map(n => n.x);
+                const ys = this.nodes.map(n => n.y);
+                const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+                const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+                this.panX = window.innerWidth  / 2 - cx * this.zoomLevel;
+                this.panY = window.innerHeight / 2 - cy * this.zoomLevel;
             }
 
             getSubtreeHeight(nodeId) {
                 const children = this.nodes.filter(n => n.parentId === nodeId);
                 if (children.length === 0) return 60;
                 return children.reduce((acc, c) => acc + this.getSubtreeHeight(c.id), 0);
+            }
+
+            // Retorna nombre de fulles (per distribuir proporcionalment en mindmap)
+            getSubtreeSize(nodeId) {
+                const children = this.nodes.filter(n => n.parentId === nodeId);
+                if (children.length === 0) return 1;
+                return children.reduce((s, c) => s + this.getSubtreeSize(c.id), 0);
+            }
+
+            // Distribueix recursivament els fills d'un node cap a un costat
+            arrangeSubtree(nodeId, side, levelRadius, vSpacing) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                const children = this.nodes.filter(n => n.parentId === nodeId);
+                if (!node || children.length === 0) return;
+                const totalH = children.reduce((s, c) => s + this.getSubtreeSize(c.id) * vSpacing, 0);
+                let curY = node.y - totalH / 2;
+                children.forEach(child => {
+                    const h = this.getSubtreeSize(child.id) * vSpacing;
+                    child.x = node.x + side * levelRadius;
+                    child.y = curY + h / 2;
+                    this.arrangeSubtree(child.id, side, levelRadius, vSpacing);
+                    curY += h;
+                });
+            }
+
+            // Layout radial clàssic esquerra/dreta per mapa mental
+            autoArrangeMindMap() {
+                const levelRadius = 200;
+                const vSpacing   = 70;
+                this.nodes.filter(n => n.isRoot).forEach(root => {
+                    const children = this.nodes.filter(n => n.parentId === root.id);
+                    const half = Math.ceil(children.length / 2);
+                    const right = children.slice(0, half);
+                    const left  = children.slice(half);
+                    [right, left].forEach((group, idx) => {
+                        const side = idx === 0 ? 1 : -1;
+                        const totalH = group.reduce((s, c) => s + this.getSubtreeSize(c.id) * vSpacing, 0);
+                        let curY = root.y - totalH / 2;
+                        group.forEach(child => {
+                            const h = this.getSubtreeSize(child.id) * vSpacing;
+                            child.x = root.x + side * levelRadius;
+                            child.y = curY + h / 2;
+                            this.arrangeSubtree(child.id, side, levelRadius, vSpacing);
+                            curY += h;
+                        });
+                    });
+                });
+            }
+
+            autoArrange() {
+                if (this.currentLayout === 'outline') {
+                    this.layoutOutline(false);
+                } else if (this.currentLayout === 'hierarchy') {
+                    this.layoutHierarchy(false);
+                } else {
+                    this.autoArrangeMindMap();
+                }
+                this.zoomLevel = 1;
+                this.centerView();
+                this.render();
+                this.showToast("Nodes ordenats proporcionalment");
             }
 
             toggleConnectMode() {
@@ -702,6 +781,7 @@
                 
                 const node = this.nodes.find(n => n.id === id);
                 this.draggedNodeId = id;
+                this.dragMoved = false;
                 this.selectNode(id);
                 this.lastMouseX = e.clientX;
                 this.lastMouseY = e.clientY;
@@ -736,6 +816,7 @@
                 } else if (this.draggedNodeId) {
                     const node = this.nodes.find(n => n.id === this.draggedNodeId);
                     if (node) {
+                        this.dragMoved = true;
                         node.x += dx; node.y += dy;
                         // Si estem en MindMap, actualitzem la memòria
                         if (this.currentLayout === 'mindmap') {
@@ -751,7 +832,7 @@
             }
             
             handleMouseUp() {
-                if (this.draggedNodeId) {
+                if (this.draggedNodeId && this.dragMoved) {
                     const node = this.nodes.find(n => n.id === this.draggedNodeId);
                     if (node && node.isRoot) {
                         if (this.currentLayout === 'outline') this.layoutOutline(false);
@@ -799,7 +880,6 @@
                 el.style.left = node.x + 'px';
                 el.style.top = node.y + 'px';
                 
-                if (this.selectedNodeId === node.id && this.currentLayout !== 'outline') el.style.transform += ' scale(1.05)';
                 
                 // CRITIC: Permetre ample en outline si està definit (pels nodes amb imatges)
                 if (node.width) { 
@@ -818,12 +898,16 @@
                 
                 if (node.fontSize) el.style.fontSize = node.fontSize + 'px';
 
-                let imgHtml = node.image ? `<img src="${node.image}" class="node-img">` : '';
+                // SECURITY: valida que node.image sigui un data URI de format raster permès
+                const allowedImgTypes = ['data:image/jpeg', 'data:image/png', 'data:image/gif', 'data:image/webp'];
+                const safeImage = node.image && allowedImgTypes.some(t => String(node.image).startsWith(t)) ? node.image : null;
+                const imgHtml = safeImage ? `<img src="${safeImage}" class="node-img">` : '';
 
+                // SECURITY: node.text s'escapa amb escapeHTML per evitar XSS via innerHTML
                 el.innerHTML = `
                     <div class="flex flex-col items-center w-full">
                         ${imgHtml}
-                        <div class="node-content" contentEditable="true">${node.text}</div>
+                        <div class="node-content" contentEditable="true">${this.escapeHTML(node.text)}</div>
                     </div>
                     <div class="resize-handle" title="Arrossega per canviar la mida"></div>
                 `;
@@ -845,7 +929,12 @@
                     }
                 });
 
-                contentDiv.addEventListener('blur', (e) => { node.text = e.target.innerText; });
+                // SECURITY: límit de 2000 caràcters per evitar DoS via texts molt llargs
+                contentDiv.addEventListener('blur', (e) => {
+                    const raw = e.target.innerText || '';
+                    node.text = raw.length > 2000 ? raw.substring(0, 2000) : raw;
+                    if (raw.length > 2000) e.target.innerText = node.text;
+                });
                 contentDiv.addEventListener('mousedown', (e) => { if (this.selectedNodeId === node.id) e.stopPropagation(); });
                 
                 el.addEventListener('mousedown', (e) => this.handleNodeMouseDown(e, node.id));
@@ -974,11 +1063,33 @@
                 if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const data = JSON.parse(e.target.result);
-                    this.nodes = data.nodes || [];
-                    this.extraConnections = data.connections || [];
-                    this.render();
-                    this.showToast("Mapa carregat");
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        const safeId = (v) => String(v || '').replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 64);
+                        const allowedImg = ['data:image/jpeg', 'data:image/png', 'data:image/gif', 'data:image/webp'];
+                        // SECURITY: cada camp del node es valida i saniteja abans d'acceptar-lo
+                        this.nodes = (data.nodes || []).map(n => ({
+                            id:       safeId(n.id),
+                            parentId: n.parentId ? safeId(n.parentId) : null,
+                            text:     String(n.text || '').substring(0, 2000),
+                            x:        Number(n.x) || 0,
+                            y:        Number(n.y) || 0,
+                            isRoot:   Boolean(n.isRoot),
+                            color:    this.sanitizeColor(n.color),
+                            image:    n.image && allowedImg.some(t => String(n.image).startsWith(t)) ? n.image : null,
+                            width:    n.width ? Math.min(Math.max(Number(n.width) || 200, 50), 1200) : null,
+                            fontSize: n.fontSize ? Math.min(Math.max(Number(n.fontSize) || 14, 10), 64) : 14
+                        }));
+                        this.extraConnections = (data.connections || []).map(c => ({
+                            id:   safeId(c.id),
+                            from: safeId(c.from),
+                            to:   safeId(c.to)
+                        }));
+                        this.render();
+                        this.showToast("Mapa carregat");
+                    } catch(err) {
+                        this.showToast("Error: fitxer JSON invàlid");
+                    }
                 };
                 reader.readAsText(file);
             }
@@ -1041,21 +1152,30 @@
             setNodeColor(color) {
                 if (this.selectedNodeId) {
                     const node = this.nodes.find(n => n.id === this.selectedNodeId);
-                    node.color = color;
+                    // SECURITY: valida el color per evitar injecció CSS via JSON o paràmetre
+                    node.color = this.sanitizeColor(color);
                     this.render();
                     this.colorMenu.style.display = 'none';
                 }
             }
             attachImage(input) {
                 if (!this.selectedNodeId || !input.files[0]) return;
+                const file = input.files[0];
+                // SECURITY: només s'accepten formats d'imatge raster segurs; SVG rebutjat
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    this.showToast("Format no permès. Usa PNG, JPG, GIF o WEBP.");
+                    input.value = '';
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const node = this.nodes.find(n => n.id === this.selectedNodeId);
                     node.image = e.target.result;
-                    if (!node.width) node.width = 200; 
+                    if (!node.width) node.width = 200;
                     this.render();
                 };
-                reader.readAsDataURL(input.files[0]);
+                reader.readAsDataURL(file);
                 input.value = '';
             }
             adjustFontSize(delta) {
