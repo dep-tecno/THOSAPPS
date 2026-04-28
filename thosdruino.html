@@ -64,7 +64,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 
 <div id="app">
 <aside id="palette"></aside>
-<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g></g></svg></div>
+<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g></g></svg></div>
 <aside id="props"><div id="props-hdr"><span>Propietats</span><button onclick="closeProps()">✕</button></div><div id="props-body"></div></aside>
 </div>
 
@@ -201,13 +201,20 @@ const COMPS={
   }}
 };
 
-const state={board:'uno',components:[],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:0};
+const state={board:'uno',components:[
+  {id:0,type:'led-red',x:150,y:200},
+  {id:1,type:'resistor',x:300,y:200},
+  {id:2,type:'dht11',x:450,y:300}
+],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:3};
+
+const EXTRA_SENSORS={};
 
 function buildPalette(){
   const p=document.getElementById('palette');
   const basics=['led-red','led-green','led-blue','resistor','button','buzzer'];
   const sensors=['dht11','hc-sr04','pir','ldr'];
   const actuators=['pot','servo','motor','lcd'];
+
   [['Bàsics',basics],['Sensors',sensors],['Actuadors',actuators]].forEach(([title,items])=>{
     const sec=document.createElement('div');
     sec.className='pal-section';
@@ -225,6 +232,23 @@ function buildPalette(){
     });
     p.appendChild(sec);
   });
+
+  if(Object.keys(EXTRA_SENSORS).length>0){
+    const esec=document.createElement('div');
+    esec.className='pal-section';
+    const etit=document.createElement('div');
+    etit.className='pal-title';
+    etit.textContent='Sensores Addicionals';
+    esec.appendChild(etit);
+    Object.entries(EXTRA_SENSORS).forEach(([cid,c])=>{
+      const item=document.createElement('div');
+      item.className='pal-item';
+      item.innerHTML=`<div class="pal-icon">${c.icon}</div><div class="pal-text"><div class="pal-label">${c.label}</div></div>`;
+      item.onclick=()=>addComponent(cid);
+      esec.appendChild(item);
+    });
+    p.appendChild(esec);
+  }
 }
 
 function addComponent(cid){
