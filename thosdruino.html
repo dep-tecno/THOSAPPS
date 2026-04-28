@@ -3,562 +3,510 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>THOSDRUINO – Simulador Arduino</title>
+<title>THOSDRUINO – Simulador Visual de Circuits</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;
-  --green:#00e676;--green-dim:#00b854;
-  --text:#e2e8f0;--muted:#8892a4;--border:#2d3347;--radius:12px;
-  --red:#ff5555;--amber:#fbbf24;
-}
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;--green:#00e676;--green-dim:#00b854;--text:#e2e8f0;--muted:#8892a4;--border:#2d3347;--radius:12px;--red:#ff5555}
 html{scroll-behavior:smooth}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
 /* NAV */
-nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;height:72px;overflow-x:auto}
+nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;height:56px;flex-shrink:0}
 nav::-webkit-scrollbar{display:none}
 .nav-brand{font-size:.8rem;font-weight:700;color:var(--green);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;margin-right:1.5rem;text-decoration:none;flex-shrink:0;display:flex;align-items:center;gap:.6rem}
 .nav-links{display:flex;list-style:none;flex-shrink:0}
-.nav-links a{display:block;padding:0 .9rem;height:72px;line-height:72px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .2s,border-bottom .2s;border-bottom:2px solid transparent}
+.nav-links a{display:block;padding:0 .9rem;height:56px;line-height:56px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .2s;border-bottom:2px solid transparent}
 .nav-links a:hover,.nav-links a.active{color:var(--green);border-bottom-color:var(--green)}
 
 /* TOOLBAR */
-#toolbar{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
-#toolbar select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;font-size:.82rem;cursor:pointer}
-.btn{border:none;border-radius:8px;padding:.35rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;transition:opacity .2s}
-.btn-run{background:var(--green);color:#0f1117}
-.btn-stop{background:var(--red);color:#fff}
-.btn-clear{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
-.btn:hover{opacity:.85}
-.btn:disabled{opacity:.4;cursor:default}
-#status{margin-left:auto;font-size:.75rem;color:var(--muted);white-space:nowrap}
-#status.running{color:var(--green)}
-#status.error{color:var(--red)}
+#toolbar{display:flex;align-items:center;gap:.5rem;padding:.4rem 1rem;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;height:44px}
+#toolbar select,#toolbar button{height:30px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.25rem .6rem;font-size:.8rem;cursor:pointer;transition:all .15s}
+#toolbar button:hover{border-color:var(--green);color:var(--green)}
+.tbtn-sep{width:1px;height:24px;background:var(--border);margin:0 .25rem}
+.wc-dot{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent;margin:0 3px}
+.wc-dot.active{border-color:#fff;transform:scale(1.15)}
 
 /* MAIN LAYOUT */
-#main{display:flex;flex:1;overflow:hidden}
+#app{display:flex;flex:1;overflow:hidden}
 
-/* LEFT: EDITOR */
-#left{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0}
-#editor{flex:1;resize:none;background:var(--bg2);color:var(--text);border:none;outline:none;padding:1rem;font-family:'Fira Code','Consolas','Courier New',monospace;font-size:.85rem;line-height:1.6;tab-size:2}
+/* PALETTE */
+#palette{width:190px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+#palette::-webkit-scrollbar{width:4px}
+#palette::-webkit-scrollbar-thumb{background:var(--border)}
+.pal-section{padding:.5rem .8rem .3rem}
+.pal-title{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);opacity:.7;margin-bottom:.3rem}
+.pal-item{display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:1px;transition:all .15s;user-select:none}
+.pal-item:hover{background:var(--bg3);color:var(--green)}
+.pal-icon{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:5px;font-size:1rem}
+.pal-text{font-size:.75rem;line-height:1.3;flex:1}
+.pal-label{font-weight:500}
+.pal-sub{font-size:.65rem;color:var(--muted)}
 
-/* RIGHT PANEL */
-#right{width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+/* CANVAS */
+#canvas-wrap{flex:1;overflow:hidden;background:#0a0c10;background-image:radial-gradient(circle,rgba(255,255,255,.12) 1px,transparent 1px);background-size:20px 20px}
+#canvas{width:100%;height:100%;display:block}
+#canvas.panning{cursor:grabbing}
+#canvas.wire-mode{cursor:crosshair}
+.pin-circle{fill:rgba(255,255,255,.05);stroke:rgba(255,255,255,.2);stroke-width:1;cursor:crosshair;transition:all .1s}
+.pin-circle:hover,.pin-circle.hover{fill:rgba(0,230,118,.3);stroke:var(--green);stroke-width:2}
+.comp-group.selected > .comp-rect{display:block}
+.comp-rect{display:none;fill:none;stroke:var(--green);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
+.wire{fill:none;stroke-width:2.5;stroke-linecap:round;cursor:pointer}
+.wire:hover{stroke-width:3.5;opacity:.8}
 
-/* COMPONENTS */
-#comp-panel{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
-#comp-header{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border)}
-#comp-header span{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
-#btn-add{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:.2rem .6rem;font-size:.78rem;cursor:pointer}
-#btn-add:hover{border-color:var(--green);color:var(--green)}
-#add-form{display:none;padding:.6rem 1rem;gap:.5rem;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap}
-#add-form.visible{display:flex}
-#add-form select,#add-form input{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.8rem}
-#add-form input{width:60px}
-#add-form label{font-size:.78rem;color:var(--muted)}
-.btn-add-ok{background:var(--green);color:#0f1117;border:none;border-radius:6px;padding:.3rem .7rem;font-size:.8rem;font-weight:600;cursor:pointer}
-#comp-list{overflow-y:auto;max-height:220px}
-.comp-row{display:flex;align-items:center;gap:.6rem;padding:.5rem 1rem;border-bottom:1px solid var(--border);font-size:.82rem}
-.comp-icon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.led-circle{width:22px;height:22px;border-radius:50%;background:#333;border:2px solid #555;transition:background .1s,box-shadow .1s}
-.led-on{background:var(--green);border-color:var(--green);box-shadow:0 0 8px var(--green),0 0 18px rgba(0,230,118,.4)}
-.btn-comp{padding:.25rem .5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:.78rem;transition:background .1s}
-.btn-comp:active,.btn-comp.pressed{background:var(--green);color:#0f1117;border-color:var(--green)}
-.buzzer-icon{font-size:1.1rem;transition:filter .1s}
-.buzzer-on{filter:drop-shadow(0 0 4px var(--amber))}
-.comp-info{flex:1;min-width:0}
-.comp-name{font-weight:600;font-size:.8rem}
-.comp-pin{font-size:.72rem;color:var(--muted)}
-.comp-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;padding:0 .2rem}
-.comp-del:hover{color:var(--red)}
+/* PROPS PANEL */
+#props{width:0;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);overflow:hidden;transition:width .2s;display:flex;flex-direction:column}
+#props.open{width:220px}
+#props-hdr{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;font-size:.8rem;color:var(--green);font-weight:700}
+#props-hdr button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem}
+#props-body{padding:.8rem 1rem;overflow-y:auto;flex:1;font-size:.8rem}
+.prop-row{margin-bottom:.8rem}
+.prop-label{color:var(--muted);font-size:.7rem;text-transform:uppercase;margin-bottom:.25rem}
+.prop-val{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:.3rem .6rem;color:var(--text)}
 
-/* SERIAL MONITOR */
-#serial-panel{display:flex;flex-direction:column;flex:1;overflow:hidden}
-#serial-header{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0}
-#serial-header span{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
-#btn-clear-serial{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:.15rem .5rem;font-size:.72rem;cursor:pointer}
-#btn-clear-serial:hover{border-color:var(--red);color:var(--red)}
-#serial-out{flex:1;overflow-y:auto;padding:.6rem 1rem;font-family:'Fira Code','Consolas',monospace;font-size:.78rem;line-height:1.6;color:#a8ff78;background:var(--bg)}
-#serial-out p{margin:0;white-space:pre-wrap;word-break:break-all}
-#serial-out .err{color:var(--red)}
+/* STATUS */
+#status{height:26px;flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 1rem;font-size:.75rem;color:var(--muted);gap:1rem}
+
+/* CONTEXT MENU */
+#ctx-menu{position:fixed;z-index:999;display:none;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.2rem 0;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.6)}
+#ctx-menu.show{display:block}
+.ctx-item{padding:.4rem .8rem;cursor:pointer;font-size:.8rem;transition:background .1s}
+.ctx-item:hover{background:var(--bg3);color:var(--green)}
+.ctx-item.danger:hover{background:rgba(255,85,85,.15);color:var(--red)}
+.ctx-sep{height:1px;background:var(--border);margin:.2rem 0}
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
   <a class="nav-brand" href="index.html">
-    <img src="logonew.png" alt="Logo" style="height:40px;width:auto;object-fit:contain;border-radius:6px;">
+    <img src="logonew.png" alt="Logo" style="height:36px;width:auto;object-fit:contain;border-radius:5px;">
     Dep. Tecnologia
   </a>
   <ul class="nav-links">
     <li><a href="index.html">Inici</a></li>
     <li><a href="THOSCAD v.2.HTML">THOSCAD v2.0</a></li>
     <li><a href="THOSLAB.html">THOSLAB v2.0</a></li>
-    <li><a href="THOSMAP.HTML">THOSMAP v2.0</a></li>
+    <li><a href="THOSMAP.html">THOSMAP v2.0</a></li>
     <li><a href="THOSLOGO v2.0.html">THOSLOGO</a></li>
     <li><a href="THOSMETRIC.html">THOSMETRIC</a></li>
     <li><a href="thosdruino.html" class="active">THOSDRUINO</a></li>
-    <li><a href="#">THOSBRIDGE</a></li>
-    <li><a href="#">THOSROBOT</a></li>
   </ul>
 </nav>
 
-<!-- TOOLBAR -->
 <div id="toolbar">
-  <select id="examples">
-    <option value="">— Selecciona un exemple —</option>
-    <option value="blink">1. Blink (LED parpellejant)</option>
-    <option value="boto">2. Botó + LED</option>
-    <option value="fade">3. Fade (brillantor gradual)</option>
-    <option value="buzzer">4. Buzzer (melodia)</option>
+  <select id="sel-board">
+    <option value="uno">Arduino Uno</option>
+    <option value="esp32">ESP32 DevKit</option>
   </select>
-  <button class="btn btn-run" id="btnRun">▶ Executar</button>
-  <button class="btn btn-stop" id="btnStop" disabled>■ Aturar</button>
-  <button class="btn btn-clear" id="btnClear">Netejar codi</button>
-  <span id="status">Aturat</span>
+  <div class="tbtn-sep"></div>
+  <button id="btn-zoom-in" title="Zoom +">+ Amplia</button>
+  <span style="font-size:.75rem;color:var(--muted);min-width:40px;text-align:center" id="zoom-pct">100%</span>
+  <button id="btn-zoom-out" title="Zoom -">− Redueix</button>
+  <div class="tbtn-sep"></div>
+  <span style="font-size:.75rem;color:var(--muted);">Cable:</span>
+  <div id="wire-colors" style="display:flex;gap:4px">
+    <div class="wc-dot active" data-color="#e53935" style="background:#e53935" title="Vermell"></div>
+    <div class="wc-dot" data-color="#212121" style="background:#555" title="Negre"></div>
+    <div class="wc-dot" data-color="#1e88e5" style="background:#1e88e5" title="Blau"></div>
+    <div class="wc-dot" data-color="#fdd835" style="background:#fdd835" title="Groc"></div>
+    <div class="wc-dot" data-color="#43a047" style="background:#43a047" title="Verd"></div>
+    <div class="wc-dot" data-color="#fb8c00" style="background:#fb8c00" title="Taronja"></div>
+  </div>
+  <div class="tbtn-sep"></div>
+  <button id="btn-delete" title="Eliminar (Supr)">✕</button>
+  <button id="btn-clear" title="Netejar">⊘</button>
 </div>
 
-<!-- MAIN -->
-<div id="main">
-
-  <!-- EDITOR -->
-  <div id="left">
-    <textarea id="editor" spellcheck="false" placeholder="// Escriu el teu codi Arduino aquí...
-// Funcions disponibles: pinMode, digitalWrite, digitalRead,
-// analogWrite, delay, Serial.println, tone, noTone
-
-void setup() {
-
-}
-
-void loop() {
-
-}"></textarea>
+<div id="app">
+  <aside id="palette"></aside>
+  <div id="canvas-wrap">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+      <defs id="defs"></defs>
+      <g id="world">
+        <g id="boards"></g>
+        <g id="components"></g>
+        <g id="wires"></g>
+        <g id="wire-preview"></g>
+      </g>
+    </svg>
   </div>
+  <aside id="props"><div id="props-hdr"><span>Propietats</span><button onclick="closeProps()">✕</button></div><div id="props-body"></div></aside>
+</div>
 
-  <!-- RIGHT -->
-  <div id="right">
+<div id="status">
+  <span id="sb-mode">Mode: selecció</span>
+  <span id="sb-info"></span>
+  <span style="margin-left:auto;font-size:.7rem;">Del=eliminar · Esc=cancel·lar</span>
+</div>
 
-    <!-- COMPONENTS -->
-    <div id="comp-panel">
-      <div id="comp-header">
-        <span>Components</span>
-        <button id="btn-add">+ Afegir</button>
-      </div>
-      <div id="add-form">
-        <label>Tipus</label>
-        <select id="add-type">
-          <option value="led">LED</option>
-          <option value="boto">Botó</option>
-          <option value="buzzer">Buzzer</option>
-        </select>
-        <label>Pin</label>
-        <input type="number" id="add-pin" value="13" min="0" max="19"/>
-        <button class="btn-add-ok" id="btn-add-ok">Afegir</button>
-      </div>
-      <div id="comp-list"></div>
-    </div>
-
-    <!-- SERIAL MONITOR -->
-    <div id="serial-panel">
-      <div id="serial-header">
-        <span>Monitor Sèrie</span>
-        <button id="btn-clear-serial">Netejar</button>
-      </div>
-      <div id="serial-out"></div>
-    </div>
-
-  </div>
+<div id="ctx-menu">
+  <div class="ctx-item" onclick="showProps()">⚙ Propietats</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" onclick="deleteSelected()">✕ Eliminar</div>
 </div>
 
 <script>
-// ── EXEMPLES ──────────────────────────────────────────────────
-const EXEMPLES = {
-  blink: `// Exemple 1: Blink
-// Necessites: LED al pin 13
-void setup() {
-  pinMode(13, OUTPUT);
+const NS='http://www.w3.org/2000/svg';
+function s(tag,attrs={},ch=[]){const el=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));ch.forEach(c=>el.appendChild(c));return el}
+
+// ════ DEFS ════
+function setupDefs(){
+  const d=document.getElementById('defs');
+  [['red','#ff5252','#b71c1c'],['green','#69f0ae','#1b5e20'],['blue','#448aff','#0d47a1'],['yellow','#ffff00','#f57f17']].forEach(([n,l,d])=>{
+    const g=s('radialGradient',{id:`led-${n}`,cx:'35%',cy:'30%',r:'60%'},[s('stop',{'offset':'0%','stop-color':l}),s('stop',{'offset':'100%','stop-color':d})]);
+    document.getElementById('defs').appendChild(g);
+  });
+  const pcb=s('linearGradient',{id:'pcb-uno',x2:'0',y2:'1'},[s('stop',{'offset':'0%','stop-color':'#2e7d32'}),s('stop',{'offset':'100%','stop-color':'#1b5e20'})]);
+  document.getElementById('defs').appendChild(pcb);
+  const esp=s('linearGradient',{id:'pcb-esp',x2:'0',y2:'1'},[s('stop',{'offset':'0%','stop-color':'#1a237e'}),s('stop',{'offset':'100%','stop-color':'#0d1545'})]);
+  document.getElementById('defs').appendChild(esp);
+  const bb=s('linearGradient',{id:'bb',x2:'0',y2:'1'},[s('stop',{'offset':'0%','stop-color':'#e8dcc8'}),s('stop',{'offset':'100%','stop-color':'#d4c5a9'})]);
+  document.getElementById('defs').appendChild(bb);
 }
 
-void loop() {
-  digitalWrite(13, HIGH);
-  delay(1000);
-  digitalWrite(13, LOW);
-  delay(1000);
-}`,
-
-  boto: `// Exemple 2: Botó + LED
-// Necessites: Botó al pin 2, LED al pin 13
-void setup() {
-  pinMode(13, OUTPUT);
-  pinMode(2, INPUT);
-}
-
-void loop() {
-  int estat = digitalRead(2);
-  if (estat == HIGH) {
-    digitalWrite(13, HIGH);
-  } else {
-    digitalWrite(13, LOW);
-  }
-  delay(50);
-}`,
-
-  fade: `// Exemple 3: Fade (brillantor gradual)
-// Necessites: LED al pin 9
-int brillantor = 0;
-int pas = 5;
-
-void setup() {
-  pinMode(9, OUTPUT);
-}
-
-void loop() {
-  analogWrite(9, brillantor);
-  brillantor = brillantor + pas;
-  if (brillantor <= 0 || brillantor >= 255) {
-    pas = -pas;
-  }
-  delay(30);
-}`,
-
-  buzzer: `// Exemple 4: Buzzer - Melodia
-// Necessites: Buzzer al pin 8
-int notes[] = {262, 294, 330, 349, 392, 440, 494, 523};
-int duracio = 300;
-
-void setup() {
-  Serial.println("Iniciant melodia...");
-}
-
-void loop() {
-  for (int i = 0; i < 8; i++) {
-    tone(8, notes[i], duracio);
-    delay(duracio + 50);
-  }
-  noTone(8);
-  delay(1000);
-}`
+// ════ COMPONENTS ════
+const COMPS={
+  'led-red':{icon:'🔴',label:'LED Vermell',w:50,h:70,pins:[{id:'a',x:15,y:68},{id:'k',x:35,y:68}],render(g){s('ellipse',{cx:25,cy:32,rx:16,ry:26,fill:'url(#led-red)',stroke:'#8b0000','stroke-width':'1.5'},[])}},
+  'led-green':{icon:'🟢',label:'LED Verd',w:50,h:70,pins:[{id:'a',x:15,y:68},{id:'k',x:35,y:68}],render(g){g.appendChild(s('ellipse',{cx:25,cy:32,rx:16,ry:26,fill:'url(#led-green)',stroke:'#0b4d00','stroke-width':'1.5'}))}},
+  'led-blue':{icon:'🔵',label:'LED Blau',w:50,h:70,pins:[{id:'a',x:15,y:68},{id:'k',x:35,y:68}],render(g){g.appendChild(s('ellipse',{cx:25,cy:32,rx:16,ry:26,fill:'url(#led-blue)',stroke:'#0d2566','stroke-width':'1.5'}))}},
+  'resistor':{icon:'〰️',label:'Resistència',w:80,h:30,pins:[{id:'1',x:-2,y:15},{id:'2',x:82,y:15}],render(g){g.appendChild(s('rect',{x:15,y:8,width:50,height:14,rx:2,fill:'#d4b896',stroke:'#7a6f5d','stroke-width':'1'}));for(let i=0;i<4;i++)g.appendChild(s('rect',{x:20+i*10,y:8,width:3,height:14,fill:['#e53935','#1e88e5','#f9a825','#e6e600'][i]}))}},
+  'button':{icon:'⊙',label:'Botó',w:50,h:50,pins:[{id:'1',x:-2,y:12},{id:'2',x:-2,y:38},{id:'3',x:52,y:12},{id:'4',x:52,y:38}],render(g){g.appendChild(s('rect',{x:5,y:5,width:40,height:40,rx:4,fill:'#e0e0e0',stroke:'#999','stroke-width':'1.5'}));g.appendChild(s('circle',{cx:25,cy:25,r:12,fill:'#ffd700',stroke:'#b8860b','stroke-width':'1'}))}},
+  'buzzer':{icon:'🔊',label:'Buzzer',w:50,h:55,pins:[{id:'+',x:15,y:53},{id:'-',x:35,y:53}],render(g){g.appendChild(s('rect',{x:8,y:5,width:34,height:30,rx:3,fill:'#1a1a1a',stroke:'#333','stroke-width':'1.5'}));g.appendChild(s('path',{d:'M 12 8 L 38 8 Q 40 8 40 10 L 40 33 Q 40 35 38 35 L 12 35 Q 10 35 10 33 L 10 10 Q 10 8 12 8',fill:'#1a1a1a'}))}},
+  'dht11':{icon:'💧',label:'DHT11',w:60,h:80,pins:[{id:'V',x:18,y:78},{id:'D',x:30,y:78},{id:'G',x:42,y:78}],render(g){g.appendChild(s('rect',{x:5,y:10,width:50,height:60,rx:3,fill:'#4a90e2',stroke:'#0d47a1','stroke-width':'1.5'}));g.appendChild(s('text',{x:30,y:35,'text-anchor':'middle','font-size':'9','font-family':'monospace','fill':'#fff','font-weight':'bold'},'DHT11'));for(let i=0;i<6;i++)g.appendChild(s('line',{x1:5+i*10,y1:45,x2:5+i*10,y2:65,stroke:'rgba(255,255,255,.3)','stroke-width':'0.5'}))}},
+  'hc-sr04':{icon:'📡',label:'HC-SR04',w:100,h:55,pins:[{id:'V',x:15,y:53},{id:'T',x:35,y:53},{id:'E',x:65,y:53},{id:'G',x:85,y:53}],render(g){g.appendChild(s('rect',{x:5,y:8,width:90,height:40,rx:2,fill:'#e0e0e0',stroke:'#999','stroke-width':'1.5'}));g.appendChild(s('circle',{cx:25,cy:20,r:8,fill:'#fff',stroke:'#999','stroke-width':'1'}));g.appendChild(s('circle',{cx:75,cy:20,r:8,fill:'#fff',stroke:'#999','stroke-width':'1'}));g.appendChild(s('text',{x:50,y:38,'text-anchor':'middle','font-size':'8','fill':'#666','font-family':'monospace'},'HC-SR04'))}},
+  'pir':{icon:'🔴',label:'Sensor PIR',w:60,h:65,pins:[{id:'V',x:18,y:63},{id:'O',x:30,y:63},{id:'G',x:42,y:63}],render(g){g.appendChild(s('rect',{x:10,y:5,width:40,height:35,rx:2,fill:'#f0f0f0'}));g.appendChild(s('circle',{cx:30,cy:30,r:18,fill:'#e8e8e8',stroke:'#999','stroke-width':'1.5'}))}},
+  'ldr':{icon:'☀️',label:'LDR',w:40,h:50,pins:[{id:'1',x:12,y:48},{id:'2',x:28,y:48}],render(g){g.appendChild(s('circle',{cx:20,cy:20,r:12,fill:'#ffeb3b',stroke:'#f57f17','stroke-width':'1.5'}));g.appendChild(s('line',{x1:28,y1:12,x2:34,y2:6,stroke:'#f57f17','stroke-width':'1'}));g.appendChild(s('line',{x1:28,y1:28,x2:34,y2:34,stroke:'#f57f17','stroke-width':'1'}))}},
+  'pot':{icon:'🎚️',label:'Potenciòmetre',w:60,h:65,pins:[{id:'G',x:18,y:63},{id:'W',x:30,y:63},{id:'V',x:42,y:63}],render(g){g.appendChild(s('circle',{cx:30,cy:25,r:18,fill:'#8b4513',stroke:'#5a2a0a','stroke-width':'1.5'}));g.appendChild(s('line',{x1:30,y1:10,x2:30,y2:5,stroke:'#333','stroke-width':'2'})}},
+  'servo':{icon:'⚙️',label:'Servo',w:80,h:70,pins:[{id:'G',x:20,y:68},{id:'S',x:40,y:68},{id:'V',x:60,y:68}],render(g){g.appendChild(s('rect',{x:10,y:10,width:60,height:50,rx:3,fill:'#8B4513',stroke:'#5a2a0a','stroke-width':'1.5'}));g.appendChild(s('circle',{cx:40,cy:20,r:8,fill:'#333',stroke:'#000','stroke-width':'1'}));g.appendChild(s('text',{x:40,y:45,'text-anchor':'middle','font-size':'8','fill':'#ddd','font-family':'monospace'},'Servo'))}},
+  'motor':{icon:'⚡',label:'Motor DC',w:70,h:80,pins:[{id:'+',x:20,y:-2},{id:'-',x:50,y:-2}],render(g){g.appendChild(s('circle',{cx:35,cy:35,r:28,fill:'#ff6b6b',stroke:'#c92a2a','stroke-width':'1.5'}));g.appendChild(s('text',{x:35,y:40,'text-anchor':'middle','font-size':'9','fill':'#fff','font-weight':'bold'},'DC'))}},
+  'lcd':{icon:'📺',label:'LCD 16×2',w:200,h:90,pins:[{id:'1',x:10,y:88},{id:'2',x:30,y:88},{id:'3',x:50,y:88},{id:'4',x:70,y:88},{id:'5',x:90,y:88},{id:'6',x:110,y:88},{id:'7',x:130,y:88},{id:'8',x:150,y:88},{id:'9',x:170,y:88},{id:'10',x:190,y:88}],render(g){g.appendChild(s('rect',{x:5,y:8,width:190,height:70,rx:3,fill:'#d0e8f2',stroke:'#01579b','stroke-width':'2'}));g.appendChild(s('rect',{x:15,y:18,width:170,height:40,fill:'#001d3d'}));g.appendChild(s('text',{x:100,y:38,'text-anchor':'middle','font-size':'7','fill':'#00c800','font-family':'monospace'},'AAAAAAAAAA'));g.appendChild(s('text',{x:100,y:50,'text-anchor':'middle','font-size':'7','fill':'#00c800','font-family':'monospace'},'BBBBBBBBBB'))}}
 };
 
-// ── COMPONENTS ────────────────────────────────────────────────
-const components = [];
-let compIdCounter = 0;
-const buttonStates = {};
-
-function renderComponents() {
-  const list = document.getElementById('comp-list');
-  list.innerHTML = '';
-  components.forEach(c => {
-    const row = document.createElement('div');
-    row.className = 'comp-row';
-    row.dataset.id = c.id;
-
-    let iconHTML = '';
-    if (c.type === 'led') {
-      iconHTML = `<div class="led-circle" id="led-${c.id}"></div>`;
-    } else if (c.type === 'boto') {
-      iconHTML = `<button class="btn-comp" id="btn-${c.id}"
-        onmousedown="pressButton(${c.pin},true,${c.id})"
-        onmouseup="pressButton(${c.pin},false,${c.id})"
-        onmouseleave="pressButton(${c.pin},false,${c.id})"
-        ontouchstart="pressButton(${c.pin},true,${c.id})"
-        ontouchend="pressButton(${c.pin},false,${c.id})">PREM</button>`;
-    } else if (c.type === 'buzzer') {
-      iconHTML = `<span class="buzzer-icon" id="buz-${c.id}">🔇</span>`;
-    }
-
-    const typeName = c.type === 'led' ? 'LED' : c.type === 'boto' ? 'Botó' : 'Buzzer';
-    row.innerHTML = `
-      <div class="comp-icon">${iconHTML}</div>
-      <div class="comp-info">
-        <div class="comp-name">${typeName}</div>
-        <div class="comp-pin">Pin ${c.pin}</div>
-      </div>
-      <button class="comp-del" onclick="deleteComponent(${c.id})">✕</button>`;
-    list.appendChild(row);
-  });
-}
-
-function addComponent(type, pin) {
-  pin = parseInt(pin);
-  components.push({ id: compIdCounter++, type, pin, value: 0 });
-  renderComponents();
-}
-
-function deleteComponent(id) {
-  const idx = components.findIndex(c => c.id === id);
-  if (idx !== -1) components.splice(idx, 1);
-  renderComponents();
-}
-
-function pressButton(pin, pressed, id) {
-  buttonStates[pin] = pressed ? 1 : 0;
-  const el = document.getElementById('btn-' + id);
-  if (el) el.classList.toggle('pressed', pressed);
-}
-
-function updateComponents(pin, val) {
-  components.forEach(c => {
-    if (c.pin !== pin) return;
-    c.value = val;
-    if (c.type === 'led') {
-      const el = document.getElementById('led-' + c.id);
-      if (!el) return;
-      if (val === 0) {
-        el.classList.remove('led-on');
-        el.style.opacity = '';
-        el.style.background = '';
-        el.style.boxShadow = '';
-      } else if (val === 1) {
-        el.classList.add('led-on');
-        el.style.opacity = '';
-      } else {
-        const pct = val / 255;
-        el.style.background = `rgba(0,230,118,${pct})`;
-        el.style.boxShadow = `0 0 ${8*pct}px var(--green)`;
-        el.style.opacity = 0.2 + 0.8 * pct;
-      }
-    } else if (c.type === 'buzzer') {
-      const el = document.getElementById('buz-' + c.id);
-      if (!el) return;
-    }
-  });
-}
-
-// ── SERIAL MONITOR ────────────────────────────────────────────
-function appendSerial(text, isError) {
-  const out = document.getElementById('serial-out');
-  const p = document.createElement('p');
-  if (isError) p.className = 'err';
-  p.textContent = text;
-  out.appendChild(p);
-  out.scrollTop = out.scrollHeight;
-}
-
-document.getElementById('btn-clear-serial').onclick = () => {
-  document.getElementById('serial-out').innerHTML = '';
+// ════ STATE ════
+const state={
+  board:'uno',
+  components:[],
+  wires:[],
+  view:{x:0,y:0,s:1},
+  selected:null,
+  wireMode:false,
+  wireStart:null,
+  wireColor:'#e53935',
+  compId:0
 };
 
-// ── WEB AUDIO (BUZZER) ────────────────────────────────────────
-let audioCtx = null;
-const oscillators = {};
+// ════ PALETTE ════
+function buildPalette(){
+  const p=document.getElementById('palette');
+  p.innerHTML='<div class="pal-section"><div class="pal-title">Bàsics</div></div><div class="pal-section"><div class="pal-title">Sensors</div></div><div class="pal-section"><div class="pal-title">Actuadors</div></div>';
+  const secs=p.querySelectorAll('.pal-section');
+  const basics=['led-red','led-green','led-blue','resistor','button','buzzer'];
+  const sensors=['dht11','hc-sr04','pir','ldr'];
+  const actuators=['pot','servo','motor','lcd'];
+  const all=[basics,sensors,actuators];
 
-function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-
-function playTone(pin, freq, duration) {
-  stopTone(pin);
-  try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    gain.gain.value = 0.3;
-    osc.start();
-    oscillators[pin] = { osc, gain };
-    components.forEach(c => {
-      if (c.pin === pin && c.type === 'buzzer') {
-        const el = document.getElementById('buz-' + c.id);
-        if (el) { el.textContent = '🔊'; el.classList.add('buzzer-on'); }
-      }
+  all.forEach((items,i)=>{
+    items.forEach(cid=>{
+      const c=COMPS[cid];
+      const item=s('div',{class:'pal-item','data-comp':cid});
+      item.innerHTML=`<div class="pal-icon">${c.icon}</div><div class="pal-text"><div class="pal-label">${c.label}</div></div>`;
+      item.onclick=()=>addComponent(cid);
+      secs[i].appendChild(item);
     });
-    if (duration) setTimeout(() => stopTone(pin), duration);
-  } catch(e) {}
-}
-
-function stopTone(pin) {
-  if (oscillators[pin]) {
-    try { oscillators[pin].osc.stop(); } catch(e) {}
-    delete oscillators[pin];
-  }
-  components.forEach(c => {
-    if (c.pin === pin && c.type === 'buzzer') {
-      const el = document.getElementById('buz-' + c.id);
-      if (el) { el.textContent = '🔇'; el.classList.remove('buzzer-on'); }
-    }
   });
 }
 
-function stopAllTones() {
-  Object.keys(oscillators).forEach(p => stopTone(parseInt(p)));
+function addComponent(cid){
+  const c=COMPS[cid];
+  const center=canvasCenter();
+  const comp={id:state.compId++,type:cid,x:center.x,y:center.y,pins:{}};
+  state.components.push(comp);
+  renderAll();
+  select(comp.id);
 }
 
-// ── TRANSPILADOR ──────────────────────────────────────────────
-function transpile(code) {
-  // Eliminar arrays literals d'estil Arduino: int arr[] = {1,2,3};
-  // Conservar com a let arr = [1,2,3];
-  code = code.replace(/\b(?:int|float|double|long|bool|boolean|byte|char|String|unsigned\s+int|unsigned\s+long)\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/g,
-    (_, name, vals) => `let ${name} = [${vals}]`);
-
-  // Declaracions de tipus → let (variables globals i locals)
-  code = code.replace(/\b(int|float|double|long|bool|boolean|byte|char|String|unsigned\s+int|unsigned\s+long)\s+(?=\w)/g, 'let ');
-
-  // for(let i → correcte (ja fet)
-  // Constants Arduino
-  code = code.replace(/\bHIGH\b/g, '1');
-  code = code.replace(/\bLOW\b/g, '0');
-  code = code.replace(/\bOUTPUT\b/g, '"OUTPUT"');
-  code = code.replace(/\bINPUT_PULLUP\b/g, '"INPUT_PULLUP"');
-  code = code.replace(/\bINPUT\b/g, '"INPUT"');
-  code = code.replace(/\bLED_BUILTIN\b/g, '13');
-  code = code.replace(/\btrue\b/g, 'true');
-  code = code.replace(/\bfalse\b/g, 'false');
-
-  // Serial
-  code = code.replace(/Serial\.println\s*\(/g, '_serialPrintln(');
-  code = code.replace(/Serial\.print\s*\(/g, '_serialPrint(');
-
-  // Funcions Arduino → privades
-  code = code.replace(/\bdelay\s*\(/g, 'await _delay(');
-  code = code.replace(/\bdigitalWrite\s*\(/g, '_digitalWrite(');
-  code = code.replace(/\bdigitalRead\s*\(/g, '_digitalRead(');
-  code = code.replace(/\banalogWrite\s*\(/g, '_analogWrite(');
-  code = code.replace(/\banalogRead\s*\(/g, '_analogRead(');
-  code = code.replace(/\bpinMode\s*\(/g, '_pinMode(');
-  code = code.replace(/\btone\s*\(/g, '_tone(');
-  code = code.replace(/\bnoTone\s*\(/g, '_noTone(');
-  code = code.replace(/\bmillis\s*\(\s*\)/g, '_millis()');
-  code = code.replace(/\bmap\s*\(/g, '_map(');
-  code = code.replace(/\bconstrain\s*\(/g, '_constrain(');
-
-  // void funcions → async function
-  code = code.replace(/\bvoid\s+(\w+)\s*\(/g, 'async function $1(');
-
-  return code;
+function canvasCenter(){
+  const r=document.getElementById('canvas').getBoundingClientRect();
+  return{x:(r.width/2-state.view.x)/state.view.s,y:(r.height/2-state.view.y)/state.view.s};
 }
 
-// ── RUNTIME API ───────────────────────────────────────────────
-let _stopped = false;
-let _startTime = 0;
+// ════ RENDERING ════
+function renderAll(){
+  renderBoards();
+  renderComponents();
+  renderWires();
+}
 
-const _api = {
-  async _delay(ms) {
-    await new Promise(r => setTimeout(r, Math.max(0, ms)));
-    if (_stopped) throw new Error('__STOP__');
-  },
-  _pinMode(pin, mode) {},
-  _digitalWrite(pin, val) {
-    if (_stopped) throw new Error('__STOP__');
-    updateComponents(pin, val);
-  },
-  _digitalRead(pin) {
-    if (_stopped) throw new Error('__STOP__');
-    return buttonStates[pin] || 0;
-  },
-  _analogWrite(pin, val) {
-    if (_stopped) throw new Error('__STOP__');
-    updateComponents(pin, Math.min(255, Math.max(0, val)));
-  },
-  _analogRead(pin) { return 0; },
-  _serialPrintln(x) { appendSerial(String(x)); },
-  _serialPrint(x) { appendSerial(String(x)); },
-  _tone(pin, freq, duration) { playTone(pin, freq, duration); },
-  _noTone(pin) { stopTone(pin); },
-  _millis() { return Date.now() - _startTime; },
-  _map(x, inMin, inMax, outMin, outMax) {
-    return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-  },
-  _constrain(x, a, b) { return Math.min(Math.max(x, a), b); }
-};
+function renderBoards(){
+  const g=document.getElementById('boards');
+  g.innerHTML='';
+  if(state.board==='uno'){
+    const board=s('g',{id:'board-0',class:'comp-group',transform:'translate(80,60)scale(0.7)'});
+    // Arduino PCB
+    board.appendChild(s('rect',{x:0,y:10,width:360,height:220,rx:10,fill:'url(#pcb-uno)',stroke:'#1a4d1e','stroke-width':2}));
+    // USB
+    board.appendChild(s('rect',{x:0,y:80,width:28,height:40,rx:2,fill:'#777'}));
+    // Reset button
+    board.appendChild(s('rect',{x:305,y:60,width:20,height:20,rx:3,fill:'#e53935'}));
+    // Chip
+    board.appendChild(s('rect',{x:140,y:80,width:80,height:60,rx:3,fill:'#1a1a1a'}));
+    board.appendChild(s('text',{x:180,y:115,'text-anchor':'middle','font-size':8,'fill':'#666','font-family':'monospace'},'ATmega328P'));
+    // Pin headers
+    const pins=['D0','D1','D2','D3','D4','D5','D6','D7','D8','D9','D10','D11','D12','D13','AREF','GND'];
+    pins.forEach((p,i)=>{
+      const x=50+i*18;
+      board.appendChild(s('circle',{cx:x,cy:0,r:6,class:'pin-circle','data-pin':p}));
+      board.appendChild(s('text',{x:x,y:24,'text-anchor':'middle','font-size':5.5,'fill':'#a5d6a7','font-family':'monospace'},p)));
+    });
+    const apins=['3V3','5V','GND','GND','VIN','A0','A1','A2','A3','A4','A5'];
+    apins.forEach((p,i)=>{
+      const x=50+i*18;
+      board.appendChild(s('circle',{cx:x,cy:240,r:6,class:'pin-circle','data-pin':p}));
+      board.appendChild(s('text',{x:x,y:256,'text-anchor':'middle','font-size':5.5,'fill':'#a5d6a7','font-family':'monospace'},p)));
+    });
+    g.appendChild(board);
+  }
+}
 
-// ── EXECUCIÓ ──────────────────────────────────────────────────
-async function runSketch() {
-  _stopped = false;
-  _startTime = Date.now();
-  setStatus('running', 'Executant...');
-  document.getElementById('btnRun').disabled = true;
-  document.getElementById('btnStop').disabled = false;
+function renderComponents(){
+  const g=document.getElementById('components');
+  g.innerHTML='';
+  state.components.forEach(c=>{
+    const def=COMPS[c.type];
+    const cg=s('g',{id:`comp-${c.id}`,class:'comp-group',transform:`translate(${c.x},${c.y})`,style:'cursor:grab'});
+    cg.dataset.id=c.id;
+    cg.dataset.type=c.type;
+    if(state.selected===c.id)cg.classList.add('selected');
 
-  let code = '';
-  try {
-    code = transpile(document.getElementById('editor').value);
+    // Body
+    def.render(cg);
 
-    const argNames = Object.keys(_api);
-    const argVals  = Object.values(_api);
+    // Selection rect
+    cg.appendChild(s('rect',{class:'comp-rect',x:-5,y:-5,width:def.w+10,height:def.h+10,rx:4}));
 
-    const wrapCode = `
-      ${code}
-      if (typeof setup === 'function') await setup();
-      while (!_stopped) {
-        if (typeof loop === 'function') await loop();
-        else break;
-      }
-    `;
+    // Pins
+    def.pins.forEach(p=>{
+      const pc=s('circle',{cx:p.x,cy:p.y,r:5,class:'pin-circle','data-pin':p.id});
+      cg.appendChild(pc);
+    });
 
-    const AsyncFunc = Object.getPrototypeOf(async function(){}).constructor;
-    const fn = new AsyncFunc('_stopped', ...argNames, wrapCode);
+    g.appendChild(cg);
+  });
+}
 
-    await fn(_stopped, ...argVals);
+function renderWires(){
+  const g=document.getElementById('wires');
+  g.innerHTML='';
+  state.wires.forEach(w=>{
+    const f=w.from, t=w.to;
+    const d=wireD(f.x,f.y,t.x,t.y);
+    const path=s('path',{d,class:'wire',stroke:w.color,'data-id':w.id});
+    path.onclick=e=>{e.stopPropagation();select(-w.id)};
+    g.appendChild(path);
+  });
+}
 
-  } catch(e) {
-    if (e.message !== '__STOP__') {
-      appendSerial('ERROR: ' + e.message, true);
-      setStatus('error', 'Error');
-    } else {
-      setStatus('', 'Aturat');
+function wireD(x1,y1,x2,y2){
+  const dx=Math.abs(x2-x1),dy=Math.abs(y2-y1);
+  if(dx>dy){const h=(x1+x2)/2;return`M ${x1} ${y1} C ${h} ${y1}, ${h} ${y2}, ${x2} ${y2}`;}
+  else{const h=(y1+y2)/2;return`M ${x1} ${y1} C ${x1} ${h}, ${x2} ${h}, ${x2} ${y2}`;}
+}
+
+// ════ INTERACTION ════
+const canvas=document.getElementById('canvas');
+let panStart,compDragStart;
+
+canvas.addEventListener('mousedown',e=>{
+  if(e.button===2)return;
+  const pt=getCanvasCoords(e);
+  const target=document.elementFromPoint(e.clientX,e.clientY);
+
+  if(target.classList.contains('pin-circle')){
+    if(state.wireMode){
+      completeWire(target);
+    }else{
+      state.wireMode=true;
+      state.wireStart={x:pt.x,y:pt.y,comp:target.closest('.comp-group'),pin:target.dataset.pin};
+      updateStatus('Selecciona pin destí');
+      document.getElementById('canvas').classList.add('wire-mode');
     }
-    onStopped();
     return;
   }
 
-  setStatus('', 'Finalitzat');
-  onStopped();
-}
-
-function stopSketch() {
-  _stopped = true;
-  stopAllTones();
-}
-
-function onStopped() {
-  document.getElementById('btnRun').disabled = false;
-  document.getElementById('btnStop').disabled = true;
-  stopAllTones();
-  components.forEach(c => updateComponents(c.pin, 0));
-}
-
-function setStatus(cls, text) {
-  const el = document.getElementById('status');
-  el.className = cls;
-  el.textContent = text;
-}
-
-// ── EVENTS ────────────────────────────────────────────────────
-document.getElementById('btnRun').onclick = runSketch;
-document.getElementById('btnStop').onclick = stopSketch;
-document.getElementById('btnClear').onclick = () => {
-  document.getElementById('editor').value = '';
-};
-
-document.getElementById('examples').onchange = function() {
-  const val = this.value;
-  if (val && EXEMPLES[val]) {
-    document.getElementById('editor').value = EXEMPLES[val];
-    this.value = '';
+  const comp=target.closest('.comp-group');
+  if(comp){
+    select(+comp.dataset.id);
+    compDragStart={x:+comp.dataset.x||0,y:+comp.dataset.y||0,sx:pt.x,sy:pt.y,comp};
+    return;
   }
-};
 
-document.getElementById('btn-add').onclick = () => {
-  document.getElementById('add-form').classList.toggle('visible');
-};
+  panStart=pt;
+  canvas.classList.add('panning');
+});
 
-document.getElementById('btn-add-ok').onclick = () => {
-  const type = document.getElementById('add-type').value;
-  const pin  = document.getElementById('add-pin').value;
-  addComponent(type, pin);
-  document.getElementById('add-form').classList.remove('visible');
-};
+canvas.addEventListener('mousemove',e=>{
+  if(state.wireMode&&state.wireStart){
+    const pt=getCanvasCoords(e);
+    const g=document.getElementById('wire-preview');
+    g.innerHTML='';
+    const d=wireD(state.wireStart.x,state.wireStart.y,pt.x,pt.y);
+    g.appendChild(s('path',{d,stroke:state.wireColor,'stroke-width':'2.5'}));
+  }
 
-// Components per defecte
-addComponent('led', 13);
-addComponent('boto', 2);
+  if(compDragStart){
+    const pt=getCanvasCoords(e);
+    const dx=pt.x-compDragStart.sx,dy=pt.y-compDragStart.sy;
+    const comp=state.components.find(c=>c.id===+compDragStart.comp.dataset.id);
+    if(comp){comp.x+=dx;comp.y+=dy}
+    compDragStart.sx=pt.x;compDragStart.sy=pt.y;
+    renderAll();
+  }
+
+  if(panStart){
+    const pt=getCanvasCoords(e,true);
+    state.view.x+=e.clientX-panStart.clientX;
+    state.view.y+=e.clientY-panStart.clientY;
+    updateTransform();
+    panStart={clientX:e.clientX,clientY:e.clientY};
+  }
+});
+
+canvas.addEventListener('mouseup',()=>{
+  panStart=null;compDragStart=null;
+  canvas.classList.remove('panning');
+});
+
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const dir=e.deltaY>0?0.9:1.1;
+  state.view.s*=dir;
+  updateTransform();
+  updateZoom();
+});
+
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const target=document.elementFromPoint(e.clientX,e.clientY);
+  if(target.closest('.comp-group')){
+    const menu=document.getElementById('ctx-menu');
+    menu.style.left=e.clientX+'px';
+    menu.style.top=e.clientY+'px';
+    menu.classList.add('show');
+  }
+});
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#ctx-menu'))document.getElementById('ctx-menu').classList.remove('show');
+  if(e.target.closest('#canvas'))select(null);
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){state.wireMode=false;document.getElementById('wire-preview').innerHTML='';document.getElementById('canvas').classList.remove('wire-mode');updateStatus('Simulador de circuits');}
+  if(e.key==='Delete')deleteSelected();
+});
+
+// ════ HELPERS ════
+function getCanvasCoords(e,raw){
+  const r=document.getElementById('canvas').getBoundingClientRect();
+  const sx=(e.clientX-r.left-state.view.x)/state.view.s;
+  const sy=(e.clientY-r.top-state.view.y)/state.view.s;
+  return raw?{clientX:e.clientX,clientY:e.clientY}:{x:sx,y:sy};
+}
+
+function updateTransform(){
+  document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);
+}
+
+function updateZoom(){
+  document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';
+}
+
+function updateStatus(text){
+  document.getElementById('sb-mode').textContent='Mode: '+text;
+}
+
+function select(id){
+  state.selected=id;
+  document.querySelectorAll('.comp-group').forEach(e=>e.classList.remove('selected'));
+  if(id!==null&&id>0){
+    const comp=state.components.find(c=>c.id===id);
+    if(comp)document.getElementById(`comp-${id}`).classList.add('selected');
+  }
+  renderAll();
+}
+
+function completeWire(target){
+  const comp=target.closest('.comp-group');
+  if(comp.dataset.id===state.wireStart.comp.dataset.id)return;
+  const from=getPinWorldCoords(state.wireStart.comp,state.wireStart.pin);
+  const to=getPinWorldCoords(comp,target.dataset.pin);
+  state.wires.push({id:state.wires.length,from,to,color:state.wireColor});
+  state.wireMode=false;
+  document.getElementById('wire-preview').innerHTML='';
+  document.getElementById('canvas').classList.remove('wire-mode');
+  updateStatus('Simulador de circuits');
+  renderWires();
+}
+
+function getPinWorldCoords(comp,pin){
+  const rect=comp.getBoundingClientRect();
+  const cg=document.getElementById('canvas').getBoundingClientRect();
+  const x=(rect.left-cg.left-state.view.x)/state.view.s+comp.dataset.x||0;
+  const y=(rect.top-cg.top-state.view.y)/state.view.s+comp.dataset.y||0;
+  return{x,y,comp:+comp.dataset.id,pin};
+}
+
+function deleteSelected(){
+  if(state.selected>0){
+    state.components=state.components.filter(c=>c.id!==state.selected);
+    state.wires=state.wires.filter(w=>!(w.from.comp===state.selected||w.to.comp===state.selected));
+    state.selected=null;
+    renderAll();
+  }else if(state.selected<0){
+    state.wires=state.wires.filter(w=>w.id!==-state.selected);
+    state.selected=null;
+    renderWires();
+  }
+}
+
+function showProps(){
+  document.getElementById('ctx-menu').classList.remove('show');
+  if(state.selected>0){
+    const comp=state.components.find(c=>c.id===state.selected);
+    const def=COMPS[comp.type];
+    document.getElementById('props').classList.add('open');
+    document.getElementById('props-body').innerHTML=`<div class="prop-row"><div class="prop-label">Tipus</div><div class="prop-val">${def.label}</div></div><div class="prop-row"><div class="prop-label">Posició</div><div class="prop-val">X: ${Math.round(comp.x)} Y: ${Math.round(comp.y)}</div></div>`;
+  }
+}
+
+function closeProps(){
+  document.getElementById('props').classList.remove('open');
+}
+
+// ════ INIT ════
+setupDefs();
+buildPalette();
+
+document.getElementById('btn-zoom-in').onclick=()=>{state.view.s*=1.2;updateTransform();updateZoom()};
+document.getElementById('btn-zoom-out').onclick=()=>{state.view.s/=1.2;updateTransform();updateZoom()};
+document.getElementById('btn-delete').onclick=deleteSelected;
+document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar tot el circuit?')){state.components=[];state.wires=[];state.selected=null;renderAll()}};
+
+document.getElementById('sel-board').onchange=e=>{state.board=e.target.value;renderBoards()};
+
+document.getElementById('wire-colors').querySelectorAll('.wc-dot').forEach(d=>{
+  d.onclick=()=>{
+    document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));
+    d.classList.add('active');
+    state.wireColor=d.dataset.color;
+  };
+});
+
+updateTransform();
+updateZoom();
+updateStatus('Simulador de circuits');
+renderAll();
 </script>
 </body>
 </html>
