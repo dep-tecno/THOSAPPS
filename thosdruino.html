@@ -198,6 +198,77 @@ const COMPS={
     g.appendChild(s('rect',{x:5,y:8,width:194,height:74,rx:4,fill:'#d0e8f2',stroke:'#01579b','stroke-width':'2.5',filter:'url(#shadow)'}));
     g.appendChild(s('rect',{x:15,y:18,width:174,height:44,fill:'#001d3d',stroke:'#00a8e8','stroke-width':'1'}));
     g.appendChild(s('text',{x:102,y:35,'text-anchor':'middle','font-size':'9','fill':'#00ff00','font-family':'monospace','font-weight':'bold'},'LCD 16x2'}));
+  }},
+  'ky001':{icon:'🌡️',label:'KY001 Temperatura',w:50,h:65,pins:[{id:'S',x:15,y:63},{id:'+',x:25,y:63},{id:'-',x:35,y:63}],render(g){
+    g.appendChild(s('rect',{x:5,y:8,width:40,height:45,rx:3,fill:'#4169e1',stroke:'#00008b','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('text',{x:25,y:28,'text-anchor':'middle','font-size':'9','fill':'#fff','font-weight':'bold'},'DS18B20'));
+  }},
+  'ky002':{icon:'📳',label:'KY002 Shock',w:45,h:55,pins:[{id:'S',x:12,y:53},{id:'+',x:22,y:53},{id:'-',x:32,y:53}],render(g){
+    g.appendChild(s('circle',{cx:22,cy:20,r:15,fill:'#ff6b6b',stroke:'#c92a2a','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('text',{x:22,y:24,'text-anchor':'middle','font-size':'7','fill':'#fff','font-weight':'bold'},'SHOCK'));
+  }},
+  'ky003':{icon:'🧲',label:'KY003 Hall',w:48,h:62,pins:[{id:'S',x:14,y:60},{id:'+',x:24,y:60},{id:'-',x:34,y:60}],render(g){
+    g.appendChild(s('rect',{x:6,y:8,width:36,height:42,rx:3,fill:'#9370db',stroke:'#4b0082','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('text',{x:24,y:28,'text-anchor':'middle','font-size':'8','fill':'#fff','font-weight':'bold'},'HALL'));
+  }},
+  'ky005':{icon:'📡',label:'KY005 IR TX',w:50,h:58,pins:[{id:'S',x:14,y:56},{id:'+',x:25,y:56},{id:'-',x:36,y:56}],render(g){
+    g.appendChild(s('rect',{x:8,y:8,width:34,height:38,rx:2,fill:'#333',stroke:'#000','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:25,cy:22,r:8,fill:'#ff3333'}));
+  }},
+  'ky008':{icon:'🔴',label:'KY008 Laser',w:48,h:60,pins:[{id:'+',x:14,y:58},{id:'-',x:34,y:58}],render(g){
+    g.appendChild(s('rect',{x:6,y:8,width:36,height:40,rx:2,fill:'#222',stroke:'#000','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:24,cy:20,r:6,fill:'#ff0000'}));
+    g.appendChild(s('line',{x1:24,y1:26,x2:24,y2:45,stroke:'#666','stroke-width':'1'}));
+  }},
+  'ky013':{icon:'🌡️',label:'KY013 Temp Analog',w:52,h:68,pins:[{id:'A',x:14,y:66},{id:'+',x:26,y:66},{id:'-',x:38,y:66}],render(g){
+    g.appendChild(s('rect',{x:8,y:10,width:36,height:45,rx:3,fill:'#87ceeb',stroke:'#4682b4','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('text',{x:26,y:35,'text-anchor':'middle','font-size':'8','fill':'#fff','font-weight':'bold'},'ANA'));
+  }},
+  'ky017':{icon:'🔀',label:'KY017 Tilt',w:50,h:58,pins:[{id:'S',x:14,y:56},{id:'+',x:25,y:56},{id:'-',x:36,y:56}],render(g){
+    g.appendChild(s('rect',{x:8,y:8,width:34,height:40,rx:3,fill:'#c0c0c0',stroke:'#808080','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:25,cy:24,r:6,fill:'#666'}));
+  }},
+  'ky019':{icon:'🔌',label:'KY019 Relay',w:72,h:66,pins:[{id:'G',x:14,y:64},{id:'C',x:36,y:64},{id:'V',x:58,y:64}],render(g){
+    g.appendChild(s('rect',{x:6,y:8,width:60,height:48,rx:3,fill:'#d32f2f',stroke:'#b71c1c','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('rect',{x:12,y:14,width:48,height:28,fill:'#ff6b6b',stroke:'#c62828','stroke-width':'1'}));
+    g.appendChild(s('text',{x:36,y:33,'text-anchor':'middle','font-size':'9','fill':'#fff','font-weight':'bold'},'RELAY'));
+  }},
+  'ky022':{icon:'📡',label:'KY022 IR RX',w:54,h:62,pins:[{id:'S',x:13,y:60},{id:'+',x:27,y:60},{id:'-',x:41,y:60}],render(g){
+    g.appendChild(s('rect',{x:8,y:10,width:38,height:40,rx:3,fill:'#444',stroke:'#000','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:27,cy:24,r:8,fill:'#1a1a1a',stroke:'#333','stroke-width':'1'}));
+    g.appendChild(s('circle',{cx:27,cy:24,r:5,fill:'#000'}));
+  }},
+  'ky023':{icon:'🕹️',label:'KY023 Joystick',w:70,h:70,pins:[{id:'X',x:10,y:68},{id:'Y',x:25,y:68},{id:'B',x:40,y:68},{id:'+',x:55,y:68},{id:'-',x:70,y:68}],render(g){
+    g.appendChild(s('rect',{x:8,y:8,width:54,height:52,rx:3,fill:'#d4a574',stroke:'#8b6914','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:35,cy:28,r:14,fill:'#c0a080',stroke:'#8b6914','stroke-width':'1.5'}));
+    g.appendChild(s('circle',{cx:35,cy:28,r:10,fill:'#b8956a'}));
+  }},
+  'ky026':{icon:'🔥',label:'KY026 Flame',w:52,h:64,pins:[{id:'A',x:14,y:62},{id:'D',x:26,y:62},{id:'-',x:38,y:62}],render(g){
+    g.appendChild(s('rect',{x:8,y:8,width:36,height:42,rx:3,fill:'#ff6b00',stroke:'#cc5500','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:26,cy:20,r:6,fill:'#ffaa00'}));
+    g.appendChild(s('text',{x:26,y:35,'text-anchor':'middle','font-size':'7','fill':'#fff','font-weight':'bold'},'FLAME'));
+  }},
+  'ky032':{icon:'📡',label:'KY032 Obstacle',w:58,h:62,pins:[{id:'G',x:10,y:60},{id:'V',x:20,y:60},{id:'O',x:38,y:60},{id:'E',x:48,y:60}],render(g){
+    g.appendChild(s('rect',{x:6,y:8,width:46,height:44,rx:2,fill:'#505050',stroke:'#000','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:16,cy:22,r:6,fill:'#ff0000'}));
+    g.appendChild(s('circle',{cx:16,cy:22,r:3,fill:'#ffaa00'}));
+    g.appendChild(s('circle',{cx:36,cy:22,r:6,fill:'#ff0000'}));
+    g.appendChild(s('circle',{cx:36,cy:22,r:3,fill:'#ffaa00'}));
+  }},
+  'ky037':{icon:'🎤',label:'KY037 Micrófono',w:60,h:68,pins:[{id:'A',x:15,y:66},{id:'D',x:30,y:66},{id:'-',x:45,y:66}],render(g){
+    g.appendChild(s('rect',{x:8,y:10,width:44,height:44,rx:3,fill:'#1a1a1a',stroke:'#333','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:30,cy:28,r:10,fill:'#444',stroke:'#555','stroke-width':'1'}));
+    g.appendChild(s('text',{x:30,y:32,'text-anchor':'middle','font-size':'6','fill':'#888','font-weight':'bold'},'MIC'));
+  }},
+  'ky039':{icon:'💓',label:'KY039 Pulso',w:54,h:66,pins:[{id:'S',x:13,y:64},{id:'+',x:27,y:64},{id:'-',x:41,y:64}],render(g){
+    g.appendChild(s('rect',{x:8,y:10,width:38,height:44,rx:3,fill:'#fff0f5',stroke:'#ff69b4','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:27,cy:26,r:8,fill:'#ff1493',stroke:'#c71585','stroke-width':'1'}));
+    g.appendChild(s('text',{x:27,y:31,'text-anchor':'middle','font-size':'6','fill':'#fff','font-weight':'bold'},'❤'));
+  }},
+  'ky040':{icon:'🔄',label:'KY040 Encoder',w:58,h:68,pins:[{id:'G',x:10,y:66},{id:'C',x:20,y:66},{id:'D',x:38,y:66},{id:'S',x:48,y:66}],render(g){
+    g.appendChild(s('circle',{cx:29,cy:26,r:14,fill:'#8b7355',stroke:'#5a4a3a','stroke-width':'2',filter:'url(#shadow)'}));
+    g.appendChild(s('circle',{cx:29,cy:26,r:10,fill:'#a0826d'}));
+    g.appendChild(s('line',{x1:29,y1:16,x2:29,y2:8,stroke:'#333','stroke-width':'2'}));
   }}
 };
 
@@ -207,7 +278,23 @@ const state={board:'uno',components:[
   {id:2,type:'dht11',x:450,y:300}
 ],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:3};
 
-const EXTRA_SENSORS={};
+const EXTRA_SENSORS={
+  'ky001':COMPS['ky001'],
+  'ky002':COMPS['ky002'],
+  'ky003':COMPS['ky003'],
+  'ky005':COMPS['ky005'],
+  'ky008':COMPS['ky008'],
+  'ky013':COMPS['ky013'],
+  'ky017':COMPS['ky017'],
+  'ky019':COMPS['ky019'],
+  'ky022':COMPS['ky022'],
+  'ky023':COMPS['ky023'],
+  'ky026':COMPS['ky026'],
+  'ky032':COMPS['ky032'],
+  'ky037':COMPS['ky037'],
+  'ky039':COMPS['ky039'],
+  'ky040':COMPS['ky040']
+};
 
 function buildPalette(){
   const p=document.getElementById('palette');
