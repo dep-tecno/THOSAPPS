@@ -26,18 +26,17 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .pal-label{font-weight:500}
 #canvas-wrap{flex:1;overflow:hidden;background:#0a0c10;background-image:radial-gradient(circle,rgba(255,255,255,.12) 1px,transparent 1px);background-size:20px 20px}
 #canvas{width:100%;height:100%;display:block}
-.pin-circle{fill:url(#pin-metal);stroke:#5d4037;stroke-width:1;cursor:crosshair;transition:all .15s ease-out;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
-.pin-circle:hover{fill:#00e676;stroke:#fff;stroke-width:2;transform:scale(1.3)}
-.pin-circle.wiring{fill:#ffd54f;stroke:var(--green);stroke-width:2.5}
+.pin-dot{fill:url(#pin-metal);stroke:#5d4037;stroke-width:1;pointer-events:none;transition:fill .1s,stroke .1s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.pin-circle{fill:transparent;stroke:transparent;cursor:crosshair}
+.pin-circle:hover+.pin-dot{fill:#00e676;stroke:#fff;stroke-width:2}
+.pin-circle.wiring+.pin-dot{fill:#ffd54f;stroke:var(--green);stroke-width:2.5}
+.pin-circle.hover-pin+.pin-dot{fill:#00e676;stroke:#fff;stroke-width:2}
 .comp-group.selected>.comp-rect,.board-group.selected>.comp-rect{display:block}
 .comp-rect{display:none;fill:none;stroke:var(--green);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
 .wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:context-menu;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));transition:stroke-width .15s,opacity .15s}
 .wire:hover{stroke-width:5;opacity:.75}
-.pin-circle.hover-pin{fill:#00e676;stroke:#fff;stroke-width:2;transform:scale(1.4)}
 #btn-mode{font-size:.82rem;min-width:90px;transition:all .2s}
 #btn-mode.cable-on{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.12);font-weight:600}
-.cable-mode .pin-circle{cursor:crosshair;transform:scale(1.5);transform-box:fill-box;transform-origin:center;transition:transform .1s}
-.move-mode .pin-circle{cursor:default}
 #palette{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 #props{width:220px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
 #props-hdr{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:.8rem;color:var(--green)}
@@ -874,8 +873,11 @@ const BOARDS={
       g.appendChild(s('text',{x:16,y:172,'font-size':'8','fill':'#00c','font-weight':'bold'},'-'));
       for(let col=0;col<30;col++){
         for(let row=0;row<5;row++){
-          g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:2.5,fill:'#999',class:'pin-circle','data-pin':'U'+col+'_'+row}));
-          g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:2.5,fill:'#999',class:'pin-circle','data-pin':'L'+col+'_'+row}));
+          const pu='U'+col+'_'+row,pl='L'+col+'_'+row;
+          g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:4,class:'pin-circle','data-pin':pu}));
+          g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:2,fill:'#999',class:'pin-dot','data-pin':pu}));
+          g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:4,class:'pin-circle','data-pin':pl}));
+          g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:2,fill:'#999',class:'pin-dot','data-pin':pl}));
         }
       }
     }
@@ -889,8 +891,11 @@ const BOARDS={
       g.appendChild(s('text',{x:12,y:125,'font-size':'7','fill':'#00c','font-weight':'bold'},'-'));
       for(let col=0;col<24;col++){
         for(let row=0;row<5;row++){
-          g.appendChild(s('circle',{cx:16+col*7,cy:28+row*7,r:2.5,fill:'#999',class:'pin-circle','data-pin':'U'+col+'_'+row}));
-          g.appendChild(s('circle',{cx:16+col*7,cy:78+row*7,r:2.5,fill:'#999',class:'pin-circle','data-pin':'L'+col+'_'+row}));
+          const pu='U'+col+'_'+row,pl='L'+col+'_'+row;
+          g.appendChild(s('circle',{cx:16+col*7,cy:28+row*7,r:3.5,class:'pin-circle','data-pin':pu}));
+          g.appendChild(s('circle',{cx:16+col*7,cy:28+row*7,r:2,fill:'#999',class:'pin-dot','data-pin':pu}));
+          g.appendChild(s('circle',{cx:16+col*7,cy:78+row*7,r:3.5,class:'pin-circle','data-pin':pl}));
+          g.appendChild(s('circle',{cx:16+col*7,cy:78+row*7,r:2,fill:'#999',class:'pin-dot','data-pin':pl}));
         }
       }
     }
@@ -1097,7 +1102,10 @@ function renderBoards(){
     bg.dataset.boardId=b.id;
     d.render(bg);
     bg.appendChild(s('rect',{class:'comp-rect',x:-5,y:-5,width:d.w+10,height:d.h+10,rx:4}));
-    if(d.pins)d.pins.forEach(p=>bg.appendChild(s('circle',{cx:p.x,cy:p.y,r:5,class:'pin-circle','data-pin':p.id})));
+    if(d.pins)d.pins.forEach(p=>{
+      bg.appendChild(s('circle',{cx:p.x,cy:p.y,r:8,class:'pin-circle','data-pin':p.id}));
+      bg.appendChild(s('circle',{cx:p.x,cy:p.y,r:3,class:'pin-dot','data-pin':p.id}));
+    });
     g.appendChild(bg);
   });
 }
@@ -1112,7 +1120,10 @@ function renderComponents(){
     if(state.selected===c.id)cg.classList.add('selected');
     d.render(cg);
     cg.appendChild(s('rect',{class:'comp-rect',x:-5,y:-5,width:d.w+10,height:d.h+10,rx:4}));
-    d.pins.forEach(p=>cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:5,class:'pin-circle','data-pin':p.id})));
+    d.pins.forEach(p=>{
+      cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:8,class:'pin-circle','data-pin':p.id}));
+      cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:3,class:'pin-dot','data-pin':p.id}));
+    });
     g.appendChild(cg);
   });
 }
