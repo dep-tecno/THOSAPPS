@@ -34,6 +34,10 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:pointer;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));transition:stroke-width .15s}
 .wire:hover{stroke-width:4.5;opacity:.85}
 .pin-circle.hover-pin{fill:#00e676;stroke:#fff;stroke-width:2;transform:scale(1.4)}
+#btn-mode{font-size:.82rem;min-width:90px;transition:all .2s}
+#btn-mode.cable-on{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.12);font-weight:600}
+.cable-mode .pin-circle{cursor:crosshair;transform:scale(1.5);transform-box:fill-box;transform-origin:center;transition:transform .1s}
+.move-mode .pin-circle{cursor:default}
 #palette{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 #props{width:220px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
 #props-hdr{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:.8rem;color:var(--green)}
@@ -52,7 +56,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 
 <div id="toolbar">
 <button id="btn-zoom-in">+ Amplia</button><span id="zoom-pct">100%</span><button id="btn-zoom-out">− Redueix</button>
-<span style="margin-left:auto">Cable:</span>
+<button id="btn-mode" title="Canvia entre mode Moure i mode Cable (W)">✋ Moure</button>
+<span style="margin-left:auto;font-size:.78rem;opacity:.7" id="lbl-cable">Cable:</span>
 <div id="wire-colors" style="display:flex;gap:4px">
 <div class="wc-dot active" data-color="#e53935" style="background:#e53935;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 <div class="wc-dot" data-color="#212121" style="background:#555;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
@@ -865,8 +870,8 @@ const BOARDS={
       g.appendChild(s('text',{x:16,y:172,'font-size':'8','fill':'#00c','font-weight':'bold'},'-'));
       for(let col=0;col<30;col++){
         for(let row=0;row<5;row++){
-          g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:2,fill:'#aaa'}));
-          g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:2,fill:'#aaa'}));
+          g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:2.5,fill:'#999',class:'pin-circle','data-pin':'U'+col+'_'+row}));
+          g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:2.5,fill:'#999',class:'pin-circle','data-pin':'L'+col+'_'+row}));
         }
       }
     }
@@ -880,15 +885,15 @@ const BOARDS={
       g.appendChild(s('text',{x:12,y:125,'font-size':'7','fill':'#00c','font-weight':'bold'},'-'));
       for(let col=0;col<24;col++){
         for(let row=0;row<5;row++){
-          g.appendChild(s('circle',{cx:16+col*7,cy:28+row*7,r:1.8,fill:'#aaa'}));
-          g.appendChild(s('circle',{cx:16+col*7,cy:78+row*7,r:1.8,fill:'#aaa'}));
+          g.appendChild(s('circle',{cx:16+col*7,cy:28+row*7,r:2.5,fill:'#999',class:'pin-circle','data-pin':'U'+col+'_'+row}));
+          g.appendChild(s('circle',{cx:16+col*7,cy:78+row*7,r:2.5,fill:'#999',class:'pin-circle','data-pin':'L'+col+'_'+row}));
         }
       }
     }
   }
 };
 
-const state={boards:[],components:[],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:0,boardId:0,wireId:0};
+const state={boards:[],components:[],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:0,boardId:0,wireId:0,mode:'move'};
 
 
 function buildBoardsPanel(){
@@ -1047,6 +1052,14 @@ function getPinPos(ep){
   }
   const b=state.boards.find(b=>b.id===ep.id);
   if(!b)return null;
+  // Protoboard: decode pin ID (e.g. 'U5_3' or 'L12_0')
+  if(b.type==='proto830'||b.type==='proto400'){
+    const m=ep.pin.match(/^([UL])(\d+)_(\d+)$/);
+    if(!m)return null;
+    const isU=m[1]==='U',col=+m[2],row=+m[3];
+    if(b.type==='proto830') return{x:b.x+20+col*8, y:b.y+(isU?35+row*8:105+row*8)};
+    return{x:b.x+16+col*7, y:b.y+(isU?28+row*7:78+row*7)};
+  }
   const pins=BOARDS[b.type].pins;
   if(!pins)return null;
   const p=pins.find(p=>p.id===ep.pin);
@@ -1123,6 +1136,21 @@ function updatePreview(mx,my){
   preview.setAttribute('stroke',state.wireColor);
 }
 
+// --- Mode toggle ---
+function setMode(m){
+  state.mode=m;
+  cancelWire();
+  const btn=document.getElementById('btn-mode');
+  const wrap=document.getElementById('canvas-wrap');
+  if(m==='wire'){
+    btn.textContent='🔗 Cable';btn.classList.add('cable-on');
+    wrap.classList.add('cable-mode');wrap.classList.remove('move-mode');
+  } else {
+    btn.textContent='✋ Moure';btn.classList.remove('cable-on');
+    wrap.classList.add('move-mode');wrap.classList.remove('cable-mode');
+  }
+}
+
 // --- Canvas events ---
 const canvas=document.getElementById('canvas');
 let panStart,dragComp;
@@ -1134,32 +1162,31 @@ canvas.addEventListener('mousedown',e=>{
   const t=document.elementFromPoint(e.clientX,e.clientY);
   if(!t)return;
 
-  if(t.classList.contains('pin-circle')){
-    const info=getPinInfo(t);
-    if(!info)return;
-    if(state.wireMode&&state.wireStart){
-      // Complete wire: must be a different pin
-      const s0=state.wireStart;
-      if(!(info.kind===s0.kind&&info.id===s0.id&&info.pin===s0.pin)){
-        state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info});
-        renderWires();
+  // ── CABLE MODE ──
+  if(state.mode==='wire'){
+    if(t.classList.contains('pin-circle')){
+      const info=getPinInfo(t);
+      if(!info)return;
+      if(state.wireMode&&state.wireStart){
+        const s0=state.wireStart;
+        if(!(info.kind===s0.kind&&info.id===s0.id&&info.pin===s0.pin)){
+          state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info});
+          renderWires();
+        }
+        cancelWire();
+      } else {
+        state.wireMode=true;state.wireStart=info;
+        document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
+        t.classList.add('wiring');
+        updatePreview(x,y);
       }
-      cancelWire();
-    } else {
-      // Start wire
-      state.wireMode=true;
-      state.wireStart=info;
-      document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
-      t.classList.add('wiring');
-      document.body.style.cursor='crosshair';
-      updatePreview(x,y);
+      return;
     }
-    return;
+    if(state.wireMode)cancelWire();
+    return; // no drag in cable mode
   }
 
-  // Click on empty space cancels wire mode
-  if(state.wireMode){cancelWire();return;}
-
+  // ── MOVE MODE ──
   const c=t.closest('.comp-group');
   if(c){select(+c.dataset.id);dragComp={id:+c.dataset.id,isBoard:false,sx:x,sy:y};return;}
   const b=t.closest('.board-group');
@@ -1172,9 +1199,8 @@ canvas.addEventListener('mousemove',e=>{
   const x=(e.clientX-r.left-state.view.x)/state.view.s;
   const y=(e.clientY-r.top-state.view.y)/state.view.s;
 
-  if(state.wireMode){
+  if(state.mode==='wire'&&state.wireMode){
     updatePreview(x,y);
-    // Highlight pin under cursor
     const t=document.elementFromPoint(e.clientX,e.clientY);
     document.querySelectorAll('.pin-circle.hover-pin').forEach(p=>p.classList.remove('hover-pin'));
     if(t&&t.classList.contains('pin-circle'))t.classList.add('hover-pin');
@@ -1195,8 +1221,12 @@ canvas.addEventListener('mousemove',e=>{
 
 canvas.addEventListener('mouseup',()=>{panStart=null;dragComp=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();state.view.s*=e.deltaY>0?0.9:1.1;updateView();},{passive:false});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')cancelWire();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(state.wireMode)cancelWire();else if(state.mode==='wire')setMode('move');}
+  if(e.key==='w'||e.key==='W'){setMode(state.mode==='move'?'wire':'move');}
+});
 
+document.getElementById('btn-mode').onclick=()=>setMode(state.mode==='move'?'wire':'move');
 document.getElementById('btn-zoom-in').onclick=()=>{state.view.s*=1.2;updateView();};
 document.getElementById('btn-zoom-out').onclick=()=>{state.view.s/=1.2;updateView();};
 document.getElementById('btn-delete').onclick=()=>{
@@ -1215,6 +1245,7 @@ function updateView(){document.getElementById('world').setAttribute('transform',
 function closeProps(){document.getElementById('props').classList.remove('open');}
 
 setupDefs();buildPalette();buildBoardsPanel();updateView();renderAll();
+document.getElementById('canvas-wrap').classList.add('move-mode');
 </script>
 </body>
 </html>
