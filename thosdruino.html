@@ -33,8 +33,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .comp-rect{display:none;fill:none;stroke:var(--green);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
 .wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:pointer;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));transition:stroke-width .15s}
 .wire:hover{stroke-width:4.5;opacity:.85}
-.wire-shine{fill:none;stroke-width:1;stroke-linecap:round;pointer-events:none;opacity:.5}
-.wire-end{stroke-width:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.pin-circle.hover-pin{fill:#00e676;stroke:#fff;stroke-width:2;transform:scale(1.4)}
 #palette{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 #props{width:220px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
 #props-hdr{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:.8rem;color:var(--green)}
@@ -66,7 +65,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 
 <div id="app">
 <aside id="palette"></aside>
-<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g></g></svg></div>
+<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><path id="wire-preview" fill="none" stroke-width="3.5" stroke-linecap="round" d="" pointer-events="none" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"/></g></svg></div>
 <aside id="props"><div id="props-hdr"><span>Plaques</span></div><div id="props-body"></div></aside>
 </div>
 
@@ -770,7 +769,10 @@ const COMPS={
 
 const BOARDS={
   'uno':{icon:'🔵',label:'Arduino Uno',w:252,h:160,
-    pins:[{id:'D0',x:46,y:0},{id:'D1',x:64,y:0},{id:'D2',x:82,y:0},{id:'D3',x:100,y:0},{id:'D4',x:118,y:0},{id:'D5',x:136,y:0},{id:'D6',x:154,y:0},{id:'D7',x:172,y:0},{id:'D8',x:190,y:0},{id:'D9',x:208,y:0},{id:'D10',x:226,y:0},{id:'D11',x:244,y:0},{id:'5V',x:46,y:160},{id:'3V3',x:64,y:160},{id:'GND',x:82,y:160},{id:'A0',x:100,y:160},{id:'A1',x:118,y:160},{id:'A2',x:136,y:160},{id:'A3',x:154,y:160},{id:'A4',x:172,y:160},{id:'A5',x:190,y:160}],
+    pins:[
+      {id:'D0',x:46,y:10},{id:'D1',x:64,y:10},{id:'D2',x:82,y:10},{id:'D3',x:100,y:10},{id:'D4',x:118,y:10},{id:'D5',x:136,y:10},{id:'D6',x:154,y:10},{id:'D7',x:172,y:10},{id:'D8',x:190,y:10},{id:'D9',x:208,y:10},{id:'D10',x:226,y:10},{id:'D11',x:244,y:10},
+      {id:'5V',x:46,y:150},{id:'3V3',x:64,y:150},{id:'GND',x:82,y:150},{id:'A0',x:100,y:150},{id:'A1',x:118,y:150},{id:'A2',x:136,y:150},{id:'A3',x:154,y:150},{id:'A4',x:172,y:150},{id:'A5',x:190,y:150}
+    ],
     render(g){
       g.appendChild(s('rect',{x:0,y:10,width:252,height:140,rx:8,fill:'url(#pcb)',stroke:'#1a4d1e','stroke-width':'2'}));
       g.appendChild(s('rect',{x:0,y:60,width:20,height:30,rx:2,fill:'#888'}));
@@ -778,67 +780,79 @@ const BOARDS={
       g.appendChild(s('text',{x:127,y:80,'text-anchor':'middle','font-size':'7','fill':'#555','font-weight':'bold'},'ATmega328P'));
       g.appendChild(s('rect',{x:215,y:44,width:14,height:14,rx:2,fill:'#e53935'}));
       ['D0','D1','D2','D3','D4','D5','D6','D7','D8','D9','D10','D11'].forEach((p,i)=>{
-        g.appendChild(s('circle',{cx:46+i*18,cy:10,r:5,class:'pin-circle','data-pin':p}));
+        g.appendChild(s('circle',{cx:46+i*18,cy:10,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
         g.appendChild(s('text',{x:46+i*18,y:28,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},p));
       });
       ['5V','3V3','GND','A0','A1','A2','A3','A4','A5'].forEach((p,i)=>{
-        g.appendChild(s('circle',{cx:46+i*18,cy:150,r:5,class:'pin-circle','data-pin':p}));
+        g.appendChild(s('circle',{cx:46+i*18,cy:150,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
         g.appendChild(s('text',{x:46+i*18,y:142,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},p));
       });
     }
   },
   'nano':{icon:'🟢',label:'Arduino Nano',w:180,h:68,
-    pins:[{id:'D2',x:0,y:10},{id:'D3',x:0,y:22},{id:'D4',x:0,y:34},{id:'D5',x:0,y:46},{id:'D6',x:0,y:58},{id:'D7',x:0,y:70},{id:'D8',x:180,y:10},{id:'D9',x:180,y:22},{id:'D10',x:180,y:34},{id:'D11',x:180,y:46},{id:'D12',x:180,y:58},{id:'5V',x:180,y:70},{id:'GND',x:180,y:82},{id:'A0',x:0,y:82},{id:'A1',x:0,y:94},{id:'A2',x:0,y:106},{id:'A3',x:0,y:118}],
+    pins:[
+      {id:'L0',x:8,y:6},{id:'L1',x:8,y:14},{id:'L2',x:8,y:22},{id:'L3',x:8,y:30},{id:'L4',x:8,y:38},{id:'L5',x:8,y:46},{id:'L6',x:8,y:54},{id:'L7',x:8,y:62},
+      {id:'R0',x:172,y:6},{id:'R1',x:172,y:14},{id:'R2',x:172,y:22},{id:'R3',x:172,y:30},{id:'R4',x:172,y:38},{id:'R5',x:172,y:46},{id:'R6',x:172,y:54},{id:'R7',x:172,y:62}
+    ],
     render(g){
       g.appendChild(s('rect',{x:8,y:0,width:164,height:68,rx:4,fill:'url(#pcb)',stroke:'#1a4d1e','stroke-width':'1.5'}));
       g.appendChild(s('rect',{x:60,y:18,width:60,height:32,rx:2,fill:'#111'}));
       g.appendChild(s('text',{x:90,y:36,'text-anchor':'middle','font-size':'6','fill':'#555','font-weight':'bold'},'ATmega328P'));
       g.appendChild(s('rect',{x:70,y:2,width:40,height:12,rx:2,fill:'#888'}));
       for(let i=0;i<8;i++){
-        g.appendChild(s('circle',{cx:8,cy:6+i*8,r:3,class:'pin-circle','data-pin':'L'+i}));
-        g.appendChild(s('circle',{cx:172,cy:6+i*8,r:3,class:'pin-circle','data-pin':'R'+i}));
+        g.appendChild(s('circle',{cx:8,cy:6+i*8,r:3,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
+        g.appendChild(s('circle',{cx:172,cy:6+i*8,r:3,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
       }
     }
   },
   'mega':{icon:'🟠',label:'Arduino Mega',w:360,h:200,
-    pins:[{id:'D0',x:30,y:0},{id:'D1',x:48,y:0},{id:'D2',x:66,y:0},{id:'D3',x:84,y:0},{id:'D4',x:102,y:0},{id:'D5',x:120,y:0},{id:'D6',x:138,y:0},{id:'D7',x:156,y:0},{id:'5V',x:30,y:200},{id:'GND',x:48,y:200},{id:'A0',x:66,y:200},{id:'A1',x:84,y:200},{id:'A2',x:102,y:200},{id:'A3',x:120,y:200}],
+    pins:[
+      {id:'D0',x:30,y:10},{id:'D1',x:48,y:10},{id:'D2',x:66,y:10},{id:'D3',x:84,y:10},{id:'D4',x:102,y:10},{id:'D5',x:120,y:10},{id:'D6',x:138,y:10},{id:'D7',x:156,y:10},
+      {id:'5V',x:30,y:190},{id:'GND',x:48,y:190},{id:'A0',x:66,y:190},{id:'A1',x:84,y:190},{id:'A2',x:102,y:190},{id:'A3',x:120,y:190}
+    ],
     render(g){
       g.appendChild(s('rect',{x:0,y:10,width:360,height:180,rx:8,fill:'url(#pcb)',stroke:'#1a4d1e','stroke-width':'2'}));
       g.appendChild(s('rect',{x:130,y:70,width:80,height:60,rx:2,fill:'#111'}));
       g.appendChild(s('text',{x:170,y:104,'text-anchor':'middle','font-size':'7','fill':'#555','font-weight':'bold'},'ATmega2560'));
       for(let i=0;i<8;i++){
-        g.appendChild(s('circle',{cx:30+i*18,cy:10,r:5,class:'pin-circle','data-pin':'D'+i}));
+        g.appendChild(s('circle',{cx:30+i*18,cy:10,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
         g.appendChild(s('text',{x:30+i*18,y:26,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},'D'+i));
       }
       ['5V','GND','A0','A1','A2','A3'].forEach((p,i)=>{
-        g.appendChild(s('circle',{cx:30+i*18,cy:190,r:5,class:'pin-circle','data-pin':p}));
+        g.appendChild(s('circle',{cx:30+i*18,cy:190,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
         g.appendChild(s('text',{x:30+i*18,y:182,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},p));
       });
     }
   },
   'esp32':{icon:'🔴',label:'ESP32',w:220,h:80,
-    pins:[{id:'3V3',x:0,y:10},{id:'GND',x:0,y:22},{id:'D2',x:0,y:34},{id:'D4',x:0,y:46},{id:'D5',x:0,y:58},{id:'D18',x:220,y:10},{id:'D19',x:220,y:22},{id:'D21',x:220,y:34},{id:'D22',x:220,y:46},{id:'D23',x:220,y:58}],
+    pins:[
+      {id:'L0',x:8,y:8},{id:'L1',x:8,y:20},{id:'L2',x:8,y:32},{id:'L3',x:8,y:44},{id:'L4',x:8,y:56},{id:'L5',x:8,y:68},
+      {id:'R0',x:212,y:8},{id:'R1',x:212,y:20},{id:'R2',x:212,y:32},{id:'R3',x:212,y:44},{id:'R4',x:212,y:56},{id:'R5',x:212,y:68}
+    ],
     render(g){
       g.appendChild(s('rect',{x:8,y:0,width:204,height:80,rx:4,fill:'#1a3a6b',stroke:'#0d47a1','stroke-width':'2'}));
       g.appendChild(s('rect',{x:70,y:8,width:80,height:50,rx:2,fill:'#c0c0c0',stroke:'#888','stroke-width':'1'}));
       g.appendChild(s('text',{x:110,y:37,'text-anchor':'middle','font-size':'8','fill':'#333','font-weight':'bold'},'ESP32'));
       g.appendChild(s('text',{x:110,y:50,'text-anchor':'middle','font-size':'5','fill':'#555'},'WiFi + BT'));
       for(let i=0;i<6;i++){
-        g.appendChild(s('circle',{cx:8,cy:8+i*12,r:4,class:'pin-circle','data-pin':'L'+i}));
-        g.appendChild(s('circle',{cx:212,cy:8+i*12,r:4,class:'pin-circle','data-pin':'R'+i}));
+        g.appendChild(s('circle',{cx:8,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
+        g.appendChild(s('circle',{cx:212,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
       }
     }
   },
   'esp8266':{icon:'🟡',label:'ESP8266 (NodeMCU)',w:200,h:72,
-    pins:[{id:'3V3',x:0,y:10},{id:'GND',x:0,y:22},{id:'D1',x:0,y:34},{id:'D2',x:0,y:46},{id:'D5',x:0,y:58},{id:'D6',x:200,y:10},{id:'D7',x:200,y:22},{id:'D8',x:200,y:34},{id:'A0',x:200,y:46}],
+    pins:[
+      {id:'L0',x:8,y:8},{id:'L1',x:8,y:20},{id:'L2',x:8,y:32},{id:'L3',x:8,y:44},{id:'L4',x:8,y:56},
+      {id:'R0',x:192,y:8},{id:'R1',x:192,y:20},{id:'R2',x:192,y:32},{id:'R3',x:192,y:44},{id:'R4',x:192,y:56}
+    ],
     render(g){
       g.appendChild(s('rect',{x:8,y:0,width:184,height:72,rx:4,fill:'#1a3a6b',stroke:'#0d47a1','stroke-width':'2'}));
       g.appendChild(s('rect',{x:60,y:8,width:80,height:44,rx:2,fill:'#c0c0c0',stroke:'#888','stroke-width':'1'}));
       g.appendChild(s('text',{x:100,y:33,'text-anchor':'middle','font-size':'8','fill':'#333','font-weight':'bold'},'ESP8266'));
       g.appendChild(s('text',{x:100,y:44,'text-anchor':'middle','font-size':'5','fill':'#555'},'WiFi'));
       for(let i=0;i<5;i++){
-        g.appendChild(s('circle',{cx:8,cy:8+i*12,r:4,class:'pin-circle','data-pin':'L'+i}));
-        g.appendChild(s('circle',{cx:192,cy:8+i*12,r:4,class:'pin-circle','data-pin':'R'+i}));
+        g.appendChild(s('circle',{cx:8,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
+        g.appendChild(s('circle',{cx:192,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
       }
     }
   },
@@ -874,7 +888,7 @@ const BOARDS={
   }
 };
 
-const state={boards:[],components:[],wires:[],view:{x:0,y:0,s:1},selected:null,selectedBoard:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:0,boardId:0};
+const state={boards:[],components:[],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:0,boardId:0,wireId:0};
 
 
 function buildBoardsPanel(){
@@ -1016,6 +1030,45 @@ function renderAll(){
   renderWires();
 }
 
+// --- Pin helpers ---
+function getPinInfo(el){
+  const cg=el.closest('.comp-group');
+  if(cg)return{kind:'comp',id:+cg.dataset.id,pin:el.dataset.pin};
+  const bg=el.closest('.board-group');
+  if(bg)return{kind:'board',id:+bg.dataset.boardId,pin:el.dataset.pin};
+  return null;
+}
+function getPinPos(ep){
+  if(ep.kind==='comp'){
+    const c=state.components.find(c=>c.id===ep.id);
+    if(!c)return null;
+    const p=COMPS[c.type].pins.find(p=>p.id===ep.pin);
+    return p?{x:c.x+p.x,y:c.y+p.y}:null;
+  }
+  const b=state.boards.find(b=>b.id===ep.id);
+  if(!b)return null;
+  const pins=BOARDS[b.type].pins;
+  if(!pins)return null;
+  const p=pins.find(p=>p.id===ep.pin);
+  return p?{x:b.x+p.x,y:b.y+p.y}:null;
+}
+function wirePath(x1,y1,x2,y2){
+  const dx=Math.abs(x2-x1),dy=Math.abs(y2-y1);
+  if(dx>dy){const h=(x1+x2)/2;return`M ${x1} ${y1} C ${h} ${y1}, ${h} ${y2}, ${x2} ${y2}`;}
+  const h=(y1+y2)/2;return`M ${x1} ${y1} C ${x1} ${h}, ${x2} ${h}, ${x2} ${y2}`;
+}
+function drawWire(g,x1,y1,x2,y2,color){
+  const d=wirePath(x1,y1,x2,y2);
+  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.38)','stroke-width':'5.5','stroke-linecap':'round',transform:'translate(1.5,2.5)'}));
+  g.appendChild(s('path',{d,fill:'none',stroke:color,'stroke-width':'3.5','stroke-linecap':'round',class:'wire'}));
+  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.28)','stroke-width':'1.2','stroke-linecap':'round','pointer-events':'none'}));
+  [[x1,y1],[x2,y2]].forEach(([cx,cy])=>{
+    g.appendChild(s('circle',{cx,cy,r:5.5,fill:color,stroke:'rgba(0,0,0,0.55)','stroke-width':'1.5','pointer-events':'none'}));
+    g.appendChild(s('circle',{cx,cy,r:2.5,fill:'rgba(255,255,255,0.35)','pointer-events':'none'}));
+  });
+}
+
+// --- Render ---
 function renderBoards(){
   const g=document.getElementById('boards');
   g.innerHTML='';
@@ -1049,24 +1102,28 @@ function renderWires(){
   const g=document.getElementById('wires');
   g.innerHTML='';
   state.wires.forEach(w=>{
-    const dx=Math.abs(w.x2-w.x1),dy=Math.abs(w.y2-w.y1);
-    let d='';
-    if(dx>dy){const h=(w.x1+w.x2)/2;d=`M ${w.x1} ${w.y1} C ${h} ${w.y1}, ${h} ${w.y2}, ${w.x2} ${w.y2}`;}
-    else{const h=(w.y1+w.y2)/2;d=`M ${w.x1} ${w.y1} C ${w.x1} ${h}, ${w.x2} ${h}, ${w.x2} ${w.y2}`;}
-    // Drop shadow (offset copy)
-    g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.38)','stroke-width':'5.5','stroke-linecap':'round',transform:'translate(1.5,2.5)'}));
-    // Main wire
-    g.appendChild(s('path',{d,class:'wire',stroke:w.color}));
-    // Specular shine
-    g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.28)','stroke-width':'1.2','stroke-linecap':'round','pointer-events':'none'}));
-    // Solder dots at endpoints
-    g.appendChild(s('circle',{cx:w.x1,cy:w.y1,r:5.5,fill:w.color,stroke:'rgba(0,0,0,0.55)','stroke-width':'1.5','pointer-events':'none'}));
-    g.appendChild(s('circle',{cx:w.x1,cy:w.y1,r:2.5,fill:'rgba(255,255,255,0.35)','pointer-events':'none'}));
-    g.appendChild(s('circle',{cx:w.x2,cy:w.y2,r:5.5,fill:w.color,stroke:'rgba(0,0,0,0.55)','stroke-width':'1.5','pointer-events':'none'}));
-    g.appendChild(s('circle',{cx:w.x2,cy:w.y2,r:2.5,fill:'rgba(255,255,255,0.35)','pointer-events':'none'}));
+    const p1=getPinPos(w.from),p2=getPinPos(w.to);
+    if(p1&&p2)drawWire(g,p1.x,p1.y,p2.x,p2.y,w.color);
   });
 }
 
+// --- Wire preview ---
+const preview=document.getElementById('wire-preview');
+function cancelWire(){
+  state.wireMode=false;state.wireStart=null;
+  preview.setAttribute('d','');
+  document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
+  document.body.style.cursor='';
+}
+function updatePreview(mx,my){
+  if(!state.wireMode||!state.wireStart)return;
+  const p1=getPinPos(state.wireStart);
+  if(!p1)return;
+  preview.setAttribute('d',wirePath(p1.x,p1.y,mx,my));
+  preview.setAttribute('stroke',state.wireColor);
+}
+
+// --- Canvas events ---
 const canvas=document.getElementById('canvas');
 let panStart,dragComp;
 
@@ -1075,18 +1132,33 @@ canvas.addEventListener('mousedown',e=>{
   const x=(e.clientX-r.left-state.view.x)/state.view.s;
   const y=(e.clientY-r.top-state.view.y)/state.view.s;
   const t=document.elementFromPoint(e.clientX,e.clientY);
+  if(!t)return;
 
   if(t.classList.contains('pin-circle')){
-    if(state.wireMode){
-      state.wires.push({x1:state.wireStart.x,y1:state.wireStart.y,x2:x,y2:y,color:state.wireColor});
-      state.wireMode=false;
-    }else{
+    const info=getPinInfo(t);
+    if(!info)return;
+    if(state.wireMode&&state.wireStart){
+      // Complete wire: must be a different pin
+      const s0=state.wireStart;
+      if(!(info.kind===s0.kind&&info.id===s0.id&&info.pin===s0.pin)){
+        state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info});
+        renderWires();
+      }
+      cancelWire();
+    } else {
+      // Start wire
       state.wireMode=true;
-      state.wireStart={x,y};
+      state.wireStart=info;
+      document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
+      t.classList.add('wiring');
+      document.body.style.cursor='crosshair';
+      updatePreview(x,y);
     }
-    renderWires();
     return;
   }
+
+  // Click on empty space cancels wire mode
+  if(state.wireMode){cancelWire();return;}
 
   const c=t.closest('.comp-group');
   if(c){select(+c.dataset.id);dragComp={id:+c.dataset.id,isBoard:false,sx:x,sy:y};return;}
@@ -1096,10 +1168,20 @@ canvas.addEventListener('mousedown',e=>{
 });
 
 canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left-state.view.x)/state.view.s;
+  const y=(e.clientY-r.top-state.view.y)/state.view.s;
+
+  if(state.wireMode){
+    updatePreview(x,y);
+    // Highlight pin under cursor
+    const t=document.elementFromPoint(e.clientX,e.clientY);
+    document.querySelectorAll('.pin-circle.hover-pin').forEach(p=>p.classList.remove('hover-pin'));
+    if(t&&t.classList.contains('pin-circle'))t.classList.add('hover-pin');
+    return;
+  }
+
   if(dragComp){
-    const r=canvas.getBoundingClientRect();
-    const x=(e.clientX-r.left-state.view.x)/state.view.s;
-    const y=(e.clientY-r.top-state.view.y)/state.view.s;
     if(dragComp.isBoard){
       const b=state.boards.find(b=>b.id===dragComp.id);
       if(b){b.x+=x-dragComp.sx;b.y+=y-dragComp.sy;dragComp.sx=x;dragComp.sy=y;renderAll();}
@@ -1112,15 +1194,23 @@ canvas.addEventListener('mousemove',e=>{
 });
 
 canvas.addEventListener('mouseup',()=>{panStart=null;dragComp=null;});
-canvas.addEventListener('wheel',e=>{e.preventDefault();state.view.s*=e.deltaY>0?0.9:1.1;updateView();});
+canvas.addEventListener('wheel',e=>{e.preventDefault();state.view.s*=e.deltaY>0?0.9:1.1;updateView();},{passive:false});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cancelWire();});
 
 document.getElementById('btn-zoom-in').onclick=()=>{state.view.s*=1.2;updateView();};
 document.getElementById('btn-zoom-out').onclick=()=>{state.view.s/=1.2;updateView();};
-document.getElementById('btn-delete').onclick=()=>{if(state.selected>0){state.components=state.components.filter(c=>c.id!==state.selected);renderAll();}};
-document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.components=[];state.wires=[];renderAll();}};
+document.getElementById('btn-delete').onclick=()=>{
+  if(state.selected!==null){
+    const id=state.selected;
+    state.wires=state.wires.filter(w=>!(w.from.kind==='comp'&&w.from.id===id)&&!(w.to.kind==='comp'&&w.to.id===id));
+    state.components=state.components.filter(c=>c.id!==id);
+    state.selected=null;renderAll();
+  }
+};
+document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.boards=[];state.components=[];state.wires=[];renderAll();}};
 document.getElementById('wire-colors').querySelectorAll('.wc-dot').forEach(d=>d.onclick=()=>{document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');state.wireColor=d.dataset.color;});
 
-function select(id){state.selected=id;document.querySelectorAll('.comp-group').forEach(e=>e.classList.remove('selected'));if(id>0)document.getElementById(`comp-${id}`).classList.add('selected');renderAll();}
+function select(id){state.selected=id;document.querySelectorAll('.comp-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}renderAll();}
 function updateView(){document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';}
 function closeProps(){document.getElementById('props').classList.remove('open');}
 
