@@ -1162,31 +1162,33 @@ canvas.addEventListener('mousedown',e=>{
   const t=document.elementFromPoint(e.clientX,e.clientY);
   if(!t)return;
 
-  // ── CABLE MODE ──
-  if(state.mode==='wire'){
-    if(t.classList.contains('pin-circle')){
-      const info=getPinInfo(t);
-      if(!info)return;
-      if(state.wireMode&&state.wireStart){
-        const s0=state.wireStart;
-        if(!(info.kind===s0.kind&&info.id===s0.id&&info.pin===s0.pin)){
-          state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info});
-          renderWires();
-        }
-        cancelWire();
-      } else {
-        state.wireMode=true;state.wireStart=info;
-        document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
-        t.classList.add('wiring');
-        updatePreview(x,y);
+  // ── PINS: always wire-interactive in any mode ──
+  if(t.classList.contains('pin-circle')){
+    const info=getPinInfo(t);
+    if(!info)return;
+    if(state.wireMode&&state.wireStart){
+      const s0=state.wireStart;
+      if(!(info.kind===s0.kind&&info.id===s0.id&&info.pin===s0.pin)){
+        state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info});
+        renderWires();
       }
-      return;
+      cancelWire();
+    } else {
+      state.wireMode=true;state.wireStart=info;
+      document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
+      t.classList.add('wiring');
+      updatePreview(x,y);
     }
-    if(state.wireMode)cancelWire();
-    return; // no drag in cable mode
+    return;
   }
 
-  // ── MOVE MODE ──
+  // Cancel any active wire on non-pin click
+  if(state.wireMode){cancelWire();return;}
+
+  // ── CABLE MODE: no dragging ──
+  if(state.mode==='wire')return;
+
+  // ── MOVE MODE: drag or pan ──
   const c=t.closest('.comp-group');
   if(c){select(+c.dataset.id);dragComp={id:+c.dataset.id,isBoard:false,sx:x,sy:y};return;}
   const b=t.closest('.board-group');
