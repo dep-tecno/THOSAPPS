@@ -73,7 +73,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div id="wire-ctx" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--border);border-radius:6px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.5)"></div>
 <div id="app">
 <aside id="palette"></aside>
-<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><path id="wire-preview" fill="none" stroke-width="3.5" stroke-linecap="round" d="" pointer-events="none" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"/></g></svg></div>
+<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><path id="wire-preview" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g></g></svg></div>
 <aside id="props"><div id="props-hdr"><span>Plaques</span></div><div id="props-body"></div></aside>
 </div>
 
@@ -902,7 +902,7 @@ const BOARDS={
   }
 };
 
-const state={boards:[],components:[],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:0,boardId:0,wireId:0,mode:'move'};
+const state={boards:[],components:[],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wirePoints:[],wireColor:'#e53935',compId:0,boardId:0,wireId:0,mode:'move'};
 
 
 function buildBoardsPanel(){
@@ -1074,19 +1074,20 @@ function getPinPos(ep){
   const p=pins.find(p=>p.id===ep.pin);
   return p?{x:b.x+p.x,y:b.y+p.y}:null;
 }
-function wirePath(x1,y1,x2,y2){
-  const dx=Math.abs(x2-x1),dy=Math.abs(y2-y1);
-  if(dx>dy){const h=(x1+x2)/2;return`M ${x1} ${y1} C ${h} ${y1}, ${h} ${y2}, ${x2} ${y2}`;}
-  const h=(y1+y2)/2;return`M ${x1} ${y1} C ${x1} ${h}, ${x2} ${h}, ${x2} ${y2}`;
+function multiPath(pts){
+  if(pts.length<2)return'';
+  let d=`M ${pts[0].x} ${pts[0].y}`;
+  for(let i=1;i<pts.length;i++)d+=` L ${pts[i].x} ${pts[i].y}`;
+  return d;
 }
-function drawWire(g,x1,y1,x2,y2,color,wid){
-  const d=wirePath(x1,y1,x2,y2);
-  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.38)','stroke-width':'5.5','stroke-linecap':'round',transform:'translate(1.5,2.5)','pointer-events':'none'}));
-  const mp=s('path',{d,fill:'none',stroke:color,'stroke-width':'3.5','stroke-linecap':'round',class:'wire'});
+function drawWire(g,pts,color,wid){
+  const d=multiPath(pts);
+  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.38)','stroke-width':'5.5','stroke-linecap':'round','stroke-linejoin':'round',transform:'translate(1.5,2.5)','pointer-events':'none'}));
+  const mp=s('path',{d,fill:'none',stroke:color,'stroke-width':'3.5','stroke-linecap':'round','stroke-linejoin':'round',class:'wire'});
   if(wid!==undefined)mp.dataset.wireId=wid;
   g.appendChild(mp);
-  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.28)','stroke-width':'1.2','stroke-linecap':'round','pointer-events':'none'}));
-  [[x1,y1],[x2,y2]].forEach(([cx,cy])=>{
+  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.28)','stroke-width':'1.2','stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none'}));
+  [[pts[0].x,pts[0].y],[pts[pts.length-1].x,pts[pts.length-1].y]].forEach(([cx,cy])=>{
     g.appendChild(s('circle',{cx,cy,r:5.5,fill:color,stroke:'rgba(0,0,0,0.55)','stroke-width':'1.5','pointer-events':'none'}));
     g.appendChild(s('circle',{cx,cy,r:2.5,fill:'rgba(255,255,255,0.35)','pointer-events':'none'}));
   });
@@ -1133,15 +1134,16 @@ function renderWires(){
   g.innerHTML='';
   state.wires.forEach(w=>{
     const p1=getPinPos(w.from),p2=getPinPos(w.to);
-    if(p1&&p2)drawWire(g,p1.x,p1.y,p2.x,p2.y,w.color,w.id);
+    if(p1&&p2)drawWire(g,[p1,...(w.points||[]),p2],w.color,w.id);
   });
 }
 
 // --- Wire preview ---
 const preview=document.getElementById('wire-preview');
 function cancelWire(){
-  state.wireMode=false;state.wireStart=null;
+  state.wireMode=false;state.wireStart=null;state.wirePoints=[];
   preview.setAttribute('d','');
+  document.getElementById('wire-preview-pts').innerHTML='';
   document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
   document.body.style.cursor='';
 }
@@ -1149,8 +1151,15 @@ function updatePreview(mx,my){
   if(!state.wireMode||!state.wireStart)return;
   const p1=getPinPos(state.wireStart);
   if(!p1)return;
-  preview.setAttribute('d',wirePath(p1.x,p1.y,mx,my));
+  const pts=[p1,...state.wirePoints,{x:mx,y:my}];
+  preview.setAttribute('d',multiPath(pts));
   preview.setAttribute('stroke',state.wireColor);
+  const gp=document.getElementById('wire-preview-pts');
+  gp.innerHTML='';
+  state.wirePoints.forEach(p=>{
+    gp.appendChild(s('circle',{cx:p.x,cy:p.y,r:4.5,fill:state.wireColor,stroke:'rgba(255,255,255,0.6)','stroke-width':'1.5'}));
+    gp.appendChild(s('circle',{cx:p.x,cy:p.y,r:2,fill:'rgba(255,255,255,0.5)'}));
+  });
 }
 
 // --- Mode toggle ---
@@ -1181,17 +1190,18 @@ canvas.addEventListener('mousedown',e=>{
 
   // ── PINS: always wire-interactive in any mode ──
   if(t.classList.contains('pin-circle')){
+    e.preventDefault();
     const info=getPinInfo(t);
     if(!info)return;
     if(state.wireMode&&state.wireStart){
       const s0=state.wireStart;
       if(!(info.kind===s0.kind&&info.id===s0.id&&info.pin===s0.pin)){
-        state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info});
+        state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info,points:[...state.wirePoints]});
         renderWires();
       }
       cancelWire();
     } else {
-      state.wireMode=true;state.wireStart=info;
+      state.wireMode=true;state.wireStart=info;state.wirePoints=[];
       document.querySelectorAll('.pin-circle.wiring').forEach(p=>p.classList.remove('wiring'));
       t.classList.add('wiring');
       updatePreview(x,y);
@@ -1199,8 +1209,19 @@ canvas.addEventListener('mousedown',e=>{
     return;
   }
 
-  // Cancel any active wire on non-pin click
-  if(state.wireMode){cancelWire();return;}
+  // ── Right-click during wiring: undo last waypoint or cancel ──
+  if(e.button===2&&state.wireMode){
+    e.preventDefault();
+    if(state.wirePoints.length>0){state.wirePoints.pop();updatePreview(x,y);}
+    else cancelWire();
+    return;
+  }
+
+  // ── Left-click on canvas during wiring: add waypoint ──
+  if(state.wireMode){
+    if(e.button===0){state.wirePoints.push({x,y});updatePreview(x,y);}
+    return;
+  }
 
   // ── CABLE MODE: no dragging ──
   if(state.mode==='wire')return;
@@ -1256,6 +1277,7 @@ const wireCtx=document.getElementById('wire-ctx');
 function hideWireCtx(){wireCtx.style.display='none';}
 canvas.addEventListener('contextmenu',e=>{
   e.preventDefault();
+  if(state.wireMode)return;
   hideWireCtx();
   const t=document.elementFromPoint(e.clientX,e.clientY);
   if(!t||!t.classList.contains('wire')||t.dataset.wireId===undefined)return;
