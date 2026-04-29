@@ -32,6 +32,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .comp-rect{display:none;fill:none;stroke:var(--green);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
 .wire{fill:none;stroke-width:2.5;stroke-linecap:round;cursor:pointer}
 .wire:hover{stroke-width:3.5;opacity:.8}
+#palette{display:none}
 #props{width:220px;background:var(--bg2);border-left:1px solid var(--border);overflow:hidden;transition:width .2s;display:flex;flex-direction:column}
 #props-hdr{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:.8rem;color:var(--green)}
 #props-body{padding:.8rem 1rem;overflow-y:auto;flex:1;font-size:.8rem}
@@ -348,128 +349,96 @@ const state={board:'uno',components:[
   {id:2,type:'dht11',x:450,y:300}
 ],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wireColor:'#e53935',compId:3};
 
-const EXTRA_SENSORS={
-  'ky001':COMPS['ky001'],
-  'ky002':COMPS['ky002'],
-  'ky003':COMPS['ky003'],
-  'ky005':COMPS['ky005'],
-  'ky008':COMPS['ky008'],
-  'ky013':COMPS['ky013'],
-  'ky017':COMPS['ky017'],
-  'ky019':COMPS['ky019'],
-  'ky022':COMPS['ky022'],
-  'ky023':COMPS['ky023'],
-  'ky026':COMPS['ky026'],
-  'ky032':COMPS['ky032'],
-  'ky037':COMPS['ky037'],
-  'ky039':COMPS['ky039'],
-  'ky040':COMPS['ky040']
-};
 
 function buildSensorsKit(){
   const body=document.getElementById('props-body');
   body.innerHTML='';
-  const allSensors=[
-    {name:'led-red',icon:'🔴',label:'LED Vermell'},
-    {name:'led-green',icon:'🟢',label:'LED Verd'},
-    {name:'led-blue',icon:'🔵',label:'LED Blau'},
-    {name:'resistor',icon:'〰️',label:'Resistència'},
-    {name:'button',icon:'⊙',label:'Botó'},
-    {name:'buzzer',icon:'🔊',label:'Buzzer'},
-    {name:'dht11',icon:'💧',label:'DHT11 (KY015)'},
-    {name:'hc-sr04',icon:'📡',label:'HC-SR04'},
-    {name:'pir',icon:'🔴',label:'PIR'},
-    {name:'ldr',icon:'☀️',label:'LDR (KY018)'},
-    {name:'pot',icon:'🎚️',label:'Potenciòmetre'},
-    {name:'servo',icon:'⚙️',label:'Servo'},
-    {name:'motor',icon:'⚡',label:'Motor DC'},
-    {name:'lcd',icon:'📺',label:'LCD 16×2'},
-    {name:'ky001',icon:'🌡️',label:'KY001 Temperatura'},
-    {name:'ky002',icon:'📳',label:'KY002 Shock'},
-    {name:'ky003',icon:'🧲',label:'KY003 Hall'},
-    {name:'ky005',icon:'📡',label:'KY005 IR TX'},
-    {name:'ky008',icon:'🔴',label:'KY008 Laser'},
-    {name:'ky009',icon:'🌈',label:'KY009 RGB LED'},
-    {name:'ky010',icon:'🚫',label:'KY010 Light Block'},
-    {name:'ky011',icon:'🔆',label:'KY011 Dual LED'},
-    {name:'ky012',icon:'🔊',label:'KY012 Buzzer'},
-    {name:'ky013',icon:'🌡️',label:'KY013 Temp Analog'},
-    {name:'ky016',icon:'🌈',label:'KY016 RGB LED 3C'},
-    {name:'ky017',icon:'🔀',label:'KY017 Tilt'},
-    {name:'ky019',icon:'🔌',label:'KY019 Relay'},
-    {name:'ky020',icon:'🎯',label:'KY020 Tilt Switch'},
-    {name:'ky021',icon:'🧲',label:'KY021 Mini Reed'},
-    {name:'ky022',icon:'📡',label:'KY022 IR RX'},
-    {name:'ky023',icon:'🕹️',label:'KY023 Joystick'},
-    {name:'ky024',icon:'🧲',label:'KY024 Linear Hall'},
-    {name:'ky025',icon:'🧲',label:'KY025 Big Reed'},
-    {name:'ky026',icon:'🔥',label:'KY026 Flame'},
-    {name:'ky027',icon:'💡',label:'KY027 Magic LED'},
-    {name:'ky028',icon:'🌡️',label:'KY028 Dig Temp'},
-    {name:'ky031',icon:'📳',label:'KY031 Knock'},
-    {name:'ky032',icon:'📡',label:'KY032 Obstacle'},
-    {name:'ky033',icon:'➡️',label:'KY033 Line Follow'},
-    {name:'ky034',icon:'🌈',label:'KY034 7 Col LED'},
-    {name:'ky035',icon:'🧲',label:'KY035 Hall Sens'},
-    {name:'ky036',icon:'🖐️',label:'KY036 Metal Touch'},
-    {name:'ky037',icon:'🎤',label:'KY037 Micrófono'},
-    {name:'ky038',icon:'🎤',label:'KY038 Mic'},
-    {name:'ky039',icon:'💓',label:'KY039 Pulso'},
-    {name:'ky040',icon:'🔄',label:'KY040 Encoder'}
+  const categories=[
+    ['⚡ Bàsics',[
+      {name:'led-red',icon:'🔴',label:'LED Vermell'},
+      {name:'led-green',icon:'🟢',label:'LED Verd'},
+      {name:'led-blue',icon:'🔵',label:'LED Blau'},
+      {name:'resistor',icon:'〰️',label:'Resistència'},
+      {name:'button',icon:'⊙',label:'Botó (KY004)'},
+      {name:'buzzer',icon:'🔊',label:'Buzzer (KY006)'}
+    ]],
+    ['🔌 Actuadors',[
+      {name:'pot',icon:'🎚️',label:'Potenciòmetre'},
+      {name:'servo',icon:'⚙️',label:'Servo'},
+      {name:'motor',icon:'⚡',label:'Motor DC'},
+      {name:'lcd',icon:'📺',label:'LCD 16×2'},
+      {name:'ky019',icon:'🔌',label:'KY019 Relay'}
+    ]],
+    ['🌡️ Temperatura',[
+      {name:'dht11',icon:'💧',label:'KY015 DHT11 Temp+Hum'},
+      {name:'ky001',icon:'🌡️',label:'KY001 DS18B20'},
+      {name:'ky013',icon:'🌡️',label:'KY013 Temp Analògic'},
+      {name:'ky028',icon:'🌡️',label:'KY028 Temp Digital'}
+    ]],
+    ['💡 LEDs i Llum',[
+      {name:'ky008',icon:'🔴',label:'KY008 Laser'},
+      {name:'ky009',icon:'🌈',label:'KY009 RGB LED SMD'},
+      {name:'ky011',icon:'🔆',label:'KY011 LED Bicolor'},
+      {name:'ky012',icon:'🔊',label:'KY012 Buzzer Passiu'},
+      {name:'ky016',icon:'🌈',label:'KY016 RGB LED 3C'},
+      {name:'ky027',icon:'💡',label:'KY027 LED Màgic'},
+      {name:'ky034',icon:'🌈',label:'KY034 LED 7 Colors'}
+    ]],
+    ['☀️ Llum i So',[
+      {name:'ldr',icon:'☀️',label:'KY018 LDR Fotoresist.'},
+      {name:'ky010',icon:'🚫',label:'KY010 Barrera Òptica'},
+      {name:'ky037',icon:'🎤',label:'KY037 Micròfon HS'},
+      {name:'ky038',icon:'🎤',label:'KY038 Micròfon'}
+    ]],
+    ['📡 IR i Sense Fils',[
+      {name:'ky005',icon:'📡',label:'KY005 IR Transmissor'},
+      {name:'ky022',icon:'📡',label:'KY022 IR Receptor'},
+      {name:'ky032',icon:'📡',label:'KY032 Obstacle IR'},
+      {name:'ky033',icon:'➡️',label:'KY033 Seguidor Línia'}
+    ]],
+    ['🧲 Magnètics i Hall',[
+      {name:'ky003',icon:'🧲',label:'KY003 Hall Digital'},
+      {name:'ky024',icon:'🧲',label:'KY024 Hall Lineal'},
+      {name:'ky035',icon:'🧲',label:'KY035 Hall Analògic'},
+      {name:'ky021',icon:'🧲',label:'KY021 Reed Mini'},
+      {name:'ky025',icon:'🧲',label:'KY025 Reed Gran'}
+    ]],
+    ['🔀 Moviment',[
+      {name:'pir',icon:'👁️',label:'PIR Moviment'},
+      {name:'hc-sr04',icon:'📡',label:'HC-SR04 Ultrasònic'},
+      {name:'ky002',icon:'📳',label:'KY002 Shock/Vibració'},
+      {name:'ky017',icon:'🔀',label:'KY017 Mercuri Tilt'},
+      {name:'ky020',icon:'🎯',label:'KY020 Tilt Switch'},
+      {name:'ky031',icon:'📳',label:'KY031 Knock/Cop'}
+    ]],
+    ['🎮 Interacció',[
+      {name:'ky023',icon:'🕹️',label:'KY023 Joystick'},
+      {name:'ky040',icon:'🔄',label:'KY040 Encoder Rot.'},
+      {name:'ky036',icon:'🖐️',label:'KY036 Tàctil Metal'},
+      {name:'ky026',icon:'🔥',label:'KY026 Flama'},
+      {name:'ky039',icon:'💓',label:'KY039 Pulsòmetre'}
+    ]]
   ];
 
-  allSensors.forEach(s=>{
-    const item=document.createElement('div');
-    item.className='pal-item';
-    item.style.fontSize='0.7rem';
-    item.innerHTML=`<div class="pal-icon" style="width:28px;height:28px;font-size:0.9rem">${s.icon}</div><div class="pal-text"><div class="pal-label">${s.label}</div></div>`;
-    item.onclick=()=>addComponent(s.name);
-    body.appendChild(item);
-  });
-  document.getElementById('props').classList.add('open');
-}
-
-function buildPalette(){
-  const p=document.getElementById('palette');
-  const basics=['led-red','led-green','led-blue','resistor','button','buzzer'];
-  const sensors=['dht11','hc-sr04','pir','ldr'];
-  const actuators=['pot','servo','motor','lcd'];
-
-  [['Bàsics',basics],['Sensors',sensors],['Actuadors',actuators]].forEach(([title,items])=>{
+  categories.forEach(([title,items])=>{
     const sec=document.createElement('div');
-    sec.className='pal-section';
+    sec.style.cssText='padding:4px 6px 2px';
     const tit=document.createElement('div');
-    tit.className='pal-title';
+    tit.style.cssText='font-size:.6rem;font-weight:700;color:var(--green);opacity:.8;margin-bottom:2px;padding-top:4px;border-top:1px solid var(--border)';
     tit.textContent=title;
     sec.appendChild(tit);
-    items.forEach(cid=>{
-      const c=COMPS[cid];
+    items.forEach(sensor=>{
       const item=document.createElement('div');
       item.className='pal-item';
-      item.innerHTML=`<div class="pal-icon">${c.icon}</div><div class="pal-text"><div class="pal-label">${c.label}</div></div>`;
-      item.onclick=()=>addComponent(cid);
+      item.innerHTML=`<div class="pal-icon" style="width:24px;height:24px;font-size:.85rem;flex-shrink:0">${sensor.icon}</div><div style="font-size:.68rem;line-height:1.2">${sensor.label}</div>`;
+      item.onclick=()=>addComponent(sensor.name);
       sec.appendChild(item);
     });
-    p.appendChild(sec);
+    body.appendChild(sec);
   });
-
-  if(Object.keys(EXTRA_SENSORS).length>0){
-    const esec=document.createElement('div');
-    esec.className='pal-section';
-    const etit=document.createElement('div');
-    etit.className='pal-title';
-    etit.textContent='Sensores Addicionals';
-    esec.appendChild(etit);
-    Object.entries(EXTRA_SENSORS).forEach(([cid,c])=>{
-      const item=document.createElement('div');
-      item.className='pal-item';
-      item.innerHTML=`<div class="pal-icon">${c.icon}</div><div class="pal-text"><div class="pal-label">${c.label}</div></div>`;
-      item.onclick=()=>addComponent(cid);
-      esec.appendChild(item);
-    });
-    p.appendChild(esec);
-  }
 }
+
+function buildPalette(){}
 
 function addComponent(cid){
   const c=COMPS[cid];
