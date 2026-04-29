@@ -31,8 +31,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .pin-circle.wiring{fill:#ffd54f;stroke:var(--green);stroke-width:2.5}
 .comp-group.selected>.comp-rect,.board-group.selected>.comp-rect{display:block}
 .comp-rect{display:none;fill:none;stroke:var(--green);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
-.wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:pointer;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));transition:stroke-width .15s}
-.wire:hover{stroke-width:4.5;opacity:.85}
+.wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:context-menu;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));transition:stroke-width .15s,opacity .15s}
+.wire:hover{stroke-width:5;opacity:.75}
 .pin-circle.hover-pin{fill:#00e676;stroke:#fff;stroke-width:2;transform:scale(1.4)}
 #btn-mode{font-size:.82rem;min-width:90px;transition:all .2s}
 #btn-mode.cable-on{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.12);font-weight:600}
@@ -63,11 +63,15 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div class="wc-dot" data-color="#212121" style="background:#555;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 <div class="wc-dot" data-color="#1e88e5" style="background:#1e88e5;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 <div class="wc-dot" data-color="#43a047" style="background:#43a047;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
+<div class="wc-dot" data-color="#ffd600" style="background:#ffd600;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
+<div class="wc-dot" data-color="#eeeeee" style="background:#ccc;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 </div>
 <button id="btn-delete">✕ Eliminar</button>
 <button id="btn-clear">⊘ Netejar</button>
 </div>
 
+<div id="pin-tip" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--green);color:var(--green);padding:2px 8px;font-size:.68rem;border-radius:4px;pointer-events:none;z-index:300;white-space:nowrap;font-family:monospace"></div>
+<div id="wire-ctx" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--border);border-radius:6px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.5)"></div>
 <div id="app">
 <aside id="palette"></aside>
 <div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><path id="wire-preview" fill="none" stroke-width="3.5" stroke-linecap="round" d="" pointer-events="none" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"/></g></svg></div>
@@ -1070,10 +1074,12 @@ function wirePath(x1,y1,x2,y2){
   if(dx>dy){const h=(x1+x2)/2;return`M ${x1} ${y1} C ${h} ${y1}, ${h} ${y2}, ${x2} ${y2}`;}
   const h=(y1+y2)/2;return`M ${x1} ${y1} C ${x1} ${h}, ${x2} ${h}, ${x2} ${y2}`;
 }
-function drawWire(g,x1,y1,x2,y2,color){
+function drawWire(g,x1,y1,x2,y2,color,wid){
   const d=wirePath(x1,y1,x2,y2);
-  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.38)','stroke-width':'5.5','stroke-linecap':'round',transform:'translate(1.5,2.5)'}));
-  g.appendChild(s('path',{d,fill:'none',stroke:color,'stroke-width':'3.5','stroke-linecap':'round',class:'wire'}));
+  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.38)','stroke-width':'5.5','stroke-linecap':'round',transform:'translate(1.5,2.5)','pointer-events':'none'}));
+  const mp=s('path',{d,fill:'none',stroke:color,'stroke-width':'3.5','stroke-linecap':'round',class:'wire'});
+  if(wid!==undefined)mp.dataset.wireId=wid;
+  g.appendChild(mp);
   g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.28)','stroke-width':'1.2','stroke-linecap':'round','pointer-events':'none'}));
   [[x1,y1],[x2,y2]].forEach(([cx,cy])=>{
     g.appendChild(s('circle',{cx,cy,r:5.5,fill:color,stroke:'rgba(0,0,0,0.55)','stroke-width':'1.5','pointer-events':'none'}));
@@ -1116,7 +1122,7 @@ function renderWires(){
   g.innerHTML='';
   state.wires.forEach(w=>{
     const p1=getPinPos(w.from),p2=getPinPos(w.to);
-    if(p1&&p2)drawWire(g,p1.x,p1.y,p2.x,p2.y,w.color);
+    if(p1&&p2)drawWire(g,p1.x,p1.y,p2.x,p2.y,w.color,w.id);
   });
 }
 
@@ -1200,10 +1206,20 @@ canvas.addEventListener('mousemove',e=>{
   const r=canvas.getBoundingClientRect();
   const x=(e.clientX-r.left-state.view.x)/state.view.s;
   const y=(e.clientY-r.top-state.view.y)/state.view.s;
+  const t=document.elementFromPoint(e.clientX,e.clientY);
 
-  if(state.mode==='wire'&&state.wireMode){
+  // Pin tooltip (always)
+  const tip=document.getElementById('pin-tip');
+  if(t&&t.classList.contains('pin-circle')&&t.dataset.pin){
+    tip.textContent=t.dataset.pin;
+    tip.style.display='block';
+    tip.style.left=(e.clientX+14)+'px';
+    tip.style.top=(e.clientY-28)+'px';
+  } else { tip.style.display='none'; }
+
+  // Wire preview (active whenever wireMode, regardless of mode button)
+  if(state.wireMode){
     updatePreview(x,y);
-    const t=document.elementFromPoint(e.clientX,e.clientY);
     document.querySelectorAll('.pin-circle.hover-pin').forEach(p=>p.classList.remove('hover-pin'));
     if(t&&t.classList.contains('pin-circle'))t.classList.add('hover-pin');
     return;
@@ -1222,6 +1238,34 @@ canvas.addEventListener('mousemove',e=>{
 });
 
 canvas.addEventListener('mouseup',()=>{panStart=null;dragComp=null;});
+canvas.addEventListener('mouseleave',()=>{document.getElementById('pin-tip').style.display='none';});
+
+// Right-click on wire → context menu to delete
+const wireCtx=document.getElementById('wire-ctx');
+function hideWireCtx(){wireCtx.style.display='none';}
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  hideWireCtx();
+  const t=document.elementFromPoint(e.clientX,e.clientY);
+  if(!t||!t.classList.contains('wire')||t.dataset.wireId===undefined)return;
+  const wid=+t.dataset.wireId;
+  wireCtx.innerHTML='';
+  const lbl=document.createElement('div');
+  lbl.style.cssText='padding:4px 12px;font-size:.65rem;color:var(--muted);border-bottom:1px solid var(--border)';
+  lbl.textContent='Cable';
+  wireCtx.appendChild(lbl);
+  const btn=document.createElement('div');
+  btn.style.cssText='padding:6px 14px;font-size:.78rem;cursor:pointer;color:var(--red)';
+  btn.textContent='✕ Esborrar cable';
+  btn.onmouseenter=()=>btn.style.background='rgba(255,85,85,.12)';
+  btn.onmouseleave=()=>btn.style.background='';
+  btn.onclick=()=>{state.wires=state.wires.filter(w=>w.id!==wid);renderWires();hideWireCtx();};
+  wireCtx.appendChild(btn);
+  wireCtx.style.display='block';
+  wireCtx.style.left=e.clientX+'px';
+  wireCtx.style.top=e.clientY+'px';
+});
+document.addEventListener('mousedown',e=>{if(!wireCtx.contains(e.target))hideWireCtx();});
 canvas.addEventListener('wheel',e=>{e.preventDefault();state.view.s*=e.deltaY>0?0.9:1.1;updateView();},{passive:false});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if(state.wireMode)cancelWire();else if(state.mode==='wire')setMode('move');}
