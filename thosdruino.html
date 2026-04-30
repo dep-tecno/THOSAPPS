@@ -212,6 +212,18 @@ function setupDefs(){
     s('stop',{'offset':'50%','stop-color':'rgba(0,0,0,0)'}),
     s('stop',{'offset':'100%','stop-color':'rgba(0,0,0,0.3)'})
   ]));
+
+  // PCB blau fosc per Nano / ESP
+  d.appendChild(s('linearGradient',{id:'pcb-dark',x2:'0',y2:'1'},[
+    s('stop',{'offset':'0%','stop-color':'#0e1f35'}),
+    s('stop',{'offset':'100%','stop-color':'#071525'})
+  ]));
+  // Blindatge metàl·lic (mòduls ESP)
+  d.appendChild(s('linearGradient',{id:'shield',x2:'1',y2:'0.5'},[
+    s('stop',{'offset':'0%','stop-color':'#a0a0a0'}),
+    s('stop',{'offset':'45%','stop-color':'#dedede'}),
+    s('stop',{'offset':'100%','stop-color':'#8a8a8a'})
+  ]));
 }
 
 const COMPS={
@@ -799,92 +811,200 @@ const COMPS={
 };
 
 const BOARDS={
-  'uno':{icon:'🔵',label:'Arduino Uno',w:252,h:160,
+  'uno':{icon:'🔵',label:'Arduino Uno',w:300,h:222,
     pins:[
-      {id:'D0',x:46,y:10},{id:'D1',x:64,y:10},{id:'D2',x:82,y:10},{id:'D3',x:100,y:10},{id:'D4',x:118,y:10},{id:'D5',x:136,y:10},{id:'D6',x:154,y:10},{id:'D7',x:172,y:10},{id:'D8',x:190,y:10},{id:'D9',x:208,y:10},{id:'D10',x:226,y:10},{id:'D11',x:244,y:10},
-      {id:'5V',x:46,y:150},{id:'3V3',x:64,y:150},{id:'GND',x:82,y:150},{id:'A0',x:100,y:150},{id:'A1',x:118,y:150},{id:'A2',x:136,y:150},{id:'A3',x:154,y:150},{id:'A4',x:172,y:150},{id:'A5',x:190,y:150}
+      {id:'AREF',x:24,y:12},{id:'GND',x:38,y:12},{id:'D13',x:52,y:12},{id:'D12',x:66,y:12},{id:'~D11',x:80,y:12},{id:'~D10',x:94,y:12},{id:'~D9',x:108,y:12},{id:'D8',x:122,y:12},
+      {id:'D7',x:150,y:12},{id:'~D6',x:164,y:12},{id:'~D5',x:178,y:12},{id:'D4',x:192,y:12},{id:'~D3',x:206,y:12},{id:'D2',x:220,y:12},{id:'TX1',x:234,y:12},{id:'RX0',x:248,y:12},
+      {id:'IOREF',x:24,y:210},{id:'RESET',x:38,y:210},{id:'3V3',x:52,y:210},{id:'5V',x:66,y:210},{id:'GND1',x:80,y:210},{id:'GND2',x:94,y:210},{id:'VIN',x:108,y:210},
+      {id:'A0',x:166,y:210},{id:'A1',x:180,y:210},{id:'A2',x:194,y:210},{id:'A3',x:208,y:210},{id:'A4',x:222,y:210},{id:'A5',x:236,y:210}
     ],
     render(g){
-      g.appendChild(s('rect',{x:0,y:10,width:252,height:140,rx:8,fill:'url(#pcb)',stroke:'#1a4d1e','stroke-width':'2'}));
-      g.appendChild(s('rect',{x:0,y:60,width:20,height:30,rx:2,fill:'#888'}));
-      g.appendChild(s('rect',{x:100,y:55,width:55,height:42,rx:2,fill:'#111'}));
-      g.appendChild(s('text',{x:127,y:80,'text-anchor':'middle','font-size':'7','fill':'#555','font-weight':'bold'},'ATmega328P'));
-      g.appendChild(s('rect',{x:215,y:44,width:14,height:14,rx:2,fill:'#e53935'}));
-      ['D0','D1','D2','D3','D4','D5','D6','D7','D8','D9','D10','D11'].forEach((p,i)=>{
-        g.appendChild(s('circle',{cx:46+i*18,cy:10,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-        g.appendChild(s('text',{x:46+i*18,y:28,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},p));
-      });
-      ['5V','3V3','GND','A0','A1','A2','A3','A4','A5'].forEach((p,i)=>{
-        g.appendChild(s('circle',{cx:46+i*18,cy:150,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-        g.appendChild(s('text',{x:46+i*18,y:142,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},p));
-      });
+      const pad=(cx,cy)=>{g.appendChild(s('circle',{cx,cy,r:5.5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));g.appendChild(s('circle',{cx,cy,r:2.2,fill:'#1a1a1a'}));};
+      const lbl=(cx,cy,t)=>g.appendChild(s('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'4.5',fill:'rgba(255,255,255,0.75)','font-family':'monospace'},t));
+      // PCB
+      g.appendChild(s('rect',{x:4,y:12,width:292,height:198,rx:8,fill:'url(#pcb)',stroke:'#145214','stroke-width':'2'}));
+      // USB-B connector
+      g.appendChild(s('rect',{x:4,y:50,width:20,height:28,rx:2,fill:'#909090',stroke:'#666','stroke-width':'1'}));
+      g.appendChild(s('rect',{x:5,y:54,width:10,height:20,rx:1,fill:'#555'}));
+      // DC power jack
+      g.appendChild(s('rect',{x:4,y:100,width:14,height:20,rx:5,fill:'#444',stroke:'#333','stroke-width':'0.8'}));
+      g.appendChild(s('circle',{cx:11,cy:110,r:4.5,fill:'#1a1a1a'}));
+      g.appendChild(s('circle',{cx:11,cy:110,r:2,fill:'#555'}));
+      // ATmega328P chip (TQFP-32)
+      const icx=102,icy=88,icw=58,ich=58;
+      g.appendChild(s('rect',{x:icx,y:icy,width:icw,height:ich,rx:2,fill:'url(#black-plastic)',stroke:'#444','stroke-width':'0.8'}));
+      g.appendChild(s('circle',{cx:icx+4,cy:icy+4,r:2.5,fill:'#2a2a2a',stroke:'#555','stroke-width':'0.5'}));
+      for(let i=0;i<8;i++){const st=(icw-10)/7;g.appendChild(s('rect',{x:icx+5+i*st-1.5,y:icy-4,width:3,height:4.5,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx+5+i*st-1.5,y:icy+ich-0.5,width:3,height:4.5,rx:0.5,fill:'#c0c0c0'}));const sv=(ich-10)/7;g.appendChild(s('rect',{x:icx-4,y:icy+5+i*sv-1.5,width:4.5,height:3,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx+icw-0.5,y:icy+5+i*sv-1.5,width:4.5,height:3,rx:0.5,fill:'#c0c0c0'}));}
+      g.appendChild(s('text',{x:icx+icw/2,y:icy+ich/2-3,'text-anchor':'middle','font-size':'7',fill:'#d0d0d0','font-family':'monospace','font-weight':'bold'},'ATmega'));
+      g.appendChild(s('text',{x:icx+icw/2,y:icy+ich/2+7,'text-anchor':'middle','font-size':'7',fill:'#d0d0d0','font-family':'monospace','font-weight':'bold'},'328P'));
+      // 16MHz crystal
+      g.appendChild(s('rect',{x:182,y:100,width:26,height:10,rx:4,fill:'url(#silver)',stroke:'#888','stroke-width':'0.5'}));
+      // Reset button
+      g.appendChild(s('rect',{x:32,y:24,width:16,height:16,rx:3,fill:'#90a4ae',stroke:'#546e7a','stroke-width':'0.8'}));
+      g.appendChild(s('circle',{cx:40,cy:32,r:5,fill:'#607d8b',stroke:'#455a64','stroke-width':'0.5'}));
+      // ICSP header
+      [[240,72],[250,72],[260,72],[240,80],[250,80],[260,80]].forEach(([x,y])=>{g.appendChild(s('rect',{x:x-2.5,y:y-2.5,width:5,height:5,rx:1,fill:'#555'}));g.appendChild(s('circle',{cx:x,cy:y,r:1.5,fill:'#ffd700'}));});
+      // Status LEDs
+      [[264,30,'#00e676','ON'],[274,30,'#ffd700','L'],[264,40,'#81d4fa','TX'],[274,40,'#ef9a9a','RX']].forEach(([x,y,c,t])=>{g.appendChild(s('circle',{cx:x,cy:y,r:4,fill:c,stroke:'rgba(0,0,0,0.3)','stroke-width':'0.8',filter:'url(#glow)'}));g.appendChild(s('text',{x:x,y:y+3,'text-anchor':'middle','font-size':'3.5',fill:'#000','font-weight':'bold'},t));});
+      // Board silk label
+      g.appendChild(s('text',{x:54,y:62,'font-size':'7',fill:'rgba(255,255,255,0.5)','font-family':'sans-serif','font-weight':'bold','letter-spacing':'1'},'ARDUINO'));
+      g.appendChild(s('text',{x:54,y:72,'font-size':'10',fill:'rgba(255,255,255,0.5)','font-family':'sans-serif','font-weight':'bold'},'UNO R3'));
+      // Connector rails (silkscreen boxes)
+      g.appendChild(s('rect',{x:16,y:7,width:116,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:142,y:7,width:116,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:16,y:205,width:102,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:158,y:205,width:88,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      // Top pin pads + labels
+      const tG1=[['AREF',24],['GND',38],['13',52],['12',66],['~11',80],['~10',94],['~9',108],['8',122]];
+      const tG2=[['7',150],['~6',164],['~5',178],['4',192],['~3',206],['2',220],['TX',234],['RX',248]];
+      [...tG1,...tG2].forEach(([n,x])=>{pad(x,12);lbl(x,26,n);});
+      // Bottom pin pads + labels
+      const bL=[['IOREF',24],['RESET',38],['3V3',52],['5V',66],['GND',80],['GND',94],['VIN',108]];
+      const bR=[['A0',166],['A1',180],['A2',194],['A3',208],['A4',222],['A5',236]];
+      [...bL,...bR].forEach(([n,x])=>{pad(x,210);lbl(x,200,n);});
     }
   },
-  'nano':{icon:'🟢',label:'Arduino Nano',w:180,h:68,
+  'nano':{icon:'🟢',label:'Arduino Nano',w:182,h:134,
     pins:[
-      {id:'L0',x:8,y:6},{id:'L1',x:8,y:14},{id:'L2',x:8,y:22},{id:'L3',x:8,y:30},{id:'L4',x:8,y:38},{id:'L5',x:8,y:46},{id:'L6',x:8,y:54},{id:'L7',x:8,y:62},
-      {id:'R0',x:172,y:6},{id:'R1',x:172,y:14},{id:'R2',x:172,y:22},{id:'R3',x:172,y:30},{id:'R4',x:172,y:38},{id:'R5',x:172,y:46},{id:'R6',x:172,y:54},{id:'R7',x:172,y:62}
+      {id:'TX',x:8,y:10},{id:'RX',x:8,y:18},{id:'RST',x:8,y:26},{id:'GND',x:8,y:34},{id:'D2',x:8,y:42},{id:'~D3',x:8,y:50},{id:'D4',x:8,y:58},{id:'~D5',x:8,y:66},{id:'~D6',x:8,y:74},{id:'D7',x:8,y:82},{id:'D8',x:8,y:90},{id:'~D9',x:8,y:98},{id:'~D10',x:8,y:106},{id:'~D11',x:8,y:114},{id:'D12',x:8,y:122},
+      {id:'D13',x:174,y:10},{id:'3V3',x:174,y:18},{id:'AREF',x:174,y:26},{id:'A0',x:174,y:34},{id:'A1',x:174,y:42},{id:'A2',x:174,y:50},{id:'A3',x:174,y:58},{id:'A4',x:174,y:66},{id:'A5',x:174,y:74},{id:'A6',x:174,y:82},{id:'A7',x:174,y:90},{id:'5V',x:174,y:98},{id:'RST2',x:174,y:106},{id:'GND2',x:174,y:114},{id:'VIN',x:174,y:122}
     ],
     render(g){
-      g.appendChild(s('rect',{x:8,y:0,width:164,height:68,rx:4,fill:'url(#pcb)',stroke:'#1a4d1e','stroke-width':'1.5'}));
-      g.appendChild(s('rect',{x:60,y:18,width:60,height:32,rx:2,fill:'#111'}));
-      g.appendChild(s('text',{x:90,y:36,'text-anchor':'middle','font-size':'6','fill':'#555','font-weight':'bold'},'ATmega328P'));
-      g.appendChild(s('rect',{x:70,y:2,width:40,height:12,rx:2,fill:'#888'}));
-      for(let i=0;i<8;i++){
-        g.appendChild(s('circle',{cx:8,cy:6+i*8,r:3,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-        g.appendChild(s('circle',{cx:172,cy:6+i*8,r:3,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-      }
+      const pad=(cx,cy)=>{g.appendChild(s('circle',{cx,cy,r:4.5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));g.appendChild(s('circle',{cx,cy,r:1.8,fill:'#1a1a1a'}));};
+      // PCB
+      g.appendChild(s('rect',{x:8,y:2,width:166,height:130,rx:4,fill:'url(#pcb-dark)',stroke:'#1e3a5f','stroke-width':'1.5'}));
+      // Mini-USB
+      g.appendChild(s('rect',{x:73,y:0,width:36,height:13,rx:2,fill:'#888',stroke:'#666','stroke-width':'0.8'}));
+      g.appendChild(s('rect',{x:77,y:2,width:28,height:9,rx:1,fill:'#555'}));
+      // ATmega328P
+      const icx=44,icy=26,icw=94,ich=66;
+      g.appendChild(s('rect',{x:icx,y:icy,width:icw,height:ich,rx:2,fill:'url(#black-plastic)',stroke:'#444','stroke-width':'0.8'}));
+      g.appendChild(s('circle',{cx:icx+4,cy:icy+4,r:2,fill:'#2a2a2a',stroke:'#555','stroke-width':'0.5'}));
+      for(let i=0;i<8;i++){const st=(icw-10)/7,sv=(ich-10)/7;g.appendChild(s('rect',{x:icx+5+i*st-1.5,y:icy-4,width:3,height:4,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx+5+i*st-1.5,y:icy+ich-0.5,width:3,height:4,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx-4,y:icy+5+i*sv-1.5,width:4,height:3,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx+icw-0.5,y:icy+5+i*sv-1.5,width:4,height:3,rx:0.5,fill:'#c0c0c0'}));}
+      g.appendChild(s('text',{x:icx+icw/2,y:icy+ich/2-3,'text-anchor':'middle','font-size':'6',fill:'#d0d0d0','font-family':'monospace','font-weight':'bold'},'ATmega328P'));
+      g.appendChild(s('text',{x:icx+icw/2,y:icy+ich/2+7,'text-anchor':'middle','font-size':'5',fill:'#aaa','font-family':'monospace'},'ARDUINO NANO'));
+      // Crystal
+      g.appendChild(s('rect',{x:70,y:102,width:18,height:7,rx:3,fill:'url(#silver)',stroke:'#888','stroke-width':'0.4'}));
+      // L LED
+      g.appendChild(s('circle',{cx:26,cy:14,r:3.5,fill:'#ffd700',filter:'url(#glow)',stroke:'rgba(0,0,0,0.2)','stroke-width':'0.5'}));
+      // Pin pads + labels (left)
+      const lPins=['TX','RX','RST','GND','D2','~D3','D4','~D5','~D6','D7','D8','~D9','~D10','~D11','D12'];
+      const rPins=['D13','3V3','AREF','A0','A1','A2','A3','A4','A5','A6','A7','5V','RST','GND','VIN'];
+      lPins.forEach((n,i)=>{const y=10+i*8;pad(8,y);g.appendChild(s('text',{x:18,y:y+2,'font-size':'4.5',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},n));});
+      rPins.forEach((n,i)=>{const y=10+i*8;pad(174,y);g.appendChild(s('text',{x:164,y:y+2,'text-anchor':'end','font-size':'4.5',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},n));});
     }
   },
-  'mega':{icon:'🟠',label:'Arduino Mega',w:360,h:200,
+  'mega':{icon:'🟠',label:'Arduino Mega',w:380,h:244,
     pins:[
-      {id:'D0',x:30,y:10},{id:'D1',x:48,y:10},{id:'D2',x:66,y:10},{id:'D3',x:84,y:10},{id:'D4',x:102,y:10},{id:'D5',x:120,y:10},{id:'D6',x:138,y:10},{id:'D7',x:156,y:10},
-      {id:'5V',x:30,y:190},{id:'GND',x:48,y:190},{id:'A0',x:66,y:190},{id:'A1',x:84,y:190},{id:'A2',x:102,y:190},{id:'A3',x:120,y:190}
+      {id:'AREF',x:24,y:14},{id:'GND',x:38,y:14},{id:'D13',x:52,y:14},{id:'D12',x:66,y:14},{id:'~D11',x:80,y:14},{id:'~D10',x:94,y:14},{id:'~D9',x:108,y:14},{id:'D8',x:122,y:14},{id:'D7',x:136,y:14},{id:'~D6',x:150,y:14},{id:'~D5',x:164,y:14},{id:'D4',x:178,y:14},{id:'~D3',x:192,y:14},{id:'D2',x:206,y:14},{id:'TX0',x:220,y:14},{id:'RX0',x:234,y:14},
+      {id:'SCL',x:258,y:14},{id:'SDA',x:272,y:14},{id:'RX1',x:286,y:14},{id:'TX1',x:300,y:14},{id:'RX2',x:314,y:14},{id:'TX2',x:328,y:14},{id:'RX3',x:342,y:14},{id:'TX3',x:356,y:14},
+      {id:'IOREF',x:24,y:230},{id:'RESET',x:38,y:230},{id:'3V3',x:52,y:230},{id:'5V',x:66,y:230},{id:'GND1',x:80,y:230},{id:'GND2',x:94,y:230},{id:'VIN',x:108,y:230},
+      {id:'A0',x:130,y:230},{id:'A1',x:144,y:230},{id:'A2',x:158,y:230},{id:'A3',x:172,y:230},{id:'A4',x:186,y:230},{id:'A5',x:200,y:230},{id:'A6',x:214,y:230},{id:'A7',x:228,y:230},{id:'A8',x:242,y:230},{id:'A9',x:256,y:230},{id:'A10',x:270,y:230},{id:'A11',x:284,y:230},{id:'A12',x:298,y:230},{id:'A13',x:312,y:230},{id:'A14',x:326,y:230},{id:'A15',x:340,y:230}
     ],
     render(g){
-      g.appendChild(s('rect',{x:0,y:10,width:360,height:180,rx:8,fill:'url(#pcb)',stroke:'#1a4d1e','stroke-width':'2'}));
-      g.appendChild(s('rect',{x:130,y:70,width:80,height:60,rx:2,fill:'#111'}));
-      g.appendChild(s('text',{x:170,y:104,'text-anchor':'middle','font-size':'7','fill':'#555','font-weight':'bold'},'ATmega2560'));
-      for(let i=0;i<8;i++){
-        g.appendChild(s('circle',{cx:30+i*18,cy:10,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-        g.appendChild(s('text',{x:30+i*18,y:26,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},'D'+i));
-      }
-      ['5V','GND','A0','A1','A2','A3'].forEach((p,i)=>{
-        g.appendChild(s('circle',{cx:30+i*18,cy:190,r:4,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-        g.appendChild(s('text',{x:30+i*18,y:182,'text-anchor':'middle','font-size':'5','fill':'#a5d6a7'},p));
-      });
+      const pad=(cx,cy)=>{g.appendChild(s('circle',{cx,cy,r:5.5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));g.appendChild(s('circle',{cx,cy,r:2.2,fill:'#1a1a1a'}));};
+      const lbl=(cx,cy,t)=>g.appendChild(s('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'4',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},t));
+      // PCB
+      g.appendChild(s('rect',{x:4,y:14,width:372,height:216,rx:8,fill:'url(#pcb)',stroke:'#145214','stroke-width':'2'}));
+      // USB-B
+      g.appendChild(s('rect',{x:4,y:56,width:20,height:28,rx:2,fill:'#909090',stroke:'#666','stroke-width':'1'}));
+      g.appendChild(s('rect',{x:5,y:60,width:10,height:20,rx:1,fill:'#555'}));
+      // DC jack
+      g.appendChild(s('rect',{x:4,y:104,width:14,height:20,rx:5,fill:'#444',stroke:'#333','stroke-width':'0.8'}));
+      g.appendChild(s('circle',{cx:11,cy:114,r:4.5,fill:'#1a1a1a'}));
+      g.appendChild(s('circle',{cx:11,cy:114,r:2,fill:'#555'}));
+      // ATmega2560 chip (larger, TQFP-100 simplified)
+      const icx=98,icy=80,icw=90,ich=90;
+      g.appendChild(s('rect',{x:icx,y:icy,width:icw,height:ich,rx:2,fill:'url(#black-plastic)',stroke:'#444','stroke-width':'0.8'}));
+      g.appendChild(s('circle',{cx:icx+5,cy:icy+5,r:3,fill:'#2a2a2a',stroke:'#555','stroke-width':'0.5'}));
+      for(let i=0;i<12;i++){const st=(icw-10)/11,sv=(ich-10)/11;g.appendChild(s('rect',{x:icx+5+i*st-1.5,y:icy-4,width:3,height:4.5,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx+5+i*st-1.5,y:icy+ich-0.5,width:3,height:4.5,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx-4,y:icy+5+i*sv-1.5,width:4.5,height:3,rx:0.5,fill:'#c0c0c0'}));g.appendChild(s('rect',{x:icx+icw-0.5,y:icy+5+i*sv-1.5,width:4.5,height:3,rx:0.5,fill:'#c0c0c0'}));}
+      g.appendChild(s('text',{x:icx+icw/2,y:icy+ich/2-3,'text-anchor':'middle','font-size':'8',fill:'#d0d0d0','font-family':'monospace','font-weight':'bold'},'ATmega'));
+      g.appendChild(s('text',{x:icx+icw/2,y:icy+ich/2+9,'text-anchor':'middle','font-size':'8',fill:'#d0d0d0','font-family':'monospace','font-weight':'bold'},'2560'));
+      // Crystal
+      g.appendChild(s('rect',{x:220,y:106,width:28,height:10,rx:4,fill:'url(#silver)',stroke:'#888','stroke-width':'0.5'}));
+      // Reset button
+      g.appendChild(s('rect',{x:32,y:28,width:16,height:16,rx:3,fill:'#90a4ae',stroke:'#546e7a','stroke-width':'0.8'}));
+      g.appendChild(s('circle',{cx:40,cy:36,r:5,fill:'#607d8b'}));
+      // Board label
+      g.appendChild(s('text',{x:32,y:70,'font-size':'7',fill:'rgba(255,255,255,0.45)','font-family':'sans-serif','font-weight':'bold'},'ARDUINO MEGA 2560'));
+      // Status LEDs
+      [[310,30,'#00e676'],[320,30,'#ffd700'],[310,40,'#81d4fa'],[320,40,'#ef9a9a']].forEach(([x,y,c])=>g.appendChild(s('circle',{cx:x,cy:y,r:4,fill:c,stroke:'rgba(0,0,0,0.3)','stroke-width':'0.8',filter:'url(#glow)'})));
+      // Top connector boxes
+      g.appendChild(s('rect',{x:16,y:8,width:228,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:250,y:8,width:116,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      // Top pin pads + labels
+      [['AREF',24],['GND',38],['13',52],['12',66],['~11',80],['~10',94],['~9',108],['8',122],['7',136],['~6',150],['~5',164],['4',178],['~3',192],['2',206],['TX0',220],['RX0',234],['SCL',258],['SDA',272],['RX1',286],['TX1',300],['RX2',314],['TX2',328],['RX3',342],['TX3',356]].forEach(([n,x])=>{pad(x,14);lbl(x,29,n);});
+      // Bottom pin pads + labels
+      g.appendChild(s('rect',{x:16,y:224,width:102,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:122,y:224,width:228,height:10,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'}));
+      [['IOREF',24],['RESET',38],['3V3',52],['5V',66],['GND',80],['GND',94],['VIN',108],['A0',130],['A1',144],['A2',158],['A3',172],['A4',186],['A5',200],['A6',214],['A7',228],['A8',242],['A9',256],['A10',270],['A11',284],['A12',298],['A13',312],['A14',326],['A15',340]].forEach(([n,x])=>{pad(x,230);lbl(x,220,n);});
     }
   },
-  'esp32':{icon:'🔴',label:'ESP32',w:220,h:80,
+  'esp32':{icon:'🔴',label:'ESP32',w:240,h:120,
     pins:[
-      {id:'L0',x:8,y:8},{id:'L1',x:8,y:20},{id:'L2',x:8,y:32},{id:'L3',x:8,y:44},{id:'L4',x:8,y:56},{id:'L5',x:8,y:68},
-      {id:'R0',x:212,y:8},{id:'R1',x:212,y:20},{id:'R2',x:212,y:32},{id:'R3',x:212,y:44},{id:'R4',x:212,y:56},{id:'R5',x:212,y:68}
+      {id:'3V3',x:8,y:8},{id:'GND',x:8,y:16},{id:'IO34',x:8,y:24},{id:'IO35',x:8,y:32},{id:'IO32',x:8,y:40},{id:'IO33',x:8,y:48},{id:'IO25',x:8,y:56},{id:'IO26',x:8,y:64},{id:'IO27',x:8,y:72},{id:'IO14',x:8,y:80},{id:'IO12',x:8,y:88},{id:'IO13',x:8,y:96},{id:'VIN',x:8,y:104},
+      {id:'GND2',x:232,y:8},{id:'IO23',x:232,y:16},{id:'IO22',x:232,y:24},{id:'TX0',x:232,y:32},{id:'RX0',x:232,y:40},{id:'IO21',x:232,y:48},{id:'IO19',x:232,y:56},{id:'IO18',x:232,y:64},{id:'IO5',x:232,y:72},{id:'IO17',x:232,y:80},{id:'IO16',x:232,y:88},{id:'IO4',x:232,y:96},{id:'5V',x:232,y:104}
     ],
     render(g){
-      g.appendChild(s('rect',{x:8,y:0,width:204,height:80,rx:4,fill:'#1a3a6b',stroke:'#0d47a1','stroke-width':'2'}));
-      g.appendChild(s('rect',{x:70,y:8,width:80,height:50,rx:2,fill:'#c0c0c0',stroke:'#888','stroke-width':'1'}));
-      g.appendChild(s('text',{x:110,y:37,'text-anchor':'middle','font-size':'8','fill':'#333','font-weight':'bold'},'ESP32'));
-      g.appendChild(s('text',{x:110,y:50,'text-anchor':'middle','font-size':'5','fill':'#555'},'WiFi + BT'));
-      for(let i=0;i<6;i++){
-        g.appendChild(s('circle',{cx:8,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-        g.appendChild(s('circle',{cx:212,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-      }
+      const pad=(cx,cy)=>{g.appendChild(s('circle',{cx,cy,r:4.5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));g.appendChild(s('circle',{cx,cy,r:1.8,fill:'#1a1a1a'}));};
+      // PCB
+      g.appendChild(s('rect',{x:8,y:0,width:224,height:120,rx:4,fill:'url(#pcb-blue)',stroke:'#0d47a1','stroke-width':'1.5'}));
+      // ESP32-WROOM-32 metal shield module
+      g.appendChild(s('rect',{x:52,y:8,width:136,height:90,rx:4,fill:'url(#shield)',stroke:'#555','stroke-width':'1.2'}));
+      // Module PCB antenna cutout
+      g.appendChild(s('rect',{x:164,y:12,width:18,height:82,rx:2,fill:'url(#pcb-dark)',stroke:'#333','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:168,y:20,width:10,height:14,rx:1,fill:'none',stroke:'#555','stroke-width':'0.8'}));
+      // Module label
+      g.appendChild(s('text',{x:108,y:54,'text-anchor':'middle','font-size':'10',fill:'#222','font-family':'monospace','font-weight':'bold'},'ESP32'));
+      g.appendChild(s('text',{x:108,y:66,'text-anchor':'middle','font-size':'6',fill:'#444','font-family':'monospace'},'WROOM-32'));
+      g.appendChild(s('text',{x:108,y:76,'text-anchor':'middle','font-size':'5',fill:'#555','font-family':'monospace'},'WiFi + BT 4.2'));
+      // Micro-USB
+      g.appendChild(s('rect',{x:16,y:108,width:28,height:12,rx:2,fill:'#888',stroke:'#666','stroke-width':'0.8'}));
+      g.appendChild(s('rect',{x:19,y:110,width:22,height:8,rx:1,fill:'#555'}));
+      // RST + BOOT buttons
+      g.appendChild(s('rect',{x:196,y:108,width:10,height:10,rx:2,fill:'#455a64'}));g.appendChild(s('circle',{cx:201,cy:113,r:3,fill:'#607d8b'}));
+      g.appendChild(s('rect',{x:212,y:108,width:10,height:10,rx:2,fill:'#455a64'}));g.appendChild(s('circle',{cx:217,cy:113,r:3,fill:'#607d8b'}));
+      g.appendChild(s('text',{x:201,y:122,'text-anchor':'middle','font-size':'4',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'RST'));
+      g.appendChild(s('text',{x:217,y:122,'text-anchor':'middle','font-size':'4',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'BOOT'));
+      // LED
+      g.appendChild(s('circle',{cx:44,cy:114,r:3.5,fill:'#00e676',filter:'url(#glow)',stroke:'rgba(0,0,0,0.2)','stroke-width':'0.5'}));
+      // Pin pads + labels
+      const lPins=['3V3','GND','34','35','32','33','25','26','27','14','12','13','VIN'];
+      const rPins=['GND','23','22','TX','RX','21','19','18','5','17','16','4','5V'];
+      lPins.forEach((n,i)=>{const y=8+i*8;pad(8,y);g.appendChild(s('text',{x:19,y:y+2,'font-size':'4.5',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},n));});
+      rPins.forEach((n,i)=>{const y=8+i*8;pad(232,y);g.appendChild(s('text',{x:221,y:y+2,'text-anchor':'end','font-size':'4.5',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},n));});
     }
   },
-  'esp8266':{icon:'🟡',label:'ESP8266 (NodeMCU)',w:200,h:72,
+  'esp8266':{icon:'🟡',label:'ESP8266 NodeMCU',w:210,h:110,
     pins:[
-      {id:'L0',x:8,y:8},{id:'L1',x:8,y:20},{id:'L2',x:8,y:32},{id:'L3',x:8,y:44},{id:'L4',x:8,y:56},
-      {id:'R0',x:192,y:8},{id:'R1',x:192,y:20},{id:'R2',x:192,y:32},{id:'R3',x:192,y:44},{id:'R4',x:192,y:56}
+      {id:'A0',x:8,y:8},{id:'D8',x:8,y:18},{id:'D7',x:8,y:28},{id:'D6',x:8,y:38},{id:'D5',x:8,y:48},{id:'D4',x:8,y:58},{id:'D3',x:8,y:68},{id:'D2',x:8,y:78},{id:'D1',x:8,y:88},{id:'D0',x:8,y:98},
+      {id:'VIN',x:202,y:8},{id:'GND',x:202,y:18},{id:'3V3',x:202,y:28},{id:'EN',x:202,y:38},{id:'RST',x:202,y:48},{id:'TX',x:202,y:58},{id:'RX',x:202,y:68},{id:'D9',x:202,y:78},{id:'D10',x:202,y:88},{id:'GND2',x:202,y:98}
     ],
     render(g){
-      g.appendChild(s('rect',{x:8,y:0,width:184,height:72,rx:4,fill:'#1a3a6b',stroke:'#0d47a1','stroke-width':'2'}));
-      g.appendChild(s('rect',{x:60,y:8,width:80,height:44,rx:2,fill:'#c0c0c0',stroke:'#888','stroke-width':'1'}));
-      g.appendChild(s('text',{x:100,y:33,'text-anchor':'middle','font-size':'8','fill':'#333','font-weight':'bold'},'ESP8266'));
-      g.appendChild(s('text',{x:100,y:44,'text-anchor':'middle','font-size':'5','fill':'#555'},'WiFi'));
-      for(let i=0;i<5;i++){
-        g.appendChild(s('circle',{cx:8,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-        g.appendChild(s('circle',{cx:192,cy:8+i*12,r:3.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.5'}));
-      }
+      const pad=(cx,cy)=>{g.appendChild(s('circle',{cx,cy,r:4.5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));g.appendChild(s('circle',{cx,cy,r:1.8,fill:'#1a1a1a'}));};
+      // PCB
+      g.appendChild(s('rect',{x:8,y:0,width:194,height:110,rx:4,fill:'url(#pcb-blue)',stroke:'#0d47a1','stroke-width':'1.5'}));
+      // ESP-12E module shield
+      g.appendChild(s('rect',{x:50,y:8,width:110,height:80,rx:4,fill:'url(#shield)',stroke:'#555','stroke-width':'1.2'}));
+      // Antenna area
+      g.appendChild(s('rect',{x:152,y:12,width:14,height:72,rx:2,fill:'url(#pcb-dark)',stroke:'#333','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:155,y:18,width:8,height:12,rx:1,fill:'none',stroke:'#555','stroke-width':'0.7'}));
+      // Module label
+      g.appendChild(s('text',{x:100,y:47,'text-anchor':'middle','font-size':'9',fill:'#222','font-family':'monospace','font-weight':'bold'},'ESP8266'));
+      g.appendChild(s('text',{x:100,y:59,'text-anchor':'middle','font-size':'5.5',fill:'#444','font-family':'monospace'},'ESP-12E · WiFi'));
+      // Micro-USB (top edge)
+      g.appendChild(s('rect',{x:84,y:0,width:42,height:12,rx:2,fill:'#888',stroke:'#666','stroke-width':'0.8'}));
+      g.appendChild(s('rect',{x:87,y:2,width:36,height:8,rx:1,fill:'#555'}));
+      // RST button
+      g.appendChild(s('rect',{x:26,y:94,width:10,height:10,rx:2,fill:'#455a64'}));g.appendChild(s('circle',{cx:31,cy:99,r:3,fill:'#607d8b'}));
+      g.appendChild(s('text',{x:31,y:108,'text-anchor':'middle','font-size':'4',fill:'rgba(255,255,255,0.5)'},'RST'));
+      // LED
+      g.appendChild(s('circle',{cx:44,cy:99,r:3.5,fill:'#00bcd4',filter:'url(#glow)',stroke:'rgba(0,0,0,0.2)','stroke-width':'0.5'}));
+      // Pin pads + labels
+      const lPins=['A0','D8','D7','D6','D5','D4','D3','D2','D1','D0'];
+      const rPins=['VIN','GND','3V3','EN','RST','TX','RX','D9','D10','GND'];
+      lPins.forEach((n,i)=>{const y=8+i*10;pad(8,y);g.appendChild(s('text',{x:19,y:y+2,'font-size':'4.5',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},n));});
+      rPins.forEach((n,i)=>{const y=8+i*10;pad(202,y);g.appendChild(s('text',{x:191,y:y+2,'text-anchor':'end','font-size':'4.5',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},n));});
     }
   },
   'proto830':{icon:'⬜',label:'Protoboard 830',w:280,h:185,
