@@ -15,6 +15,10 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #toolbar{display:flex;align-items:center;gap:.5rem;padding:.4rem 1rem;background:var(--bg2);border-bottom:1px solid var(--border);height:44px;flex-shrink:0}
 #toolbar select,#toolbar button{height:30px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.25rem .6rem;font-size:.8rem;cursor:pointer}
 #toolbar button:hover{border-color:var(--green);color:var(--green)}
+#toolbar button:disabled{opacity:.3;cursor:default;pointer-events:none}
+.tb-sep{width:1px;height:22px;background:var(--border);flex-shrink:0}
+#btn-text.text-on{border-color:#ffd600;color:#ffd600;background:rgba(255,214,0,.1);font-weight:600}
+#text-input{background:var(--bg3);color:var(--text);border:1.5px solid var(--green);border-radius:5px;padding:4px 10px;font-size:.9rem;outline:none;min-width:160px;font-family:inherit}
 #app{display:flex;flex:1;overflow:hidden}
 #palette{width:190px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 .pal-section{padding:.5rem .8rem .3rem}
@@ -61,9 +65,18 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 </nav>
 
 <div id="toolbar">
+<button id="btn-undo" title="Desfer (Ctrl+Z)" disabled>↩ Desfer</button>
+<button id="btn-redo" title="Refer (Ctrl+Y)" disabled>↪ Refer</button>
+<span class="tb-sep"></span>
+<button id="btn-save" title="Guardar projecte (JSON)">💾 Guardar</button>
+<button id="btn-open" title="Obrir projecte">📂 Obrir</button>
+<button id="btn-img" title="Descarregar imatge PNG">🖼 Imatge</button>
+<span class="tb-sep"></span>
 <button id="btn-zoom-in">+ Amplia</button><span id="zoom-pct">100%</span><button id="btn-zoom-out">− Redueix</button>
 <button id="btn-mode" title="Canvia entre mode Moure i mode Cable (W)">✋ Moure</button>
-<span style="margin-left:auto;font-size:.78rem;opacity:.7" id="lbl-cable">Cable:</span>
+<button id="btn-text" title="Afegir text (T)">T Text</button>
+<span class="tb-sep"></span>
+<span style="font-size:.78rem;opacity:.7" id="lbl-cable">Cable:</span>
 <div id="wire-colors" style="display:flex;gap:4px">
 <div class="wc-dot active" data-color="#e53935" style="background:#e53935;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 <div class="wc-dot" data-color="#212121" style="background:#555;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
@@ -72,15 +85,18 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div class="wc-dot" data-color="#ffd600" style="background:#ffd600;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 <div class="wc-dot" data-color="#eeeeee" style="background:#ccc;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 </div>
+<span class="tb-sep"></span>
+<button id="btn-dup" title="Duplicar seleccionat">⎘ Duplicar</button>
 <button id="btn-delete">✕ Eliminar</button>
 <button id="btn-clear">⊘ Netejar</button>
 </div>
 
+<div id="text-overlay" style="position:fixed;display:none;z-index:250"><input id="text-input" placeholder="Escriu text, Enter per confirmar" autocomplete="off"/></div>
 <div id="pin-tip" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--green);color:var(--green);padding:2px 8px;font-size:.68rem;border-radius:4px;pointer-events:none;z-index:300;white-space:nowrap;font-family:monospace"></div>
 <div id="wire-ctx" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--border);border-radius:6px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.5)"></div>
 <div id="app">
 <aside id="palette"></aside>
-<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><path id="wire-preview" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g></g></svg></div>
+<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><g id="texts"></g><path id="wire-preview" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g></g></svg></div>
 <aside id="props"><div id="props-hdr"><span>Plaques</span></div><div id="props-body"></div></aside>
 </div>
 
@@ -909,7 +925,7 @@ const BOARDS={
   }
 };
 
-const state={boards:[],components:[],wires:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wirePoints:[],wireColor:'#e53935',compId:0,boardId:0,wireId:0,mode:'move'};
+const state={boards:[],components:[],wires:[],texts:[],view:{x:0,y:0,s:1},selected:null,wireMode:false,wireStart:null,wirePoints:[],wireColor:'#e53935',compId:0,boardId:0,wireId:0,textId:0,mode:'move'};
 
 
 function buildBoardsPanel(){
@@ -1031,7 +1047,7 @@ function addBoard(type){
   const x=(r.width/2-state.view.x)/state.view.s - BOARDS[type].w/2;
   const y=(r.height/2-state.view.y)/state.view.s - BOARDS[type].h/2;
   state.boards.push({id:state.boardId++,type,x,y});
-  renderAll();
+  renderAll();snapshot();
 }
 
 function addComponent(cid){
@@ -1041,14 +1057,14 @@ function addComponent(cid){
   const y=(r.height/2-state.view.y)/state.view.s;
   const comp={id:state.compId++,type:cid,x,y};
   state.components.push(comp);
-  renderAll();
-  select(comp.id);
+  renderAll();select(comp.id);snapshot();
 }
 
 function renderAll(){
   renderBoards();
   renderComponents();
   renderWires();
+  renderTexts();
 }
 
 // --- Pin helpers ---
@@ -1173,11 +1189,18 @@ function updatePreview(mx,my){
 function setMode(m){
   state.mode=m;
   cancelWire();
+  textOverlay.style.display='none';textPending=null;
   const btn=document.getElementById('btn-mode');
+  const btnT=document.getElementById('btn-text');
   const wrap=document.getElementById('canvas-wrap');
+  btnT.classList.remove('text-on');
   if(m==='wire'){
     btn.textContent='🔗 Cable';btn.classList.add('cable-on');
     wrap.classList.add('cable-mode');wrap.classList.remove('move-mode');
+  } else if(m==='text'){
+    btn.textContent='✋ Moure';btn.classList.remove('cable-on');
+    btnT.classList.add('text-on');
+    wrap.classList.add('move-mode');wrap.classList.remove('cable-mode');
   } else {
     btn.textContent='✋ Moure';btn.classList.remove('cable-on');
     wrap.classList.add('move-mode');wrap.classList.remove('cable-mode');
@@ -1195,8 +1218,8 @@ canvas.addEventListener('mousedown',e=>{
   const t=document.elementFromPoint(e.clientX,e.clientY);
   if(!t)return;
 
-  // ── PINS: always wire-interactive in any mode ──
-  if(t.classList.contains('pin-circle')){
+  // ── PINS: always wire-interactive (except text mode) ──
+  if(t.classList.contains('pin-circle')&&state.mode!=='text'){
     e.preventDefault();
     const info=getPinInfo(t);
     if(!info)return;
@@ -1204,7 +1227,7 @@ canvas.addEventListener('mousedown',e=>{
       const s0=state.wireStart;
       if(!(info.kind===s0.kind&&info.id===s0.id&&info.pin===s0.pin)){
         state.wires.push({id:state.wireId++,color:state.wireColor,from:s0,to:info,points:[...state.wirePoints]});
-        renderWires();
+        renderWires();snapshot();
       }
       cancelWire();
     } else {
@@ -1230,14 +1253,20 @@ canvas.addEventListener('mousedown',e=>{
     return;
   }
 
+  // ── TEXT MODE ──
+  if(state.mode==='text'&&e.button===0){
+    showTextAt(x,y,e.clientX,e.clientY-40);
+    return;
+  }
+
   // ── CABLE MODE: no dragging ──
   if(state.mode==='wire')return;
 
   // ── MOVE MODE: drag or pan ──
   const c=t.closest('.comp-group');
-  if(c){select(+c.dataset.id);dragComp={id:+c.dataset.id,isBoard:false,sx:x,sy:y};return;}
+  if(c){select(+c.dataset.id);dragComp={id:+c.dataset.id,isBoard:false,sx:x,sy:y,moved:false};return;}
   const b=t.closest('.board-group');
-  if(b){dragComp={id:+b.dataset.boardId,isBoard:true,sx:x,sy:y};return;}
+  if(b){dragComp={id:+b.dataset.boardId,isBoard:true,sx:x,sy:y,moved:false};return;}
   panStart={sx:e.clientX,sy:e.clientY};
 });
 
@@ -1267,16 +1296,16 @@ canvas.addEventListener('mousemove',e=>{
   if(dragComp){
     if(dragComp.isBoard){
       const b=state.boards.find(b=>b.id===dragComp.id);
-      if(b){b.x+=x-dragComp.sx;b.y+=y-dragComp.sy;dragComp.sx=x;dragComp.sy=y;renderAll();}
+      if(b){b.x+=x-dragComp.sx;b.y+=y-dragComp.sy;dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
     } else {
       const c=state.components.find(c=>c.id===dragComp.id);
-      if(c){c.x+=x-dragComp.sx;c.y+=y-dragComp.sy;dragComp.sx=x;dragComp.sy=y;renderAll();}
+      if(c){c.x+=x-dragComp.sx;c.y+=y-dragComp.sy;dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
     }
   }
   if(panStart){state.view.x+=e.clientX-panStart.sx;state.view.y+=e.clientY-panStart.sy;updateView();panStart={sx:e.clientX,sy:e.clientY};}
 });
 
-canvas.addEventListener('mouseup',()=>{panStart=null;dragComp=null;});
+canvas.addEventListener('mouseup',()=>{panStart=null;if(dragComp?.moved)snapshot();dragComp=null;});
 canvas.addEventListener('mouseleave',()=>{document.getElementById('pin-tip').style.display='none';});
 
 // Right-click on wire → context menu to delete
@@ -1308,9 +1337,15 @@ canvas.addEventListener('contextmenu',e=>{
 document.addEventListener('mousedown',e=>{if(!wireCtx.contains(e.target))hideWireCtx();});
 canvas.addEventListener('wheel',e=>{e.preventDefault();state.view.s*=e.deltaY>0?0.9:1.1;updateView();},{passive:false});
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){if(state.wireMode)cancelWire();else if(state.mode==='wire')setMode('move');}
-  if(e.key==='w'||e.key==='W'){setMode(state.mode==='move'?'wire':'move');}
+  if(e.target===textInput)return;
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();return;}
+  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){e.preventDefault();redo();return;}
+  if(e.key==='Escape'){if(state.wireMode)cancelWire();else setMode('move');}
+  if(e.key==='w'||e.key==='W'){setMode(state.mode==='wire'?'move':'wire');}
+  if(e.key==='t'||e.key==='T'){setMode(state.mode==='text'?'move':'text');}
+  if(e.key==='Delete'||e.key==='Backspace'){document.getElementById('btn-delete').click();}
 });
+document.getElementById('btn-text').onclick=()=>setMode(state.mode==='text'?'move':'text');
 
 document.getElementById('btn-mode').onclick=()=>setMode(state.mode==='move'?'wire':'move');
 document.getElementById('btn-zoom-in').onclick=()=>{state.view.s*=1.2;updateView();};
@@ -1320,17 +1355,131 @@ document.getElementById('btn-delete').onclick=()=>{
     const id=state.selected;
     state.wires=state.wires.filter(w=>!(w.from.kind==='comp'&&w.from.id===id)&&!(w.to.kind==='comp'&&w.to.id===id));
     state.components=state.components.filter(c=>c.id!==id);
-    state.selected=null;renderAll();
+    state.selected=null;renderAll();snapshot();
   }
 };
-document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.boards=[];state.components=[];state.wires=[];renderAll();}};
+document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.boards=[];state.components=[];state.wires=[];state.texts=[];renderAll();snapshot();}};
 document.getElementById('wire-colors').querySelectorAll('.wc-dot').forEach(d=>d.onclick=()=>{document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');state.wireColor=d.dataset.color;});
 
 function select(id){state.selected=id;document.querySelectorAll('.comp-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}renderAll();}
 function updateView(){document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';}
 function closeProps(){document.getElementById('props').classList.remove('open');}
 
+// ── Undo / Redo ──
+const hist=[];let histIdx=-1;
+function stateSnap(){return JSON.stringify({boards:state.boards,components:state.components,wires:state.wires,texts:state.texts});}
+function snapshot(){
+  hist.splice(histIdx+1);
+  hist.push(stateSnap());
+  if(hist.length>60)hist.shift();else histIdx++;
+  syncUR();
+}
+function restoreSnap(json){
+  const d=JSON.parse(json);
+  state.boards=d.boards||[];state.components=d.components||[];
+  state.wires=d.wires||[];state.texts=d.texts||[];
+  renderAll();syncUR();
+}
+function undo(){if(histIdx>0){histIdx--;restoreSnap(hist[histIdx]);}}
+function redo(){if(histIdx<hist.length-1){histIdx++;restoreSnap(hist[histIdx]);}}
+function syncUR(){
+  document.getElementById('btn-undo').disabled=histIdx<=0;
+  document.getElementById('btn-redo').disabled=histIdx>=hist.length-1;
+}
+document.getElementById('btn-undo').onclick=undo;
+document.getElementById('btn-redo').onclick=redo;
+
+// ── Save / Open / Image ──
+document.getElementById('btn-save').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({v:1,boards:state.boards,components:state.components,wires:state.wires,texts:state.texts},null,2)],{type:'application/json'}));
+  a.download='circuit.json';a.click();
+};
+document.getElementById('btn-open').onclick=()=>{
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    f.text().then(txt=>{
+      try{
+        const d=JSON.parse(txt);
+        state.boards=d.boards||[];state.components=d.components||[];
+        state.wires=d.wires||[];state.texts=d.texts||[];
+        state.boardId=Math.max(0,...state.boards.map(b=>b.id+1),0);
+        state.compId=Math.max(0,...state.components.map(c=>c.id+1),0);
+        state.wireId=Math.max(0,...state.wires.map(w=>w.id+1),0);
+        state.textId=Math.max(0,...state.texts.map(t=>t.id+1),0);
+        snapshot();renderAll();
+      }catch{alert('Format invàlid');}
+    });
+  };inp.click();
+};
+document.getElementById('btn-img').onclick=()=>{
+  const svg=document.getElementById('canvas');
+  const w=svg.clientWidth,h=svg.clientHeight;
+  const clone=svg.cloneNode(true);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  clone.querySelectorAll('.pin-circle').forEach(el=>el.remove());
+  const st=document.createElementNS('http://www.w3.org/2000/svg','style');
+  st.textContent='.wire{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.pin-dot{stroke:#5d4037;stroke-width:1}';
+  clone.querySelector('defs').insertAdjacentElement('afterend',st);
+  const xml=new XMLSerializer().serializeToString(clone);
+  const url=URL.createObjectURL(new Blob([xml],{type:'image/svg+xml'}));
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas');c.width=w*2;c.height=h*2;
+    const ctx=c.getContext('2d');ctx.scale(2,2);
+    ctx.fillStyle='#0a0c10';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0);
+    c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='circuit.png';a.click();});
+    URL.revokeObjectURL(url);
+  };img.src=url;
+};
+
+// ── Text mode ──
+let textPending=null;
+const textOverlay=document.getElementById('text-overlay');
+const textInput=document.getElementById('text-input');
+function showTextAt(svgX,svgY,screenX,screenY){
+  textPending={x:svgX,y:svgY};
+  textOverlay.style.display='block';
+  textOverlay.style.left=screenX+'px';
+  textOverlay.style.top=screenY+'px';
+  textInput.value='';textInput.focus();
+}
+textInput.addEventListener('keydown',e=>{
+  e.stopPropagation();
+  if(e.key==='Enter'){
+    const txt=textInput.value.trim();
+    if(txt&&textPending){state.texts.push({id:state.textId++,x:textPending.x,y:textPending.y,text:txt,size:16,color:'#e2e8f0'});renderTexts();snapshot();}
+    textOverlay.style.display='none';textPending=null;
+  }
+  if(e.key==='Escape'){textOverlay.style.display='none';textPending=null;}
+});
+textInput.addEventListener('blur',()=>{textOverlay.style.display='none';textPending=null;});
+
+// ── Render texts ──
+function renderTexts(){
+  const g=document.getElementById('texts');g.innerHTML='';
+  state.texts.forEach(t=>{
+    const el=s('text',{x:t.x,y:t.y,fill:t.color,'font-size':t.size,'font-family':'Segoe UI,system-ui,sans-serif','cursor':'pointer','data-tid':t.id},t.text);
+    el.addEventListener('contextmenu',ev=>{
+      ev.preventDefault();ev.stopPropagation();
+      if(confirm('Esborrar text?')){state.texts=state.texts.filter(tx=>tx.id!==t.id);renderTexts();snapshot();}
+    });
+    g.appendChild(el);
+  });
+}
+
+// ── Duplicate ──
+document.getElementById('btn-dup').onclick=()=>{
+  if(state.selected===null)return;
+  const orig=state.components.find(c=>c.id===state.selected);
+  if(!orig)return;
+  const nc={...orig,id:state.compId++,x:orig.x+20,y:orig.y+20};
+  state.components.push(nc);renderAll();select(nc.id);snapshot();
+};
+
 setupDefs();buildPalette();buildBoardsPanel();updateView();renderAll();
+snapshot();
 document.getElementById('canvas-wrap').classList.add('move-mode');
 </script>
 </body>
