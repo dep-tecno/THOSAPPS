@@ -36,7 +36,14 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .pin-circle.wiring+.pin-dot{fill:#ffd54f;stroke:var(--green);stroke-width:2.5}
 .pin-circle.hover-pin+.pin-dot{fill:#00e676;stroke:#fff;stroke-width:2}
 .comp-group.selected>.comp-rect,.board-group.selected>.comp-rect{display:block}
-.comp-rect{display:none;fill:none;stroke:var(--green);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
+.comp-rect{display:none;fill:rgba(0,230,118,.06);stroke:var(--green);stroke-width:2.5;stroke-dasharray:8 4;pointer-events:none;filter:drop-shadow(0 0 6px rgba(0,230,118,.55))}
+#sel-bar{position:fixed;display:none;z-index:250;background:#1a1d27;border:1.5px solid var(--green);border-radius:10px;padding:5px 10px;align-items:center;gap:7px;box-shadow:0 4px 20px rgba(0,0,0,.7),0 0 12px rgba(0,230,118,.2);transform:translateX(-50%);pointer-events:all;white-space:nowrap}
+#sel-bar::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--green)}
+#sel-bar .sel-label{font-size:.72rem;font-weight:700;color:var(--green);max-width:120px;overflow:hidden;text-overflow:ellipsis}
+#sel-bar .sel-sep{width:1px;height:18px;background:#2d3347;flex-shrink:0}
+#sel-bar .sel-btn{height:24px;background:#22263a;color:#e2e8f0;border:1px solid #2d3347;border-radius:6px;padding:0 8px;font-size:.73rem;cursor:pointer;transition:all .15s}
+#sel-bar .sel-btn:hover{border-color:var(--green);color:var(--green)}
+#sel-bar .sel-btn.del:hover{border-color:#ff5555;color:#ff5555}
 .wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:context-menu;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));transition:stroke-width .15s,opacity .15s}
 .wire:hover{stroke-width:5;opacity:.75}
 #btn-mode{font-size:.82rem;min-width:90px;transition:all .2s}
@@ -92,6 +99,12 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 </div>
 
 <div id="text-overlay" style="position:fixed;display:none;z-index:250"><input id="text-input" placeholder="Escriu text, Enter per confirmar" autocomplete="off"/></div>
+<div id="sel-bar">
+  <span class="sel-label" id="sel-label"></span>
+  <span class="sel-sep"></span>
+  <button class="sel-btn" id="sel-dup" title="Duplicar (D)">⎘ Copiar</button>
+  <button class="sel-btn del" id="sel-del" title="Eliminar (Supr)">✕ Eliminar</button>
+</div>
 <div id="pin-tip" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--green);color:var(--green);padding:2px 8px;font-size:.68rem;border-radius:4px;pointer-events:none;z-index:300;white-space:nowrap;font-family:monospace"></div>
 <div id="wire-ctx" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--border);border-radius:6px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.5)"></div>
 <div id="app">
@@ -1293,6 +1306,7 @@ function renderAll(){
   renderComponents();
   renderWires();
   renderTexts();
+  updateSelBar();
 }
 
 // --- Pin helpers ---
@@ -1595,9 +1609,33 @@ document.getElementById('btn-delete').onclick=()=>{
 document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.boards=[];state.components=[];state.wires=[];state.texts=[];renderAll();snapshot();}};
 document.getElementById('wire-colors').querySelectorAll('.wc-dot').forEach(d=>d.onclick=()=>{document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');state.wireColor=d.dataset.color;});
 
-function select(id){state.selected=id;state.selectedBoard=null;document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}}
-function selectBoard(id){state.selectedBoard=id;state.selected=null;document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`board-${id}`);if(el)el.classList.add('selected');}}
-function updateView(){document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';}
+function updateSelBar(){
+  const bar=document.getElementById('sel-bar');
+  let el=null,label='';
+  if(state.selected!==null){
+    el=document.getElementById(`comp-${state.selected}`);
+    const c=state.components.find(c=>c.id===state.selected);
+    if(c)label=COMPS[c.type].label;
+  } else if(state.selectedBoard!==null){
+    el=document.getElementById(`board-${state.selectedBoard}`);
+    const b=state.boards.find(b=>b.id===state.selectedBoard);
+    if(b)label=BOARDS[b.type].label;
+  }
+  if(!el){bar.style.display='none';return;}
+  try{
+    const bbox=el.getBBox();
+    const svgRect=canvas.getBoundingClientRect();
+    const cx=svgRect.left+state.view.x+(bbox.x+bbox.width/2)*state.view.s;
+    const top=svgRect.top+state.view.y+bbox.y*state.view.s-52;
+    document.getElementById('sel-label').textContent=label;
+    bar.style.left=cx+'px';
+    bar.style.top=Math.max(60,top)+'px';
+    bar.style.display='flex';
+  }catch(e){bar.style.display='none';}
+}
+function select(id){state.selected=id;state.selectedBoard=null;document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}updateSelBar();}
+function selectBoard(id){state.selectedBoard=id;state.selected=null;document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`board-${id}`);if(el)el.classList.add('selected');}updateSelBar();}
+function updateView(){document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';updateSelBar();}
 function closeProps(){document.getElementById('props').classList.remove('open');}
 
 // ── Undo / Redo ──
@@ -1705,13 +1743,22 @@ function renderTexts(){
 }
 
 // ── Duplicate ──
-document.getElementById('btn-dup').onclick=()=>{
-  if(state.selected===null)return;
-  const orig=state.components.find(c=>c.id===state.selected);
-  if(!orig)return;
-  const nc={...orig,id:state.compId++,x:orig.x+20,y:orig.y+20};
-  state.components.push(nc);renderAll();select(nc.id);snapshot();
-};
+function dupSelected(){
+  if(state.selected!==null){
+    const orig=state.components.find(c=>c.id===state.selected);
+    if(!orig)return;
+    const nc={...orig,id:state.compId++,x:orig.x+24,y:orig.y+24};
+    state.components.push(nc);renderAll();select(nc.id);snapshot();
+  } else if(state.selectedBoard!==null){
+    const orig=state.boards.find(b=>b.id===state.selectedBoard);
+    if(!orig)return;
+    const nb={...orig,id:state.boardId++,x:orig.x+24,y:orig.y+24};
+    state.boards.push(nb);renderAll();selectBoard(nb.id);snapshot();
+  }
+}
+document.getElementById('btn-dup').onclick=dupSelected;
+document.getElementById('sel-dup').onclick=dupSelected;
+document.getElementById('sel-del').onclick=()=>document.getElementById('btn-delete').click();
 
 setupDefs();buildPalette();buildBoardsPanel();updateView();renderAll();
 snapshot();
