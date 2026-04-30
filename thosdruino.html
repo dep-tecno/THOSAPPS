@@ -393,19 +393,57 @@ const COMPS={
     g.appendChild(s('ellipse',{cx:30,cy:30,rx:14,ry:8,fill:'rgba(255,255,255,0.25)'}));
     g.appendChild(s('text',{x:40,y:78,'text-anchor':'middle','font-size':'7','fill':'#fff','font-weight':'bold'},'MOTOR DC'));
   }},
-  'lcd':{icon:'📺',label:'LCD 16×2',w:212,h:104,pins:[{id:'V',x:14,y:102},{id:'G',x:32,y:102},{id:'C',x:50,y:102},{id:'R',x:68,y:102},{id:'E',x:86,y:102},{id:'D4',x:104,y:102}],render(g){
-    g.appendChild(s('rect',{x:4,y:6,width:204,height:84,rx:4,fill:'url(#pcb)',stroke:'#0d3d14','stroke-width':'2.5',filter:'url(#shadow)'}));
-    g.appendChild(s('rect',{x:14,y:14,width:184,height:54,rx:2,fill:'#1a3a1c',stroke:'#0a1f0c','stroke-width':'1.5'}));
-    g.appendChild(s('rect',{x:18,y:18,width:176,height:46,rx:1,fill:'url(#lcd-screen)'}));
-    g.appendChild(s('text',{x:106,y:35,'text-anchor':'middle','font-size':'9','fill':'#1b3a0c','font-family':'monospace','font-weight':'bold'},'THOSDRUINO'));
-    g.appendChild(s('text',{x:106,y:52,'text-anchor':'middle','font-size':'9','fill':'#1b3a0c','font-family':'monospace','font-weight':'bold'},'LCD 16x2'));
-    [10,30,50,70,90,110,130,150,170,184].forEach(x=>{
-      for(let r=0;r<5;r++)g.appendChild(s('rect',{x:18+x*0.85,y:20+r*9,width:0.5,height:8,fill:'rgba(0,0,0,0.04)'}));
-    });
-    for(let i=0;i<16;i++)g.appendChild(s('circle',{cx:14+i*18,cy:84,r:1.5,fill:'#ffd700',stroke:'#8b6914','stroke-width':'0.3'}));
-    g.appendChild(s('text',{x:106,y:97,'text-anchor':'middle','font-size':'4.5','fill':'#fff','font-weight':'bold'},'1602A'));
-    g.appendChild(s('rect',{x:6,y:8,width:200,height:6,rx:2,fill:'rgba(255,255,255,0.1)'}));
-  }},
+  'lcd':{icon:'📺',label:'LCD 16×2',w:244,h:112,
+    pins:[
+      {id:'VSS',x:14,y:92},{id:'VDD',x:28,y:92},{id:'V0',x:42,y:92},
+      {id:'RS',x:56,y:92},{id:'RW',x:70,y:92},{id:'E',x:84,y:92},
+      {id:'D0',x:98,y:92},{id:'D1',x:112,y:92},{id:'D2',x:126,y:92},
+      {id:'D3',x:140,y:92},{id:'D4',x:154,y:92},{id:'D5',x:168,y:92},
+      {id:'D6',x:182,y:92},{id:'D7',x:196,y:92},{id:'A',x:210,y:92},
+      {id:'K',x:224,y:92}
+    ],
+    render(g){
+      // PCB body - no filter
+      g.appendChild(s('rect',{x:2,y:2,width:240,height:86,rx:3,fill:'#2d6e2d',stroke:'#1a4a1a','stroke-width':'1.5'}));
+      // Mounting holes at 4 corners
+      [[8,8],[236,8],[8,82],[236,82]].forEach(([cx,cy])=>{
+        g.appendChild(s('circle',{cx,cy,r:3.5,fill:'#1a4a1a'}));
+        g.appendChild(s('circle',{cx,cy,r:1.8,fill:'#c09000'}));
+      });
+      // Display bezel (dark frame)
+      g.appendChild(s('rect',{x:14,y:10,width:180,height:58,rx:2,fill:'#111',stroke:'#0a0a0a','stroke-width':'1'}));
+      // LCD screen (yellow-green backlight)
+      g.appendChild(s('rect',{x:18,y:14,width:172,height:50,rx:1,fill:'url(#lcd-screen)'}));
+      // Character cells 16×2
+      for(let row=0;row<2;row++){
+        for(let col=0;col<16;col++){
+          g.appendChild(s('rect',{x:19.5+col*10.7,y:15+row*24,width:9.2,height:22,rx:0.5,fill:'rgba(0,70,0,0.22)',stroke:'rgba(0,50,0,0.35)','stroke-width':'0.3'}));
+        }
+      }
+      // Screen glare
+      g.appendChild(s('rect',{x:18,y:14,width:172,height:10,rx:1,fill:'rgba(255,255,255,0.07)'}));
+      // Contrast trimmer pot (blue)
+      g.appendChild(s('circle',{cx:207,cy:47,r:9,fill:'#1a3eaa',stroke:'#0d2a88','stroke-width':'1'}));
+      g.appendChild(s('circle',{cx:207,cy:47,r:3.5,fill:'#333',stroke:'#222','stroke-width':'0.5'}));
+      g.appendChild(s('line',{x1:207,y1:41,x2:207,y2:44,stroke:'#aaa','stroke-width':'1.5','stroke-linecap':'round'}));
+      g.appendChild(s('text',{x:207,y:64,'text-anchor':'middle','font-size':'4.5','fill':'#9fc','font-family':'monospace'},'V0'));
+      // HD44780 controller chip
+      g.appendChild(s('rect',{x:14,y:72,width:44,height:12,rx:1,fill:'#111',stroke:'#2a2a2a','stroke-width':'0.5'}));
+      g.appendChild(s('text',{x:36,y:80,'text-anchor':'middle','font-size':'4','fill':'#888','font-family':'monospace'},'HD44780'));
+      // PCB label
+      g.appendChild(s('text',{x:120,y:80,'text-anchor':'middle','font-size':'5','fill':'#9fc','font-family':'monospace','font-weight':'bold'},'LCD 1602A'));
+      // Through-hole solder pads (visual)
+      for(let i=0;i<16;i++){
+        const cx=14+i*14;
+        g.appendChild(s('circle',{cx,cy:92,r:5.5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));
+        g.appendChild(s('circle',{cx,cy:92,r:2.2,fill:'#1a1a1a'}));
+      }
+      // Pin labels
+      ['VSS','VDD','V0','RS','RW','E','D0','D1','D2','D3','D4','D5','D6','D7','A','K'].forEach((n,i)=>{
+        g.appendChild(s('text',{x:14+i*14,y:109,'text-anchor':'middle','font-size':'4','fill':'#cfc','font-family':'monospace'},n));
+      });
+    }
+  },
   'ky001':{icon:'🌡️',label:'KY001 Temperatura',w:50,h:65,pins:[{id:'S',x:15,y:63},{id:'+',x:25,y:63},{id:'-',x:35,y:63}],render(g){
     // Leads
     g.appendChild(s('line',{x1:15,y1:50,x2:15,y2:63,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));
@@ -1481,7 +1519,7 @@ document.getElementById('btn-delete').onclick=()=>{
 document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.boards=[];state.components=[];state.wires=[];state.texts=[];renderAll();snapshot();}};
 document.getElementById('wire-colors').querySelectorAll('.wc-dot').forEach(d=>d.onclick=()=>{document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');state.wireColor=d.dataset.color;});
 
-function select(id){state.selected=id;document.querySelectorAll('.comp-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}renderAll();}
+function select(id){state.selected=id;document.querySelectorAll('.comp-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}}
 function updateView(){document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';}
 function closeProps(){document.getElementById('props').classList.remove('open');}
 
