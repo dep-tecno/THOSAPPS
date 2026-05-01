@@ -1615,6 +1615,7 @@ canvas.addEventListener('mousedown',e=>{
 
   // ── TEXT MODE ──
   if(state.mode==='text'&&e.button===0){
+    e.preventDefault(); // prevent canvas from stealing focus away from textInput
     showTextAt(x,y,e.clientX,e.clientY-40);
     return;
   }
@@ -1809,9 +1810,13 @@ document.getElementById('btn-img').onclick=()=>{
   const w=svg.clientWidth,h=svg.clientHeight;
   const clone=svg.cloneNode(true);
   clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
-  clone.querySelectorAll('.pin-circle').forEach(el=>el.remove());
+  // Remove interactive/UI-only elements
+  clone.querySelectorAll('.pin-circle,.comp-rect').forEach(el=>el.remove());
+  // User texts are light-coloured for dark UI → make dark for white-background reports
+  clone.querySelectorAll('#texts text').forEach(t=>t.setAttribute('fill','#1a1a2e'));
+  // Inline CSS (no CSS vars available outside the document)
   const st=document.createElementNS('http://www.w3.org/2000/svg','style');
-  st.textContent='.wire{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.pin-dot{stroke:#5d4037;stroke-width:1}';
+  st.textContent='.wire{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.pin-dot{fill:#c09000;stroke:#7a5c00;stroke-width:1}';
   clone.querySelector('defs').insertAdjacentElement('afterend',st);
   const xml=new XMLSerializer().serializeToString(clone);
   const url=URL.createObjectURL(new Blob([xml],{type:'image/svg+xml'}));
@@ -1819,7 +1824,8 @@ document.getElementById('btn-img').onclick=()=>{
   img.onload=()=>{
     const c=document.createElement('canvas');c.width=w*2;c.height=h*2;
     const ctx=c.getContext('2d');ctx.scale(2,2);
-    ctx.fillStyle='#0a0c10';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0);
+    // Transparent background — no fillRect
+    ctx.drawImage(img,0,0);
     c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='circuit.png';a.click();});
     URL.revokeObjectURL(url);
   };img.src=url;
