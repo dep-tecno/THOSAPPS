@@ -1217,38 +1217,38 @@ const BOARDS={
       [[16,7,116,10],[142,7,116,10],[16,205,102,10],[158,205,88,10]].forEach(([x,y,w,h])=>g.appendChild(s('rect',{x,y,width:w,height:h,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'})));
     }
   },
-  'mb102':{icon:'⬜',label:'MB-102',w:320,h:100,
+  'mb102':{icon:'⬜',label:'MB-102',w:320,h:108,
     render(g){
       // Ivory PCB body
-      g.appendChild(s('rect',{x:0,y:0,width:320,height:100,rx:4,fill:'#eeeadf',stroke:'#c0b898','stroke-width':'1.5'}));
-      // Center channel
-      g.appendChild(s('rect',{x:18,y:46,width:284,height:9,rx:1,fill:'#d4ccb8',stroke:'#b8b0a0','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:0,y:0,width:320,height:108,rx:4,fill:'#eeeadf',stroke:'#c0b898','stroke-width':'1.5'}));
       // Power rail zones (top & bottom)
-      g.appendChild(s('rect',{x:18,y:4,width:284,height:16,rx:2,fill:'rgba(255,255,255,0.4)'}));
-      g.appendChild(s('rect',{x:18,y:80,width:284,height:16,rx:2,fill:'rgba(255,255,255,0.4)'}));
+      g.appendChild(s('rect',{x:18,y:3,width:284,height:16,rx:2,fill:'rgba(255,255,255,0.4)'}));
+      g.appendChild(s('rect',{x:18,y:89,width:284,height:16,rx:2,fill:'rgba(255,255,255,0.4)'}));
       // Red/blue lines top
-      g.appendChild(s('line',{x1:20,y1:9,x2:300,y2:9,stroke:'#e53935','stroke-width':'1.5','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:20,y1:17,x2:300,y2:17,stroke:'#1e88e5','stroke-width':'1.5','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:20,y1:8,x2:300,y2:8,stroke:'#e53935','stroke-width':'1.5','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:20,y1:16,x2:300,y2:16,stroke:'#1e88e5','stroke-width':'1.5','stroke-linecap':'round'}));
       // Red/blue lines bottom
-      g.appendChild(s('line',{x1:20,y1:86,x2:300,y2:86,stroke:'#e53935','stroke-width':'1.5','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:20,y1:94,x2:300,y2:94,stroke:'#1e88e5','stroke-width':'1.5','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:20,y1:94,x2:300,y2:94,stroke:'#e53935','stroke-width':'1.5','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:20,y1:102,x2:300,y2:102,stroke:'#1e88e5','stroke-width':'1.5','stroke-linecap':'round'}));
       // +/- labels
-      g.appendChild(s('text',{x:8,y:10.5,'font-size':'7',fill:'#c00','font-weight':'bold'},'+'));
-      g.appendChild(s('text',{x:8,y:19,'font-size':'7',fill:'#00c','font-weight':'bold'},'−'));
-      g.appendChild(s('text',{x:8,y:87.5,'font-size':'7',fill:'#c00','font-weight':'bold'},'+'));
-      g.appendChild(s('text',{x:8,y:96,'font-size':'7',fill:'#00c','font-weight':'bold'},'−'));
-      // Row letters a-e (top half) and f-j (bottom half)
-      ['a','b','c','d','e'].forEach((l,i)=>g.appendChild(s('text',{x:11,y:25+i*8+2,'font-size':'4.5',fill:'rgba(0,0,0,0.3)','font-family':'monospace'},l)));
-      ['f','g','h','i','j'].forEach((l,i)=>g.appendChild(s('text',{x:11,y:57+i*8+2,'font-size':'4.5',fill:'rgba(0,0,0,0.3)','font-family':'monospace'},l)));
-      // Column numbers every 5
+      g.appendChild(s('text',{x:8,y:10,'font-size':'7',fill:'#c00','font-weight':'bold'},'+'));
+      g.appendChild(s('text',{x:8,y:18,'font-size':'7',fill:'#00c','font-weight':'bold'},'−'));
+      g.appendChild(s('text',{x:8,y:96,'font-size':'7',fill:'#c00','font-weight':'bold'},'+'));
+      g.appendChild(s('text',{x:8,y:104,'font-size':'7',fill:'#00c','font-weight':'bold'},'−'));
+      // Center channel gap (between upper half row e and lower half row f)
+      g.appendChild(s('rect',{x:18,y:52,width:284,height:8,rx:1,fill:'#d4ccb8',stroke:'#b8b0a0','stroke-width':'0.5'}));
+      // Row letters a-e / f-j
+      ['a','b','c','d','e'].forEach((l,i)=>g.appendChild(s('text',{x:11,y:24+i*7+2,'font-size':'4',fill:'rgba(0,0,0,0.3)','font-family':'monospace'},l)));
+      ['f','g','h','i','j'].forEach((l,i)=>g.appendChild(s('text',{x:11,y:62+i*7+2,'font-size':'4',fill:'rgba(0,0,0,0.3)','font-family':'monospace'},l)));
+      // Column numbers every 5 — note: ''+(col+1) to pass a string to s()
       for(let col=0;col<33;col++){
-        if(col%5===0)g.appendChild(s('text',{x:22+col*8,y:22,'text-anchor':'middle','font-size':'4',fill:'rgba(0,0,0,0.25)','font-family':'monospace'},col+1));
+        if(col%5===0)g.appendChild(s('text',{x:22+col*8,y:21,'text-anchor':'middle','font-size':'4',fill:'rgba(0,0,0,0.25)','font-family':'monospace'},''+(col+1)));
         for(let row=0;row<5;row++){
           const pu='U'+col+'_'+row,pl='L'+col+'_'+row,cx=22+col*8;
-          g.appendChild(s('circle',{cx,cy:25+row*8,r:3.5,class:'pin-circle','data-pin':pu}));
-          g.appendChild(s('circle',{cx,cy:25+row*8,r:2,fill:'#a8a090',stroke:'#888','stroke-width':'0.3','pointer-events':'none'}));
-          g.appendChild(s('circle',{cx,cy:57+row*8,r:3.5,class:'pin-circle','data-pin':pl}));
-          g.appendChild(s('circle',{cx,cy:57+row*8,r:2,fill:'#a8a090',stroke:'#888','stroke-width':'0.3','pointer-events':'none'}));
+          g.appendChild(s('circle',{cx,cy:24+row*7,r:3.5,class:'pin-circle','data-pin':pu}));
+          g.appendChild(s('circle',{cx,cy:24+row*7,r:2,fill:'#a8a090',stroke:'#888','stroke-width':'0.3','pointer-events':'none'}));
+          g.appendChild(s('circle',{cx,cy:62+row*7,r:3.5,class:'pin-circle','data-pin':pl}));
+          g.appendChild(s('circle',{cx,cy:62+row*7,r:2,fill:'#a8a090',stroke:'#888','stroke-width':'0.3','pointer-events':'none'}));
         }
       }
     }
@@ -1448,7 +1448,7 @@ function getPinPos(ep){
     const m=ep.pin.match(/^([UL])(\d+)_(\d+)$/);
     if(!m)return null;
     const isU=m[1]==='U',col=+m[2],row=+m[3];
-    if(b.type==='mb102') return{x:b.x+22+col*8, y:b.y+(isU?25+row*8:57+row*8)};
+    if(b.type==='mb102') return{x:b.x+22+col*8, y:b.y+(isU?24+row*7:62+row*7)};
     return{x:b.x+20+col*8, y:b.y+(isU?35+row*8:105+row*8)};
   }
   const pins=BOARDS[b.type].pins;
