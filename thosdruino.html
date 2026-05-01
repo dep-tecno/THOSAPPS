@@ -295,16 +295,19 @@ const COMPS={
     });
     g.appendChild(s('path',{d:'M 10 6 Q 16 4, 46 6',fill:'none',stroke:'rgba(255,255,255,0.35)','stroke-width':'1.2'}));
   }},
-  'button':{icon:'⊙',label:'Botó',w:60,h:60,pins:[{id:'1',x:5,y:12},{id:'2',x:5,y:48},{id:'3',x:55,y:12},{id:'4',x:55,y:48}],render(g){
-    g.appendChild(s('rect',{x:8,y:8,width:44,height:44,rx:4,fill:'#3a3a3a',stroke:'#1a1a1a','stroke-width':'1.5'}));
-    g.appendChild(s('rect',{x:11,y:11,width:38,height:38,rx:3,fill:'#4a4a4a'}));
-    g.appendChild(s('line',{x1:5,y1:12,x2:11,y2:18,stroke:'url(#silver)','stroke-width':'2'}));
-    g.appendChild(s('line',{x1:5,y1:48,x2:11,y2:42,stroke:'url(#silver)','stroke-width':'2'}));
-    g.appendChild(s('line',{x1:55,y1:12,x2:49,y2:18,stroke:'url(#silver)','stroke-width':'2'}));
-    g.appendChild(s('line',{x1:55,y1:48,x2:49,y2:42,stroke:'url(#silver)','stroke-width':'2'}));
-    g.appendChild(s('circle',{cx:30,cy:30,r:13,fill:'#212121',stroke:'#000','stroke-width':'1.5'}));
-    g.appendChild(s('circle',{cx:30,cy:30,r:11,fill:'#e53935',stroke:'#b71c1c','stroke-width':'1'}));
-    g.appendChild(s('ellipse',{cx:27,cy:27,rx:5,ry:4,fill:'rgba(255,255,255,.4)'}));
+  'button':{icon:'⊙',label:'Botó',w:48,h:32,pins:[{id:'1',x:4,y:8},{id:'2',x:4,y:24},{id:'3',x:44,y:8},{id:'4',x:44,y:24}],render(g){
+    // Lead stubs (5 forats horitz × 2 forats vert = 40px × 16px)
+    g.appendChild(s('line',{x1:4,y1:8,x2:10,y2:8,stroke:'url(#silver)','stroke-width':'2'}));
+    g.appendChild(s('line',{x1:4,y1:24,x2:10,y2:24,stroke:'url(#silver)','stroke-width':'2'}));
+    g.appendChild(s('line',{x1:44,y1:8,x2:38,y2:8,stroke:'url(#silver)','stroke-width':'2'}));
+    g.appendChild(s('line',{x1:44,y1:24,x2:38,y2:24,stroke:'url(#silver)','stroke-width':'2'}));
+    // Housing
+    g.appendChild(s('rect',{x:10,y:3,width:28,height:26,rx:3,fill:'#3a3a3a',stroke:'#1a1a1a','stroke-width':'1.5'}));
+    g.appendChild(s('rect',{x:12,y:5,width:24,height:22,rx:2,fill:'#4a4a4a'}));
+    // Button cap
+    g.appendChild(s('circle',{cx:24,cy:16,r:9,fill:'#212121',stroke:'#000','stroke-width':'1'}));
+    g.appendChild(s('circle',{cx:24,cy:16,r:7,fill:'#e53935',stroke:'#b71c1c','stroke-width':'0.8'}));
+    g.appendChild(s('ellipse',{cx:21,cy:13,rx:3.5,ry:2.5,fill:'rgba(255,255,255,.4)'}));
   }},
   'buzzer':{icon:'🔊',label:'Buzzer',w:56,h:62,pins:[{id:'+',x:16,y:60},{id:'-',x:40,y:60}],render(g){
     g.appendChild(s('circle',{cx:28,cy:24,r:22,fill:'url(#black-plastic)',stroke:'#000','stroke-width':'1.5'}));
