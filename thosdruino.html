@@ -48,8 +48,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #sel-bar .sel-btn{height:24px;background:#22263a;color:#e2e8f0;border:1px solid #2d3347;border-radius:6px;padding:0 8px;font-size:.73rem;cursor:pointer;transition:all .15s}
 #sel-bar .sel-btn:hover{border-color:var(--green);color:var(--green)}
 #sel-bar .sel-btn.del:hover{border-color:#ff5555;color:#ff5555}
-.wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:context-menu;transition:stroke-width .15s,opacity .15s}
-.wire:hover{stroke-width:5;opacity:.75}
+.wire{fill:none;stroke-width:2;stroke-linecap:round;cursor:context-menu;transition:stroke-width .15s,opacity .15s}
+.wire:hover{stroke-width:3;opacity:.75}
 #btn-mode{font-size:1rem;min-width:34px;transition:all .2s}
 #btn-mode.cable-on{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.12);font-weight:600}
 #palette{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
@@ -149,7 +149,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div id="wire-ctx" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--border);border-radius:6px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.5)"></div>
 <div id="app">
 <aside id="palette"></aside>
-<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><g id="texts"></g><path id="wire-preview" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g></g></svg></div>
+<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><g id="texts"></g><path id="wire-preview" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g></g></svg></div>
 <aside id="props"><div id="props-hdr"><span>Plaques</span></div><div id="props-body"></div></aside>
 </div>
 
@@ -1886,14 +1886,14 @@ function multiPath(pts){
 }
 function drawWire(g,pts,color,wid){
   const d=multiPath(pts);
-  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.38)','stroke-width':'5.5','stroke-linecap':'round','stroke-linejoin':'round',transform:'translate(1.5,2.5)','pointer-events':'none'}));
-  const mp=s('path',{d,fill:'none',stroke:color,'stroke-width':'3.5','stroke-linecap':'round','stroke-linejoin':'round',class:'wire'});
+  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.35)','stroke-width':'3.5','stroke-linecap':'round','stroke-linejoin':'round',transform:'translate(1,2)','pointer-events':'none'}));
+  const mp=s('path',{d,fill:'none',stroke:color,'stroke-width':'2','stroke-linecap':'round','stroke-linejoin':'round',class:'wire'});
   if(wid!==undefined)mp.dataset.wireId=wid;
   g.appendChild(mp);
-  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.28)','stroke-width':'1.2','stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none'}));
+  g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.22)','stroke-width':'0.7','stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none'}));
   [[pts[0].x,pts[0].y],[pts[pts.length-1].x,pts[pts.length-1].y]].forEach(([cx,cy])=>{
-    g.appendChild(s('circle',{cx,cy,r:5.5,fill:color,stroke:'rgba(0,0,0,0.55)','stroke-width':'1.5','pointer-events':'none'}));
-    g.appendChild(s('circle',{cx,cy,r:2.5,fill:'rgba(255,255,255,0.35)','pointer-events':'none'}));
+    g.appendChild(s('circle',{cx,cy,r:3.5,fill:color,stroke:'rgba(0,0,0,0.5)','stroke-width':'1','pointer-events':'none'}));
+    g.appendChild(s('circle',{cx,cy,r:1.5,fill:'rgba(255,255,255,0.35)','pointer-events':'none'}));
   });
 }
 
@@ -1966,8 +1966,8 @@ function updatePreview(mx,my){
   const gp=document.getElementById('wire-preview-pts');
   gp.innerHTML='';
   state.wirePoints.forEach(p=>{
-    gp.appendChild(s('circle',{cx:p.x,cy:p.y,r:4.5,fill:state.wireColor,stroke:'rgba(255,255,255,0.6)','stroke-width':'1.5'}));
-    gp.appendChild(s('circle',{cx:p.x,cy:p.y,r:2,fill:'rgba(255,255,255,0.5)'}));
+    gp.appendChild(s('circle',{cx:p.x,cy:p.y,r:3,fill:state.wireColor,stroke:'rgba(255,255,255,0.6)','stroke-width':'1'}));
+    gp.appendChild(s('circle',{cx:p.x,cy:p.y,r:1.2,fill:'rgba(255,255,255,0.5)'}));
   });
 }
 
