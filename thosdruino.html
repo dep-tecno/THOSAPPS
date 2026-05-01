@@ -56,6 +56,19 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #props{width:220px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
 #props-hdr{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:.8rem;color:var(--green)}
 #props-body{padding:.8rem 1rem;overflow-y:auto;flex:1;font-size:.8rem}
+#verify-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;z-index:500;min-width:320px;max-width:460px;display:none;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.8)}
+#verify-hdr{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;border-bottom:1px solid var(--border)}
+#verify-hdr span{font-size:.85rem;font-weight:700;color:var(--green)}
+#verify-hdr button{background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:0 4px}
+#verify-hdr button:hover{color:var(--text)}
+#verify-body{padding:.8rem 1rem;display:flex;flex-direction:column;gap:.45rem;max-height:60vh;overflow-y:auto}
+.vi{display:flex;align-items:flex-start;gap:.55rem;padding:.4rem .65rem;border-radius:7px;line-height:1.45;font-size:.8rem}
+.vi.err{background:rgba(255,85,85,.1);border:1px solid rgba(255,85,85,.35);color:#ff9999}
+.vi.warn{background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.28);color:#ffd600}
+.vi.ok{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.28);color:var(--green)}
+#verify-sum{margin-top:.4rem;padding-top:.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--muted)}
+#btn-verify.issues{border-color:#ff5555;color:#ff5555}
+#btn-verify.ok{border-color:var(--green);color:var(--green)}
 </style>
 </head>
 <body>
@@ -110,6 +123,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div class="wc-dot" data-color="#ffd600" style="background:#ffd600" title="Groc"></div>
 </div>
 <span class="tb-sep"></span>
+<button id="btn-verify" title="Verificar circuit">🔍</button>
+<span class="tb-sep"></span>
 <button id="btn-rotate" title="Girar 90° (R)">↻</button>
 <button id="btn-copy" title="Copiar seleccionat (Ctrl+C)">⎘</button>
 <button id="btn-paste" title="Enganxar (Ctrl+V)">⎗</button>
@@ -117,6 +132,10 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <button id="btn-clear" title="Netejar tot">⊘</button>
 </div>
 
+<div id="verify-panel">
+  <div id="verify-hdr"><span>🔍 Verificació del circuit</span><button id="btn-verify-close">✕</button></div>
+  <div id="verify-body"></div>
+</div>
 <div id="text-overlay" style="position:fixed;display:none;z-index:250"><input id="text-input" placeholder="Escriu text, Enter per confirmar" autocomplete="off"/></div>
 <div id="sel-bar">
   <span class="sel-label" id="sel-label"></span>
@@ -2333,6 +2352,90 @@ document.getElementById('sel-rot').onclick=rotateSelected;
 document.getElementById('sel-copy').onclick=copySelected;
 document.getElementById('sel-dup').onclick=dupSelected;
 document.getElementById('sel-del').onclick=()=>document.getElementById('btn-delete').click();
+
+// ── Verificador de circuit ──
+function pinRole(pin){
+  const p=pin.toUpperCase();
+  if(/^(GND|G|-|VSS|NEG)$/.test(p))return'gnd';
+  if(/^(5V|VCC|V\+|VIN|\+5V)$/.test(p))return'5v';
+  if(/^(3V3|3\.3V|3V|3\.3)$/.test(p))return'3v3';
+  return null;
+}
+function verifyCircuit(){
+  const issues=[];
+  // Curt circuits i incompatibilitats de tensió
+  state.wires.forEach(w=>{
+    const r1=pinRole(w.from.pin),r2=pinRole(w.to.pin);
+    if(!r1||!r2)return;
+    if((r1==='gnd'&&r2==='5v')||(r1==='5v'&&r2==='gnd'))
+      issues.push({l:'err',m:'Curt circuit: GND connectat directament a 5V'});
+    if((r1==='gnd'&&r2==='3v3')||(r1==='3v3'&&r2==='gnd'))
+      issues.push({l:'err',m:'Curt circuit: GND connectat directament a 3.3V'});
+    if((r1==='5v'&&r2==='3v3')||(r1==='3v3'&&r2==='5v'))
+      issues.push({l:'err',m:'Tensió incompatible: pin 5V connectat a pin 3.3V'});
+  });
+  // Components sense cap connexió
+  const connComps=new Set();
+  state.wires.forEach(w=>{
+    if(w.from.kind==='comp')connComps.add(w.from.id);
+    if(w.to.kind==='comp')connComps.add(w.to.id);
+  });
+  state.components.forEach(c=>{
+    if(!connComps.has(c.id))
+      issues.push({l:'warn',m:`Sense connexions: ${COMPS[c.type].label}`});
+  });
+  // Canvas buit
+  if(state.boards.length===0&&state.components.length===0)
+    issues.push({l:'warn',m:'El canvas és buit'});
+  else if(state.boards.length===0&&state.components.length>0)
+    issues.push({l:'warn',m:'No hi ha cap placa (Arduino/ESP32) al canvas'});
+  // Pins de potència de component sense connexió
+  const connPins=new Set();
+  state.wires.forEach(w=>{
+    connPins.add(`${w.from.kind}-${w.from.id}:${w.from.pin}`);
+    connPins.add(`${w.to.kind}-${w.to.id}:${w.to.pin}`);
+  });
+  state.components.forEach(c=>{
+    COMPS[c.type].pins.forEach(p=>{
+      const r=pinRole(p.id);
+      if((r==='5v'||r==='gnd')&&!connPins.has(`comp-${c.id}:${p.id}`))
+        issues.push({l:'warn',m:`Pin ${p.id} de ${COMPS[c.type].label} sense connexió`});
+    });
+  });
+  // Mostrar panel
+  const body=document.getElementById('verify-body');
+  body.innerHTML='';
+  const btn=document.getElementById('btn-verify');
+  if(issues.length===0){
+    const el=document.createElement('div');
+    el.className='vi ok';
+    el.innerHTML='<span>✅</span><span>Cap problema detectat. Circuit correcte!</span>';
+    body.appendChild(el);
+    btn.className='ok';
+  } else {
+    const errs=issues.filter(i=>i.l==='err');
+    const warns=issues.filter(i=>i.l==='warn');
+    issues.forEach(i=>{
+      const el=document.createElement('div');
+      el.className='vi '+(i.l==='err'?'err':'warn');
+      el.innerHTML=`<span>${i.l==='err'?'❌':'⚠️'}</span><span>${i.m}</span>`;
+      body.appendChild(el);
+    });
+    if(issues.length>1){
+      const sum=document.createElement('div');
+      sum.id='verify-sum';
+      sum.textContent=`${errs.length} error${errs.length!==1?'s':''} · ${warns.length} avís${warns.length!==1?'os':''}`;
+      body.appendChild(sum);
+    }
+    btn.className=errs.length>0?'issues':'';
+  }
+  document.getElementById('verify-panel').style.display='flex';
+}
+document.getElementById('btn-verify').onclick=verifyCircuit;
+document.getElementById('btn-verify-close').onclick=()=>{
+  document.getElementById('verify-panel').style.display='none';
+  document.getElementById('btn-verify').className='';
+};
 
 setupDefs();buildPalette();buildBoardsPanel();updateView();renderAll();
 snapshot();
