@@ -48,7 +48,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #sel-bar .sel-btn.del:hover{border-color:#ff5555;color:#ff5555}
 .wire{fill:none;stroke-width:3.5;stroke-linecap:round;cursor:context-menu;transition:stroke-width .15s,opacity .15s}
 .wire:hover{stroke-width:5;opacity:.75}
-#btn-mode{font-size:.82rem;min-width:90px;transition:all .2s}
+#btn-mode{font-size:1rem;min-width:34px;transition:all .2s}
 #btn-mode.cable-on{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.12);font-weight:600}
 #palette{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
 #props{width:220px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
@@ -88,25 +88,24 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
   <span style="color:#60a5fa">THOS</span><span style="color:#e2e8f0">DRUINO</span>
 </span>
 <span class="tb-sep"></span>
-<button id="btn-undo" title="Desfer (Ctrl+Z)" disabled>↩ Desfer</button>
-<button id="btn-redo" title="Refer (Ctrl+Y)" disabled>↪ Refer</button>
+<button id="btn-undo" title="Desfer (Ctrl+Z)" disabled>↩</button>
+<button id="btn-redo" title="Refer (Ctrl+Y)" disabled>↪</button>
 <span class="tb-sep"></span>
-<button id="btn-save" title="Guardar projecte (JSON)">💾 Guardar</button>
-<button id="btn-open" title="Obrir projecte">📂 Obrir</button>
-<button id="btn-img" title="Descarregar imatge PNG">🖼 Imatge</button>
+<button id="btn-save" title="Guardar projecte (JSON)">💾</button>
+<button id="btn-open" title="Obrir projecte">📂</button>
+<button id="btn-img" title="Descarregar imatge PNG">🖼</button>
 <span class="tb-sep"></span>
-<button id="btn-zoom-in">+ Amplia</button><span id="zoom-pct">100%</span><button id="btn-zoom-out">− Redueix</button>
-<button id="btn-mode" title="Canvia entre mode Moure i mode Cable (W)">✋ Moure</button>
-<button id="btn-text" title="Afegir text (T)">T Text</button>
+<button id="btn-zoom-in" title="Ampliar">+</button><span id="zoom-pct">100%</span><button id="btn-zoom-out" title="Reduir">−</button>
+<button id="btn-mode" title="Canvia entre mode Moure i mode Cable (W)">✋</button>
+<button id="btn-text" title="Afegir text (T)">T</button>
 <span class="tb-sep"></span>
-<label style="font-size:.78rem;opacity:.7;white-space:nowrap" for="wire-color-picker">Cable:</label>
 <input type="color" id="wire-color-picker" value="#e53935" title="Color del cable"/>
 <span class="tb-sep"></span>
-<button id="btn-rotate" title="Girar 90° (R)">↻ Girar</button>
-<button id="btn-copy" title="Copiar seleccionat (Ctrl+C)">⎘ Copiar</button>
-<button id="btn-paste" title="Enganxar (Ctrl+V)">⎗ Enganxar</button>
-<button id="btn-delete" title="Eliminar seleccionat (Supr)">✕ Eliminar</button>
-<button id="btn-clear">⊘ Netejar</button>
+<button id="btn-rotate" title="Girar 90° (R)">↻</button>
+<button id="btn-copy" title="Copiar seleccionat (Ctrl+C)">⎘</button>
+<button id="btn-paste" title="Enganxar (Ctrl+V)">⎗</button>
+<button id="btn-delete" title="Eliminar seleccionat (Supr)">✕</button>
+<button id="btn-clear" title="Netejar tot">⊘</button>
 </div>
 
 <div id="text-overlay" style="position:fixed;display:none;z-index:250"><input id="text-input" placeholder="Escriu text, Enter per confirmar" autocomplete="off"/></div>
@@ -1818,14 +1817,14 @@ function setMode(m){
   const wrap=document.getElementById('canvas-wrap');
   btnT.classList.remove('text-on');
   if(m==='wire'){
-    btn.textContent='🔗 Cable';btn.classList.add('cable-on');
+    btn.textContent='🔗';btn.classList.add('cable-on');
     wrap.classList.add('cable-mode');wrap.classList.remove('move-mode');
   } else if(m==='text'){
-    btn.textContent='✋ Moure';btn.classList.remove('cable-on');
+    btn.textContent='✋';btn.classList.remove('cable-on');
     btnT.classList.add('text-on');
     wrap.classList.add('move-mode');wrap.classList.remove('cable-mode');
   } else {
-    btn.textContent='✋ Moure';btn.classList.remove('cable-on');
+    btn.textContent='✋';btn.classList.remove('cable-on');
     wrap.classList.add('move-mode');wrap.classList.remove('cable-mode');
   }
 }
