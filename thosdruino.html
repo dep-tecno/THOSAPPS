@@ -36,7 +36,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .pin-circle.wiring+.pin-dot{fill:#ffd54f;stroke:var(--green);stroke-width:2.5}
 .pin-circle.hover-pin+.pin-dot{fill:#00e676;stroke:#fff;stroke-width:2}
 .comp-group.selected>.comp-rect,.board-group.selected>.comp-rect{display:block}
-.comp-rect{display:none;fill:rgba(0,230,118,.06);stroke:var(--green);stroke-width:2.5;stroke-dasharray:8 4;pointer-events:none;filter:drop-shadow(0 0 6px rgba(0,230,118,.55))}
+.comp-rect{display:none;fill:rgba(0,230,118,.06);stroke:var(--green);stroke-width:2.5;stroke-dasharray:8 4;pointer-events:none}
 #sel-bar{position:fixed;display:none;z-index:250;background:#1a1d27;border:1.5px solid var(--green);border-radius:10px;padding:5px 10px;align-items:center;gap:7px;box-shadow:0 4px 20px rgba(0,0,0,.7),0 0 12px rgba(0,230,118,.2);transform:translateX(-50%);pointer-events:all;white-space:nowrap}
 #sel-bar::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--green)}
 #sel-bar .sel-label{font-size:.72rem;font-weight:700;color:var(--green);max-width:120px;overflow:hidden;text-overflow:ellipsis}
@@ -1107,8 +1107,8 @@ const BOARDS={
       g.appendChild(s('text',{x:145,y:60,'text-anchor':'middle','font-size':'4',fill:'rgba(255,255,255,0.6)','font-family':'monospace'},'POWER'));
       ['5V','GND','3V3','Vin'].forEach((l,i)=>{const px=122+i*12,py=70;g.appendChild(s('circle',{cx:px,cy:py,r:2.5,fill:'#c09000'}));g.appendChild(s('text',{x:px,y:py+8,'text-anchor':'middle','font-size':'3',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},l));});
       // Top/bottom edge connector rows (same as Uno)
-      [...[['AREF',24],['GND',38],['13',52],['12',66],['~11',80],['~10',94],['~9',108],['8',122]],[['7',150],['~6',164],['~5',178],['4',192],['~3',206],['2',220],['TX',234],['RX',248]]].flat().forEach(([n,x])=>{pad(x,12);lbl(x,26,n);});
-      [...[['IOREF',24],['RESET',38],['3V3',52],['5V',66],['GND',80],['GND',94],['VIN',108]],[['A0',166],['A1',180],['A2',194],['A3',208],['A4',222],['A5',236]]].flat().forEach(([n,x])=>{pad(x,210);lbl(x,200,n);});
+      [...[['AREF',24],['GND',38],['13',52],['12',66],['~11',80],['~10',94],['~9',108],['8',122]],...[['7',150],['~6',164],['~5',178],['4',192],['~3',206],['2',220],['TX',234],['RX',248]]].forEach(([n,x])=>{pad(x,12);lbl(x,26,n);});
+      [...[['IOREF',24],['RESET',38],['3V3',52],['5V',66],['GND',80],['GND',94],['VIN',108]],...[['A0',166],['A1',180],['A2',194],['A3',208],['A4',222],['A5',236]]].forEach(([n,x])=>{pad(x,210);lbl(x,200,n);});
       [[16,7,116,10],[142,7,116,10],[16,205,102,10],[158,205,88,10]].forEach(([x,y,w,h])=>g.appendChild(s('rect',{x,y,width:w,height:h,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'})));
     }
   },
@@ -1130,7 +1130,7 @@ const BOARDS={
       g.appendChild(s('rect',{x:pbx-4,y:pby-4,width:22*8+8,height:12*8+8,rx:3,fill:'#f5f0e8',stroke:'#ccc','stroke-width':'1.2'}));
       g.appendChild(s('rect',{x:pbx-4,y:pby-4,width:22*8+8,height:6,rx:2,fill:'#ef9a9a',opacity:'0.6'}));
       g.appendChild(s('rect',{x:pbx-4,y:pby+12*8-1,width:22*8+8,height:7,rx:2,fill:'#90caf9',opacity:'0.6'}));
-      for(let col=0;col<22;col++)for(let row=0;row<12;row++){const cx=pbx+col*8,cy=pby+row*8;g.appendChild(s('circle',{cx,cy,r:2.5,fill:'#c0a880',stroke:'#8a7060','stroke-width':'0.3'}));g.appendChild(s('circle',{cx,cy,r:1.2,fill:'#1a1a1a'}));}
+      for(let col=0;col<22;col++)for(let row=0;row<12;row++){const cx=pbx+col*8,cy=pby+row*8;g.appendChild(s('circle',{cx,cy,r:2.5,fill:'#c0a880',stroke:'#8a7060','stroke-width':'0.3','pointer-events':'none'}));g.appendChild(s('circle',{cx,cy,r:1.2,fill:'#1a1a1a','pointer-events':'none'}));}
       // Reset button
       g.appendChild(s('rect',{x:258,y:50,width:16,height:16,rx:3,fill:'#546e7a',stroke:'#37474f','stroke-width':'0.8'}));
       g.appendChild(s('circle',{cx:266,cy:58,r:5,fill:'#607d8b'}));
@@ -1142,8 +1142,8 @@ const BOARDS={
       g.appendChild(s('text',{x:pbx+2,y:pby+152,'font-size':'4',fill:'rgba(200,80,80,0.9)','font-family':'monospace'},'+5V'));
       g.appendChild(s('text',{x:pbx+2,y:pby+112,'font-size':'4',fill:'rgba(80,120,200,0.9)','font-family':'monospace'},'GND'));
       // Top/bottom edge connector rows
-      [...[['AREF',24],['GND',38],['13',52],['12',66],['~11',80],['~10',94],['~9',108],['8',122]],[['7',150],['~6',164],['~5',178],['4',192],['~3',206],['2',220],['TX',234],['RX',248]]].flat().forEach(([n,x])=>{pad(x,12);lbl(x,26,n);});
-      [...[['IOREF',24],['RESET',38],['3V3',52],['5V',66],['GND',80],['GND',94],['VIN',108]],[['A0',166],['A1',180],['A2',194],['A3',208],['A4',222],['A5',236]]].flat().forEach(([n,x])=>{pad(x,210);lbl(x,200,n);});
+      [...[['AREF',24],['GND',38],['13',52],['12',66],['~11',80],['~10',94],['~9',108],['8',122]],...[['7',150],['~6',164],['~5',178],['4',192],['~3',206],['2',220],['TX',234],['RX',248]]].forEach(([n,x])=>{pad(x,12);lbl(x,26,n);});
+      [...[['IOREF',24],['RESET',38],['3V3',52],['5V',66],['GND',80],['GND',94],['VIN',108]],...[['A0',166],['A1',180],['A2',194],['A3',208],['A4',222],['A5',236]]].forEach(([n,x])=>{pad(x,210);lbl(x,200,n);});
       [[16,7,116,10],[142,7,116,10],[16,205,102,10],[158,205,88,10]].forEach(([x,y,w,h])=>g.appendChild(s('rect',{x,y,width:w,height:h,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'})));
     }
   },
@@ -1158,9 +1158,9 @@ const BOARDS={
         for(let row=0;row<5;row++){
           const pu='U'+col+'_'+row,pl='L'+col+'_'+row;
           g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:4,class:'pin-circle','data-pin':pu}));
-          g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:2,fill:'#999',class:'pin-dot','data-pin':pu}));
+          g.appendChild(s('circle',{cx:20+col*8,cy:35+row*8,r:2.2,fill:'#888',stroke:'#555','stroke-width':'0.4','pointer-events':'none','data-pin':pu}));
           g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:4,class:'pin-circle','data-pin':pl}));
-          g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:2,fill:'#999',class:'pin-dot','data-pin':pl}));
+          g.appendChild(s('circle',{cx:20+col*8,cy:105+row*8,r:2.2,fill:'#888',stroke:'#555','stroke-width':'0.4','pointer-events':'none','data-pin':pl}));
         }
       }
     }
