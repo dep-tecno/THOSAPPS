@@ -14,6 +14,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .nav-links a:hover,.nav-links a.active{color:var(--green);border-bottom-color:var(--green)}
 #toolbar{display:flex;align-items:center;gap:.5rem;padding:.4rem 1rem;background:var(--bg2);border-bottom:1px solid var(--border);height:44px;flex-shrink:0}
 #toolbar select,#toolbar button{height:30px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.25rem .6rem;font-size:.8rem;cursor:pointer}
+#app-brand{display:flex;align-items:center;gap:6px;font-size:.9rem;font-weight:700;letter-spacing:.04em;flex-shrink:0;white-space:nowrap}
+#wire-color-picker{width:34px;height:28px;padding:2px 3px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);cursor:pointer;vertical-align:middle}
 #toolbar button:hover{border-color:var(--green);color:var(--green)}
 #toolbar button:disabled{opacity:.3;cursor:default;pointer-events:none}
 .tb-sep{width:1px;height:22px;background:var(--border);flex-shrink:0}
@@ -72,6 +74,20 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 </nav>
 
 <div id="toolbar">
+<span id="app-brand">
+  <svg width="20" height="20" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="4" y="4" width="10" height="10" rx="2" fill="#1e3a5f" stroke="#60a5fa" stroke-width="1.2"/>
+    <line x1="1" y1="6.5" x2="4" y2="6.5" stroke="#60a5fa" stroke-width="1.2"/>
+    <line x1="1" y1="9" x2="4" y2="9" stroke="#60a5fa" stroke-width="1.2"/>
+    <line x1="1" y1="11.5" x2="4" y2="11.5" stroke="#60a5fa" stroke-width="1.2"/>
+    <line x1="14" y1="6.5" x2="17" y2="6.5" stroke="#60a5fa" stroke-width="1.2"/>
+    <line x1="14" y1="9" x2="17" y2="9" stroke="#60a5fa" stroke-width="1.2"/>
+    <line x1="14" y1="11.5" x2="17" y2="11.5" stroke="#60a5fa" stroke-width="1.2"/>
+    <circle cx="6.5" cy="6.5" r="1" fill="#60a5fa"/>
+  </svg>
+  <span style="color:#60a5fa">THOS</span><span style="color:#e2e8f0">DRUINO</span>
+</span>
+<span class="tb-sep"></span>
 <button id="btn-undo" title="Desfer (Ctrl+Z)" disabled>↩ Desfer</button>
 <button id="btn-redo" title="Refer (Ctrl+Y)" disabled>↪ Refer</button>
 <span class="tb-sep"></span>
@@ -83,15 +99,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <button id="btn-mode" title="Canvia entre mode Moure i mode Cable (W)">✋ Moure</button>
 <button id="btn-text" title="Afegir text (T)">T Text</button>
 <span class="tb-sep"></span>
-<span style="font-size:.78rem;opacity:.7" id="lbl-cable">Cable:</span>
-<div id="wire-colors" style="display:flex;gap:4px">
-<div class="wc-dot active" data-color="#e53935" style="background:#e53935;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
-<div class="wc-dot" data-color="#212121" style="background:#555;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
-<div class="wc-dot" data-color="#1e88e5" style="background:#1e88e5;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
-<div class="wc-dot" data-color="#43a047" style="background:#43a047;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
-<div class="wc-dot" data-color="#ffd600" style="background:#ffd600;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
-<div class="wc-dot" data-color="#eeeeee" style="background:#ccc;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
-</div>
+<label style="font-size:.78rem;opacity:.7;white-space:nowrap" for="wire-color-picker">Cable:</label>
+<input type="color" id="wire-color-picker" value="#e53935" title="Color del cable"/>
 <span class="tb-sep"></span>
 <button id="btn-rotate" title="Girar 90° (R)">↻ Girar</button>
 <button id="btn-copy" title="Copiar seleccionat (Ctrl+C)">⎘ Copiar</button>
@@ -1984,7 +1993,7 @@ document.getElementById('btn-delete').onclick=()=>{
   }
 };
 document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.boards=[];state.components=[];state.wires=[];state.texts=[];renderAll();snapshot();}};
-document.getElementById('wire-colors').querySelectorAll('.wc-dot').forEach(d=>d.onclick=()=>{document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');state.wireColor=d.dataset.color;});
+document.getElementById('wire-color-picker').oninput=e=>{state.wireColor=e.target.value;};
 
 function updateSelBar(){
   const bar=document.getElementById('sel-bar');
