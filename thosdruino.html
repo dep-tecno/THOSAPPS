@@ -93,8 +93,11 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div class="wc-dot" data-color="#eeeeee" style="background:#ccc;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent"></div>
 </div>
 <span class="tb-sep"></span>
-<button id="btn-dup" title="Duplicar seleccionat">⎘ Duplicar</button>
-<button id="btn-delete">✕ Eliminar</button>
+<button id="btn-rotate" title="Girar 90° (R)">↻ Girar</button>
+<button id="btn-copy" title="Copiar seleccionat (Ctrl+C)">⎘ Copiar</button>
+<button id="btn-paste" title="Enganxar (Ctrl+V)">⎗ Enganxar</button>
+<button id="btn-dup" title="Duplicar seleccionat">⧉ Duplicar</button>
+<button id="btn-delete" title="Eliminar seleccionat (Supr)">✕ Eliminar</button>
 <button id="btn-clear">⊘ Netejar</button>
 </div>
 
@@ -102,7 +105,9 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div id="sel-bar">
   <span class="sel-label" id="sel-label"></span>
   <span class="sel-sep"></span>
-  <button class="sel-btn" id="sel-dup" title="Duplicar (D)">⎘ Copiar</button>
+  <button class="sel-btn" id="sel-rot" title="Girar 90° (R)">↻ Girar</button>
+  <button class="sel-btn" id="sel-copy" title="Copiar (Ctrl+C)">⎘ Copiar</button>
+  <button class="sel-btn" id="sel-dup" title="Duplicar">⧉ Duplicar</button>
   <button class="sel-btn del" id="sel-del" title="Eliminar (Supr)">✕ Eliminar</button>
 </div>
 <div id="pin-tip" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--green);color:var(--green);padding:2px 8px;font-size:.68rem;border-radius:4px;pointer-events:none;z-index:300;white-space:nowrap;font-family:monospace"></div>
@@ -1510,7 +1515,7 @@ const BOARDS={
   },
 };
 
-const state={boards:[],components:[],wires:[],texts:[],view:{x:0,y:0,s:1},selected:null,selectedBoard:null,wireMode:false,wireStart:null,wirePoints:[],wireColor:'#e53935',compId:0,boardId:0,wireId:0,textId:0,mode:'move'};
+const state={boards:[],components:[],wires:[],texts:[],view:{x:0,y:0,s:1},selected:null,selectedBoard:null,wireMode:false,wireStart:null,wirePoints:[],wireColor:'#e53935',compId:0,boardId:0,wireId:0,textId:0,mode:'move',clipboard:null};
 
 
 function buildBoardsPanel(){
@@ -1671,12 +1676,21 @@ function getPinInfo(el){
   if(bg)return{kind:'board',id:+bg.dataset.boardId,pin:el.dataset.pin};
   return null;
 }
+function rotPt(px,py,cx,cy,deg){
+  const r=deg*Math.PI/180,cos=Math.cos(r),sin=Math.sin(r);
+  const dx=px-cx,dy=py-cy;
+  return{x:dx*cos-dy*sin+cx,y:dx*sin+dy*cos+cy};
+}
 function getPinPos(ep){
   if(ep.kind==='comp'){
     const c=state.components.find(c=>c.id===ep.id);
     if(!c)return null;
-    const p=COMPS[c.type].pins.find(p=>p.id===ep.pin);
-    return p?{x:c.x+p.x,y:c.y+p.y}:null;
+    const d=COMPS[c.type];
+    const p=d.pins.find(p=>p.id===ep.pin);
+    if(!p)return null;
+    const rot=c.rot||0;
+    if(rot){const rp=rotPt(p.x,p.y,d.w/2,d.h/2,rot);return{x:c.x+rp.x,y:c.y+rp.y};}
+    return{x:c.x+p.x,y:c.y+p.y};
   }
   const b=state.boards.find(b=>b.id===ep.id);
   if(!b)return null;
@@ -1718,7 +1732,9 @@ function renderBoards(){
   g.innerHTML='';
   state.boards.forEach(b=>{
     const d=BOARDS[b.type];
-    const bg=s('g',{id:`board-${b.id}`,class:'board-group',transform:`translate(${b.x},${b.y})`,style:'cursor:grab'});
+    const rot=b.rot||0;
+    const tf=rot?`translate(${b.x},${b.y}) rotate(${rot},${d.w/2},${d.h/2})`:`translate(${b.x},${b.y})`;
+    const bg=s('g',{id:`board-${b.id}`,class:'board-group',transform:tf,style:'cursor:grab'});
     bg.dataset.boardId=b.id;
     if(state.selectedBoard===b.id)bg.classList.add('selected');
     d.render(bg);
@@ -1736,7 +1752,9 @@ function renderComponents(){
   g.innerHTML='';
   state.components.forEach(c=>{
     const d=COMPS[c.type];
-    const cg=s('g',{id:`comp-${c.id}`,class:'comp-group',transform:`translate(${c.x},${c.y})`,style:'cursor:grab'});
+    const rot=c.rot||0;
+    const tf=rot?`translate(${c.x},${c.y}) rotate(${rot},${d.w/2},${d.h/2})`:`translate(${c.x},${c.y})`;
+    const cg=s('g',{id:`comp-${c.id}`,class:'comp-group',transform:tf,style:'cursor:grab'});
     cg.dataset.id=c.id;
     if(state.selected===c.id)cg.classList.add('selected');
     d.render(cg);
@@ -1939,9 +1957,12 @@ document.addEventListener('keydown',e=>{
   if(e.target===textInput)return;
   if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();return;}
   if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){e.preventDefault();redo();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key==='c'){e.preventDefault();copySelected();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key==='v'){e.preventDefault();pasteClipboard();return;}
   if(e.key==='Escape'){if(state.wireMode)cancelWire();else setMode('move');}
   if(e.key==='w'||e.key==='W'){setMode(state.mode==='wire'?'move':'wire');}
   if(e.key==='t'||e.key==='T'){setMode(state.mode==='text'?'move':'text');}
+  if(e.key==='r'||e.key==='R'){rotateSelected();return;}
   if(e.key==='Delete'||e.key==='Backspace'){document.getElementById('btn-delete').click();}
 });
 document.getElementById('btn-text').onclick=()=>setMode(state.mode==='text'?'move':'text');
@@ -2117,7 +2138,44 @@ function dupSelected(){
     state.boards.push(nb);renderAll();selectBoard(nb.id);snapshot();
   }
 }
+function rotateSelected(){
+  if(state.selected!==null){
+    const c=state.components.find(c=>c.id===state.selected);
+    if(!c)return;
+    c.rot=((c.rot||0)+90)%360;
+    renderAll();snapshot();
+  } else if(state.selectedBoard!==null){
+    const b=state.boards.find(b=>b.id===state.selectedBoard);
+    if(!b)return;
+    b.rot=((b.rot||0)+90)%360;
+    renderAll();snapshot();
+  }
+}
+function copySelected(){
+  if(state.selected!==null){
+    const orig=state.components.find(c=>c.id===state.selected);
+    if(orig)state.clipboard={kind:'comp',data:JSON.parse(JSON.stringify(orig))};
+  } else if(state.selectedBoard!==null){
+    const orig=state.boards.find(b=>b.id===state.selectedBoard);
+    if(orig)state.clipboard={kind:'board',data:JSON.parse(JSON.stringify(orig))};
+  }
+}
+function pasteClipboard(){
+  if(!state.clipboard)return;
+  if(state.clipboard.kind==='comp'){
+    const nc={...state.clipboard.data,id:state.compId++,x:state.clipboard.data.x+32,y:state.clipboard.data.y+32};
+    state.components.push(nc);renderAll();select(nc.id);snapshot();
+  } else if(state.clipboard.kind==='board'){
+    const nb={...state.clipboard.data,id:state.boardId++,x:state.clipboard.data.x+32,y:state.clipboard.data.y+32};
+    state.boards.push(nb);renderAll();selectBoard(nb.id);snapshot();
+  }
+}
+document.getElementById('btn-rotate').onclick=rotateSelected;
+document.getElementById('btn-copy').onclick=copySelected;
+document.getElementById('btn-paste').onclick=pasteClipboard;
 document.getElementById('btn-dup').onclick=dupSelected;
+document.getElementById('sel-rot').onclick=rotateSelected;
+document.getElementById('sel-copy').onclick=copySelected;
 document.getElementById('sel-dup').onclick=dupSelected;
 document.getElementById('sel-del').onclick=()=>document.getElementById('btn-delete').click();
 
