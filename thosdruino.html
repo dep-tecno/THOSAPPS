@@ -1053,26 +1053,150 @@ const COMPS={
     [16,28,40].forEach(x=>{g.appendChild(s('line',{x1:x,y1:54,x2:x,y2:62,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));});
   }},
   'ky038':{icon:'🎤',label:'KY038 Mic',w:58,h:66,pins:[{id:'A',x:14,y:64},{id:'G',x:29,y:64},{id:'D',x:44,y:64}],render(g){
-    // PCB
     g.appendChild(s('rect',{x:4,y:8,width:50,height:50,rx:3,fill:'url(#pcb)',stroke:'#0d3d14','stroke-width':'2'}));
-    // Electret mic capsule
     g.appendChild(s('circle',{cx:22,cy:26,r:10,fill:'#1a1a1a',stroke:'#3a3a3a','stroke-width':'1.5'}));
     g.appendChild(s('circle',{cx:22,cy:26,r:8,fill:'#2a2a2a'}));
     for(let i=0;i<3;i++) g.appendChild(s('rect',{x:18,y:21+i*4,width:8,height:1.8,fill:'#111',rx:0.5}));
     g.appendChild(s('ellipse',{cx:19,cy:21,rx:3.5,ry:2.5,fill:'rgba(255,255,255,0.08)'}));
-    // Comparator IC
     g.appendChild(s('rect',{x:34,y:18,width:16,height:12,rx:1,fill:'#111',stroke:'#333','stroke-width':'0.5'}));
     g.appendChild(s('text',{x:42,y:27,'text-anchor':'middle','font-size':'4','fill':'#666','font-family':'monospace'},'LM393'));
-    // Trimmer potentiometer
     g.appendChild(s('circle',{cx:42,cy:42,r:5,fill:'#444',stroke:'#333','stroke-width':'0.8'}));
     g.appendChild(s('line',{x1:39,y1:42,x2:45,y2:42,stroke:'#999','stroke-width':'1'}));
-    // Status LED
     g.appendChild(s('circle',{cx:10,cy:50,r:3,fill:'#ff3333'}));
-    // Leads
     [14,29,44].forEach(x=>{
       g.appendChild(s('line',{x1:x,y1:58,x2:x,y2:64,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));
     });
-  }}
+  }},
+
+  // ── Components discrets ──
+  'transistor':{icon:'🔺',label:'Transistor BC547',w:24,h:48,
+    pins:[{id:'C',x:4,y:48},{id:'B',x:12,y:48},{id:'E',x:20,y:48}],
+    render(g){
+      g.appendChild(s('line',{x1:4,y1:28,x2:4,y2:48,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:12,y1:28,x2:12,y2:48,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:20,y1:28,x2:20,y2:48,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+      g.appendChild(s('rect',{x:2,y:18,width:20,height:12,rx:1,fill:'url(#black-plastic)',stroke:'#000','stroke-width':'1.2'}));
+      g.appendChild(s('path',{d:'M 2 18 A 10 10 0 0 1 22 18',fill:'url(#black-plastic)',stroke:'#000','stroke-width':'1.2'}));
+      g.appendChild(s('ellipse',{cx:9,cy:15,rx:4,ry:2.5,fill:'rgba(255,255,255,0.12)'}));
+      g.appendChild(s('text',{x:12,y:26,'text-anchor':'middle','font-size':'3.5','fill':'rgba(200,200,200,0.85)','font-family':'monospace'},'BC547'));
+      g.appendChild(s('text',{x:4,y:43,'text-anchor':'middle','font-size':'3.5','fill':'rgba(255,255,255,0.45)','font-family':'monospace'},'C'));
+      g.appendChild(s('text',{x:12,y:43,'text-anchor':'middle','font-size':'3.5','fill':'rgba(255,255,255,0.45)','font-family':'monospace'},'B'));
+      g.appendChild(s('text',{x:20,y:43,'text-anchor':'middle','font-size':'3.5','fill':'rgba(255,255,255,0.45)','font-family':'monospace'},'E'));
+    }},
+  'diode':{icon:'⬡',label:'Díode 1N4007',w:32,h:20,
+    pins:[{id:'A',x:0,y:10},{id:'K',x:32,y:10}],
+    render(g){
+      g.appendChild(s('line',{x1:0,y1:10,x2:8,y2:10,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:24,y1:10,x2:32,y2:10,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+      g.appendChild(s('ellipse',{cx:16,cy:10,rx:8,ry:6,fill:'#b0bec5',stroke:'#78909c','stroke-width':'1'}));
+      g.appendChild(s('rect',{x:21,y:4,width:3,height:12,fill:'#37474f'}));
+      g.appendChild(s('ellipse',{cx:12,cy:7,rx:4.5,ry:2,fill:'rgba(255,255,255,0.5)'}));
+      g.appendChild(s('text',{x:4,y:8,'text-anchor':'middle','font-size':'3.5','fill':'rgba(40,40,40,0.9)','font-family':'monospace'},'A'));
+      g.appendChild(s('text',{x:28,y:8,'text-anchor':'middle','font-size':'3.5','fill':'rgba(40,40,40,0.9)','font-family':'monospace'},'K'));
+    }},
+  'cap-elec':{icon:'🔋',label:'Condensador 100µF',w:24,h:52,
+    pins:[{id:'+',x:8,y:52},{id:'-',x:16,y:52}],
+    render(g){
+      g.appendChild(s('rect',{x:4,y:10,width:16,height:28,rx:3,fill:'#1a237e',stroke:'#0d1452','stroke-width':'1.2'}));
+      g.appendChild(s('ellipse',{cx:12,cy:10,rx:8,ry:4,fill:'#283593',stroke:'#0d1452','stroke-width':'1'}));
+      g.appendChild(s('ellipse',{cx:12,cy:38,rx:8,ry:3,fill:'#1a237e',stroke:'#0d1452','stroke-width':'1'}));
+      g.appendChild(s('rect',{x:16,y:10,width:4,height:28,rx:2,fill:'#e8eaf6',opacity:'0.75'}));
+      g.appendChild(s('text',{x:10,y:27,'text-anchor':'middle','font-size':'7','fill':'rgba(255,255,255,0.8)','font-weight':'bold'},'+'));
+      g.appendChild(s('text',{x:12,y:34,'text-anchor':'middle','font-size':'3','fill':'rgba(255,255,255,0.5)','font-family':'monospace'},'100uF'));
+      g.appendChild(s('line',{x1:8,y1:38,x2:8,y2:52,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:16,y1:38,x2:16,y2:52,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+    }},
+  'cap-cer':{icon:'🟠',label:'Condensador 100nF',w:24,h:40,
+    pins:[{id:'1',x:8,y:40},{id:'2',x:16,y:40}],
+    render(g){
+      g.appendChild(s('ellipse',{cx:12,cy:14,rx:10,ry:7,fill:'#e65100',stroke:'#bf360c','stroke-width':'1.2'}));
+      g.appendChild(s('ellipse',{cx:9,cy:10,rx:5,ry:3,fill:'rgba(255,255,255,0.3)'}));
+      g.appendChild(s('text',{x:12,y:17,'text-anchor':'middle','font-size':'4','fill':'rgba(255,255,255,0.9)','font-family':'monospace'},'104'));
+      g.appendChild(s('line',{x1:8,y1:20,x2:8,y2:40,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+      g.appendChild(s('line',{x1:16,y1:20,x2:16,y2:40,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
+    }},
+  'ne555':{icon:'⏱️',label:'NE555 Timer',w:56,h:48,
+    pins:[
+      {id:'GND',x:0,y:8},{id:'TR',x:0,y:16},{id:'OUT',x:0,y:24},{id:'RST',x:0,y:32},
+      {id:'VCC',x:56,y:8},{id:'DIS',x:56,y:16},{id:'THR',x:56,y:24},{id:'CV',x:56,y:32}
+    ],
+    render(g){
+      [8,16,24,32].forEach(y=>{
+        g.appendChild(s('line',{x1:0,y1:y,x2:8,y2:y,stroke:'url(#silver)','stroke-width':'2'}));
+        g.appendChild(s('line',{x1:48,y1:y,x2:56,y2:y,stroke:'url(#silver)','stroke-width':'2'}));
+      });
+      g.appendChild(s('rect',{x:8,y:2,width:40,height:38,rx:2,fill:'url(#black-plastic)',stroke:'#000','stroke-width':'1.5'}));
+      g.appendChild(s('path',{d:'M 22 2 A 6 5 0 0 0 34 2',fill:'#111',stroke:'#333','stroke-width':'1'}));
+      g.appendChild(s('circle',{cx:11,cy:5,r:1.5,fill:'rgba(255,255,255,0.4)'}));
+      g.appendChild(s('text',{x:28,y:18,'text-anchor':'middle','font-size':'8','fill':'#fff','font-weight':'bold','font-family':'monospace'},'NE555'));
+      g.appendChild(s('text',{x:28,y:28,'text-anchor':'middle','font-size':'4.5','fill':'#888','font-family':'monospace'},'TIMER'));
+      g.appendChild(s('rect',{x:9,y:3,width:38,height:5,rx:1,fill:'rgba(255,255,255,0.08)'}));
+    }},
+
+  // ── Mòduls de comunicació ──
+  'oled':{icon:'📱',label:'OLED 0.96" SSD1306',w:72,h:80,
+    pins:[{id:'GND',x:24,y:80},{id:'VCC',x:32,y:80},{id:'SCL',x:40,y:80},{id:'SDA',x:48,y:80}],
+    render(g){
+      g.appendChild(s('rect',{x:2,y:8,width:68,height:58,rx:3,fill:'url(#pcb-dark)',stroke:'#1e3a5f','stroke-width':'1.5'}));
+      g.appendChild(s('rect',{x:6,y:12,width:60,height:38,rx:2,fill:'#111',stroke:'#2a2a2a','stroke-width':'1'}));
+      g.appendChild(s('rect',{x:8,y:14,width:56,height:34,rx:1,fill:'#040408'}));
+      g.appendChild(s('text',{x:13,y:22,'font-size':'5','fill':'rgba(100,180,255,0.85)','font-family':'monospace','font-weight':'bold'},'Hello World!'));
+      g.appendChild(s('text',{x:13,y:30,'font-size':'4.5','fill':'rgba(100,180,255,0.65)','font-family':'monospace'},'Temp: 23.5 C'));
+      g.appendChild(s('text',{x:13,y:38,'font-size':'4.5','fill':'rgba(100,180,255,0.45)','font-family':'monospace'},'Hum:  62 %'));
+      g.appendChild(s('text',{x:36,y:56,'text-anchor':'middle','font-size':'5','fill':'#60a5fa','font-family':'monospace','font-weight':'bold'},'SSD1306'));
+      g.appendChild(s('text',{x:36,y:62,'text-anchor':'middle','font-size':'3.5','fill':'#4a8fbf','font-family':'monospace'},'0.96" OLED I2C'));
+      [{cx:5,cy:11},{cx:69,cy:11},{cx:5,cy:63},{cx:69,cy:63}].forEach(({cx,cy})=>
+        g.appendChild(s('circle',{cx,cy,r:2,fill:'none',stroke:'#2a4a6f','stroke-width':'1'}))
+      );
+      [{id:'GND',x:24},{id:'VCC',x:32},{id:'SCL',x:40},{id:'SDA',x:48}].forEach(p=>{
+        g.appendChild(s('line',{x1:p.x,y1:66,x2:p.x,y2:80,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));
+        g.appendChild(s('text',{x:p.x,y:76,'text-anchor':'middle','font-size':'3','fill':'rgba(180,220,255,0.6)','font-family':'monospace'},p.id));
+      });
+      g.appendChild(s('rect',{x:3,y:9,width:66,height:4,rx:1,fill:'rgba(255,255,255,0.06)'}));
+    }},
+  'mpu6050':{icon:'🔄',label:'MPU6050 Accel/Gyro',w:80,h:84,
+    pins:[
+      {id:'VCC',x:8,y:84},{id:'GND',x:16,y:84},{id:'SCL',x:24,y:84},{id:'SDA',x:32,y:84},
+      {id:'XDA',x:40,y:84},{id:'XCL',x:48,y:84},{id:'ADO',x:56,y:84},{id:'INT',x:64,y:84}
+    ],
+    render(g){
+      g.appendChild(s('rect',{x:2,y:8,width:76,height:62,rx:3,fill:'url(#pcb-dark)',stroke:'#1e3a5f','stroke-width':'1.5'}));
+      g.appendChild(s('rect',{x:26,y:18,width:28,height:28,rx:1,fill:'#0d0d0d',stroke:'#2a2a2a','stroke-width':'1.2'}));
+      g.appendChild(s('rect',{x:28,y:20,width:24,height:24,rx:0.5,fill:'#111'}));
+      g.appendChild(s('text',{x:40,y:30,'text-anchor':'middle','font-size':'4.5','fill':'rgba(180,180,180,0.85)','font-family':'monospace','font-weight':'bold'},'MPU'));
+      g.appendChild(s('text',{x:40,y:37,'text-anchor':'middle','font-size':'4.5','fill':'rgba(180,180,180,0.85)','font-family':'monospace','font-weight':'bold'},'6050'));
+      g.appendChild(s('circle',{cx:29,cy:21,r:1.5,fill:'rgba(255,255,255,0.5)'}));
+      g.appendChild(s('rect',{x:8,y:24,width:12,height:5,rx:1,fill:'#1a2a3a',stroke:'#0a1a2a','stroke-width':'0.5'}));
+      g.appendChild(s('rect',{x:60,y:38,width:12,height:4,rx:1,fill:'#2a1a1a',stroke:'#1a0a0a','stroke-width':'0.5'}));
+      g.appendChild(s('text',{x:40,y:56,'text-anchor':'middle','font-size':'4.5','fill':'#60a5fa','font-family':'monospace'},'Accel + Gyro'));
+      g.appendChild(s('text',{x:40,y:63,'text-anchor':'middle','font-size':'3.5','fill':'#4a8fbf','font-family':'monospace'},'I2C  3.3V'));
+      [8,16,24,32,40,48,56,64].forEach(x=>
+        g.appendChild(s('line',{x1:x,y1:70,x2:x,y2:84,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}))
+      );
+      g.appendChild(s('rect',{x:3,y:9,width:74,height:4,rx:1,fill:'rgba(255,255,255,0.06)'}));
+    }},
+  'hc05':{icon:'📶',label:'HC-05 Bluetooth',w:64,h:88,
+    pins:[
+      {id:'EN',x:12,y:88},{id:'VCC',x:20,y:88},{id:'GND',x:28,y:88},
+      {id:'TX',x:36,y:88},{id:'RX',x:44,y:88},{id:'ST',x:52,y:88}
+    ],
+    render(g){
+      g.appendChild(s('rect',{x:2,y:8,width:60,height:66,rx:3,fill:'url(#pcb-blue)',stroke:'#0a1929','stroke-width':'1.5'}));
+      g.appendChild(s('rect',{x:8,y:14,width:48,height:36,rx:2,fill:'url(#shield)',stroke:'#888','stroke-width':'1.2'}));
+      g.appendChild(s('rect',{x:22,y:2,width:20,height:14,rx:1,fill:'url(#shield)',stroke:'#888','stroke-width':'1'}));
+      g.appendChild(s('line',{x1:32,y1:2,x2:32,y2:0,stroke:'#bbb','stroke-width':'2'}));
+      g.appendChild(s('text',{x:32,y:28,'text-anchor':'middle','font-size':'6','fill':'#1a1a1a','font-weight':'bold','font-family':'monospace'},'HC-05'));
+      g.appendChild(s('text',{x:32,y:37,'text-anchor':'middle','font-size':'4','fill':'#333','font-family':'monospace'},'Bluetooth'));
+      g.appendChild(s('circle',{cx:54,cy:55,r:5,fill:'url(#led-glow-blue)',opacity:'0.5'}));
+      g.appendChild(s('circle',{cx:54,cy:55,r:3,fill:'url(#led-blue)',stroke:'#0d47a1','stroke-width':'0.8'}));
+      g.appendChild(s('text',{x:30,y:58,'text-anchor':'middle','font-size':'4','fill':'rgba(150,200,255,0.7)','font-family':'monospace'},'AT v1.3'));
+      g.appendChild(s('text',{x:30,y:64,'text-anchor':'middle','font-size':'3.5','fill':'rgba(100,160,220,0.6)','font-family':'monospace'},'3.3V/5V compat.'));
+      [{id:'EN',x:12},{id:'VCC',x:20},{id:'GND',x:28},{id:'TX',x:36},{id:'RX',x:44},{id:'ST',x:52}].forEach(p=>{
+        g.appendChild(s('line',{x1:p.x,y1:74,x2:p.x,y2:88,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));
+        g.appendChild(s('text',{x:p.x,y:84,'text-anchor':'middle','font-size':'3','fill':'rgba(100,180,255,0.7)','font-family':'monospace'},p.id));
+      });
+      g.appendChild(s('rect',{x:3,y:9,width:58,height:4,rx:1,fill:'rgba(255,255,255,0.08)'}));
+    }}
 };
 
 const BOARDS={
@@ -1584,6 +1708,13 @@ function buildPalette(){
       {name:'buzzer',icon:'🔊',label:'Buzzer (KY006)'},
       {name:'ky012',icon:'🔊',label:'KY012 Buzzer Passiu'}
     ]],
+    ['🔩 Discrets',[
+      {name:'transistor',icon:'🔺',label:'Transistor BC547'},
+      {name:'diode',icon:'⬡',label:'Díode 1N4007'},
+      {name:'cap-elec',icon:'🔋',label:'Condensador 100µF'},
+      {name:'cap-cer',icon:'🟠',label:'Condensador 100nF'},
+      {name:'ne555',icon:'⏱️',label:'NE555 Timer'}
+    ]],
     ['🔌 Actuadors',[
       {name:'pot',icon:'🎚️',label:'Potenciòmetre'},
       {name:'servo',icon:'⚙️',label:'Servo'},
@@ -1638,6 +1769,11 @@ function buildPalette(){
       {name:'ky036',icon:'🖐️',label:'KY036 Tàctil Metal'},
       {name:'ky026',icon:'🔥',label:'KY026 Flama'},
       {name:'ky039',icon:'💓',label:'KY039 Pulsòmetre'}
+    ]],
+    ['📡 Comunicació',[
+      {name:'oled',icon:'📱',label:'OLED 0.96" SSD1306'},
+      {name:'mpu6050',icon:'🔄',label:'MPU6050 Accel/Gyro'},
+      {name:'hc05',icon:'📶',label:'HC-05 Bluetooth'}
     ]]
   ];
   categories.forEach(([title,items])=>{
