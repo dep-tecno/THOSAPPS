@@ -15,7 +15,10 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #toolbar{display:flex;align-items:center;gap:.5rem;padding:.4rem 1rem;background:var(--bg2);border-bottom:1px solid var(--border);height:44px;flex-shrink:0}
 #toolbar select,#toolbar button{height:30px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.25rem .6rem;font-size:.8rem;cursor:pointer}
 #app-brand{display:flex;align-items:center;gap:6px;font-size:.9rem;font-weight:700;letter-spacing:.04em;flex-shrink:0;white-space:nowrap}
-#wire-color-picker{width:34px;height:28px;padding:2px 3px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);cursor:pointer;vertical-align:middle}
+#wire-color-picker{width:30px;height:26px;padding:1px 2px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);cursor:pointer;vertical-align:middle}
+.wc-dot{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid transparent;flex-shrink:0;transition:border-color .15s,transform .1s}
+.wc-dot:hover{transform:scale(1.2)}
+.wc-dot.active{border-color:#fff}
 #toolbar button:hover{border-color:var(--green);color:var(--green)}
 #toolbar button:disabled{opacity:.3;cursor:default;pointer-events:none}
 .tb-sep{width:1px;height:22px;background:var(--border);flex-shrink:0}
@@ -99,7 +102,14 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <button id="btn-mode" title="Canvia entre mode Moure i mode Cable (W)">✋</button>
 <button id="btn-text" title="Afegir text (T)">T</button>
 <span class="tb-sep"></span>
-<input type="color" id="wire-color-picker" value="#e53935" title="Color del cable"/>
+<div id="wire-presets" style="display:flex;gap:3px;align-items:center">
+<div class="wc-dot active" data-color="#e53935" style="background:#e53935" title="Vermell"></div>
+<div class="wc-dot" data-color="#212121" style="background:#444" title="Negre"></div>
+<div class="wc-dot" data-color="#1e88e5" style="background:#1e88e5" title="Blau"></div>
+<div class="wc-dot" data-color="#43a047" style="background:#43a047" title="Verd"></div>
+<div class="wc-dot" data-color="#ffd600" style="background:#ffd600" title="Groc"></div>
+</div>
+<input type="color" id="wire-color-picker" value="#e53935" title="Color personalitzat"/>
 <span class="tb-sep"></span>
 <button id="btn-rotate" title="Girar 90° (R)">↻</button>
 <button id="btn-copy" title="Copiar seleccionat (Ctrl+C)">⎘</button>
@@ -1991,7 +2001,16 @@ document.getElementById('btn-delete').onclick=()=>{
   }
 };
 document.getElementById('btn-clear').onclick=()=>{if(confirm('Netejar?')){state.boards=[];state.components=[];state.wires=[];state.texts=[];renderAll();snapshot();}};
-document.getElementById('wire-color-picker').oninput=e=>{state.wireColor=e.target.value;};
+document.querySelectorAll('.wc-dot').forEach(d=>d.onclick=()=>{
+  document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));
+  d.classList.add('active');
+  state.wireColor=d.dataset.color;
+  document.getElementById('wire-color-picker').value=d.dataset.color;
+});
+document.getElementById('wire-color-picker').oninput=e=>{
+  document.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));
+  state.wireColor=e.target.value;
+};
 
 function updateSelBar(){
   const bar=document.getElementById('sel-bar');
