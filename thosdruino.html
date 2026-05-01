@@ -891,8 +891,8 @@ const BOARDS={
     render(g){
       const pad=(cx,cy)=>{g.appendChild(s('circle',{cx,cy,r:5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));g.appendChild(s('circle',{cx,cy,r:2,fill:'#1a1a1a'}));};
       const lbl=(cx,cy,t)=>g.appendChild(s('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'4.5',fill:'rgba(255,255,255,0.72)','font-family':'monospace'},t));
-      // PCB (verd fosc realista)
-      g.appendChild(s('rect',{x:4,y:12,width:292,height:198,rx:8,fill:'url(#pcb-green)',stroke:'#0a2010','stroke-width':'2'}));
+      // PCB (dark, same as Nano)
+      g.appendChild(s('rect',{x:4,y:12,width:292,height:198,rx:8,fill:'url(#pcb-dark)',stroke:'#1e3a5f','stroke-width':'2'}));
       // USB-B connector (protrudes left, mounting tabs + port cutout)
       g.appendChild(s('rect',{x:1,y:48,width:26,height:34,rx:2,fill:'#8a8a8a',stroke:'#666','stroke-width':'0.8'}));
       g.appendChild(s('rect',{x:3,y:51,width:20,height:28,rx:1.5,fill:'#4a4a4a'}));
@@ -1039,8 +1039,8 @@ const BOARDS={
     render(g){
       const pad=(cx,cy)=>{g.appendChild(s('circle',{cx,cy,r:5,fill:'#c09000',stroke:'#7a5c00','stroke-width':'0.5'}));g.appendChild(s('circle',{cx,cy,r:2,fill:'#1a1a1a'}));};
       const lbl=(cx,cy,t)=>g.appendChild(s('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'4',fill:'rgba(255,255,255,0.7)','font-family':'monospace'},t));
-      // PCB (verd fosc realista)
-      g.appendChild(s('rect',{x:4,y:14,width:372,height:216,rx:8,fill:'url(#pcb-green)',stroke:'#0a2010','stroke-width':'2'}));
+      // PCB (dark, same as Nano)
+      g.appendChild(s('rect',{x:4,y:14,width:372,height:216,rx:8,fill:'url(#pcb-dark)',stroke:'#1e3a5f','stroke-width':'2'}));
       // USB-B connector (protrudes left, with mounting tabs)
       g.appendChild(s('rect',{x:1,y:52,width:26,height:34,rx:2,fill:'#8a8a8a',stroke:'#666','stroke-width':'0.8'}));
       g.appendChild(s('rect',{x:3,y:55,width:20,height:28,rx:1.5,fill:'#4a4a4a'}));
