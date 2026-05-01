@@ -1173,27 +1173,37 @@ const state={boards:[],components:[],wires:[],texts:[],view:{x:0,y:0,s:1},select
 function buildBoardsPanel(){
   const body=document.getElementById('props-body');
   body.innerHTML='';
-  const boards=[
-    {type:'uno',    icon:'🔵',label:'Arduino Uno',   desc:'ATmega328P · 14D · 6A'},
-    {type:'nano',   icon:'🟢',label:'Arduino Nano',  desc:'ATmega328P · Compacte'},
-    {type:'mega',   icon:'🟠',label:'Arduino Mega',  desc:'ATmega2560 · 54D · 16A'},
-    {type:'esp32',  icon:'🔴',label:'ESP32',         desc:'Dual-core · WiFi · BT'},
-    {type:'esp8266',icon:'🟡',label:'ESP8266 NodeMCU',desc:'WiFi · 11 pins'},
-    {type:'proto830',icon:'⬜',label:'Protoboard 830',desc:'830 forats'}
+  const sections=[
+    {title:'🖥️ Plaques',items:[
+      {type:'uno',    icon:'🔵',label:'Arduino Uno',   desc:'ATmega328P · 14D · 6A'},
+      {type:'nano',   icon:'🟢',label:'Arduino Nano',  desc:'ATmega328P · Compacte'},
+      {type:'mega',   icon:'🟠',label:'Arduino Mega',  desc:'ATmega2560 · 54D · 16A'},
+      {type:'esp32',  icon:'🔴',label:'ESP32',         desc:'Dual-core · WiFi · BT'},
+      {type:'esp8266',icon:'🟡',label:'ESP8266 NodeMCU',desc:'WiFi · 11 pins'},
+    ]},
+    {title:'🛡️ Shields',items:[
+      {type:'shield-sensor',icon:'🛡️',label:'Sensor Shield V5',desc:'3-pin headers D0-D13 · A0-A5'},
+      {type:'shield-proto', icon:'🛡️',label:'Proto Shield',    desc:'Protoboard 22×12 integrada'},
+    ]},
+    {title:'⬜ Protoboard',items:[
+      {type:'proto830',icon:'⬜',label:'Protoboard 830',desc:'830 forats'},
+    ]},
   ];
-  const tit=document.createElement('div');
-  tit.style.cssText='font-size:.6rem;font-weight:700;color:var(--green);opacity:.8;padding:6px 8px 4px;border-bottom:1px solid var(--border)';
-  tit.textContent='🖥️ Plaques i Protoboard';
-  body.appendChild(tit);
-  boards.forEach(b=>{
-    const item=document.createElement('div');
-    item.className='pal-item';
-    item.style.flexDirection='column';
-    item.style.alignItems='flex-start';
-    item.style.padding='.4rem .6rem';
-    item.innerHTML=`<div style="display:flex;align-items:center;gap:.4rem;width:100%"><span style="font-size:1.1rem">${b.icon}</span><div><div style="font-size:.75rem;font-weight:600">${b.label}</div><div style="font-size:.62rem;color:var(--muted)">${b.desc}</div></div></div>`;
-    item.onclick=()=>addBoard(b.type);
-    body.appendChild(item);
+  sections.forEach(sec=>{
+    const tit=document.createElement('div');
+    tit.style.cssText='font-size:.6rem;font-weight:700;color:var(--green);opacity:.8;padding:6px 8px 4px;border-bottom:1px solid var(--border);margin-top:4px';
+    tit.textContent=sec.title;
+    body.appendChild(tit);
+    sec.items.forEach(b=>{
+      const item=document.createElement('div');
+      item.className='pal-item';
+      item.style.flexDirection='column';
+      item.style.alignItems='flex-start';
+      item.style.padding='.4rem .6rem';
+      item.innerHTML=`<div style="display:flex;align-items:center;gap:.4rem;width:100%"><span style="font-size:1.1rem">${b.icon}</span><div><div style="font-size:.75rem;font-weight:600">${b.label}</div><div style="font-size:.62rem;color:var(--muted)">${b.desc}</div></div></div>`;
+      item.onclick=()=>addBoard(b.type);
+      body.appendChild(item);
+    });
   });
 }
 
