@@ -2087,16 +2087,29 @@ canvas.addEventListener('mousemove',e=>{
   if(dragComp){
     if(dragComp.isBoard){
       const b=state.boards.find(b=>b.id===dragComp.id);
-      if(b){b.x=snap8(b.x+x-dragComp.sx);b.y=snap8(b.y+y-dragComp.sy);dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
+      if(b){b.x+=x-dragComp.sx;b.y+=y-dragComp.sy;dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
     } else {
       const c=state.components.find(c=>c.id===dragComp.id);
-      if(c){c.x=snap8(c.x+x-dragComp.sx);c.y=snap8(c.y+y-dragComp.sy);dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
+      if(c){c.x+=x-dragComp.sx;c.y+=y-dragComp.sy;dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
     }
   }
   if(panStart){state.view.x+=e.clientX-panStart.sx;state.view.y+=e.clientY-panStart.sy;updateView();panStart={sx:e.clientX,sy:e.clientY};}
 });
 
-canvas.addEventListener('mouseup',()=>{panStart=null;if(dragComp?.moved)snapshot();dragComp=null;});
+canvas.addEventListener('mouseup',()=>{
+  panStart=null;
+  if(dragComp?.moved){
+    if(dragComp.isBoard){
+      const b=state.boards.find(b=>b.id===dragComp.id);
+      if(b){b.x=snap8(b.x);b.y=snap8(b.y);renderAll();}
+    } else {
+      const c=state.components.find(c=>c.id===dragComp.id);
+      if(c){c.x=snap8(c.x);c.y=snap8(c.y);renderAll();}
+    }
+    snapshot();
+  }
+  dragComp=null;
+});
 canvas.addEventListener('mouseleave',()=>{document.getElementById('pin-tip').style.display='none';});
 
 // Right-click on wire → context menu to delete
