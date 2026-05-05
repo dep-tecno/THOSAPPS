@@ -78,6 +78,14 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #help-body{padding:.8rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.35rem .5rem;max-height:60vh;overflow-y:auto}
 .hk{display:flex;align-items:center;gap:.5rem;font-size:.78rem}
 .hk kbd{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:.72rem;color:var(--text);font-family:monospace;flex-shrink:0}
+.prop-row{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.prop-lbl{font-size:.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.prop-inp,.prop-sel{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:.78rem;outline:none;width:100%;font-family:inherit}
+.prop-inp:focus,.prop-sel:focus{border-color:var(--green)}
+.prop-sep{height:1px;background:var(--border);margin:10px 0}
+.prop-back{width:100%;background:var(--bg3);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:5px;font-size:.75rem;cursor:pointer;font-family:inherit}
+.prop-back:hover{color:var(--text)}
+.prop-head{font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -1706,7 +1714,54 @@ const BOARDS={
 const state={boards:[],components:[],wires:[],texts:[],view:{x:0,y:0,s:1},selected:null,selectedBoard:null,multiSel:[],wireMode:false,wireStart:null,wirePoints:[],wireColor:'#e53935',compId:0,boardId:0,wireId:0,textId:0,mode:'move',clipboard:null};
 
 
+function updatePropsPanel(){
+  const hdr=document.getElementById('props-hdr').querySelector('span');
+  const body=document.getElementById('props-body');
+  if(state.selected===null){hdr.textContent='Plaques';buildBoardsPanel();return;}
+  const c=state.components.find(c=>c.id===state.selected);
+  if(!c){hdr.textContent='Plaques';buildBoardsPanel();return;}
+  const def=COMPS[c.type];
+  hdr.textContent='Propietats';
+  body.innerHTML='';
+  const head=document.createElement('div');head.className='prop-head';head.textContent=def.label;body.appendChild(head);
+  const makeRow=(lbl,el)=>{const r=document.createElement('div');r.className='prop-row';const l=document.createElement('div');l.className='prop-lbl';l.textContent=lbl;r.appendChild(l);r.appendChild(el);body.appendChild(r);};
+  const inp=document.createElement('input');inp.className='prop-inp';inp.type='text';inp.placeholder='R1, LED2, VCC…';inp.value=c.label||'';
+  inp.oninput=()=>{c.label=inp.value;renderComponents();};inp.onchange=()=>snapshot();
+  makeRow('Etiqueta canvas',inp);
+  const VAL_MAP={
+    resistor:{lbl:'Valor',vals:['100Ω','220Ω','330Ω','470Ω','1kΩ','2.2kΩ','4.7kΩ','10kΩ','22kΩ','47kΩ','100kΩ','1MΩ']},
+    pot:{lbl:'Valor',vals:['1kΩ','5kΩ','10kΩ','50kΩ','100kΩ','1MΩ']},
+    'cap-elec':{lbl:'Capacitat',vals:['1µF','10µF','22µF','47µF','100µF','220µF','470µF','1000µF']},
+    'cap-cer':{lbl:'Capacitat',vals:['10pF','22pF','47pF','100pF','1nF','10nF','100nF','1µF']}
+  };
+  if(VAL_MAP[c.type]){
+    const {lbl,vals}=VAL_MAP[c.type];
+    if(!c.value)c.value=vals[4]||vals[0];
+    const sel=document.createElement('select');sel.className='prop-sel';
+    vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(c.value===v)o.selected=true;sel.appendChild(o);});
+    sel.onchange=()=>{c.value=sel.value;renderComponents();snapshot();};
+    makeRow(lbl,sel);
+  }
+  if(c.type.startsWith('led-')){
+    const ledOpts=[{n:'Vermell',c:'red',bg:'#ff3232'},{n:'Verd',c:'green',bg:'#00d96b'},{n:'Blau',c:'blue',bg:'#1a66ff'},{n:'Groc',c:'yellow',bg:'#ffeb3b'},{n:'Blanc',c:'white',bg:'#f5f5f5'}];
+    const row=document.createElement('div');row.className='prop-row';
+    const l=document.createElement('div');l.className='prop-lbl';l.textContent='Color LED';row.appendChild(l);
+    const dots=document.createElement('div');dots.style.cssText='display:flex;gap:5px;flex-wrap:wrap;margin-top:2px';
+    ledOpts.forEach(opt=>{
+      const d=document.createElement('div');d.className='wc-dot'+(c.ledColor===opt.c?' active':'');
+      d.style.cssText=`background:${opt.bg};width:18px;height:18px`;d.title=opt.n;
+      d.onclick=()=>{dots.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');c.ledColor=opt.c;renderComponents();snapshot();};
+      dots.appendChild(d);
+    });
+    row.appendChild(dots);body.appendChild(row);
+  }
+  const sep=document.createElement('div');sep.className='prop-sep';body.appendChild(sep);
+  const back=document.createElement('button');back.className='prop-back';back.textContent='← Tornar a Plaques';
+  back.onclick=()=>select(null);body.appendChild(back);
+}
+
 function buildBoardsPanel(){
+  document.getElementById('props-hdr').querySelector('span').textContent='Plaques';
   const body=document.getElementById('props-body');
   body.innerHTML='';
   const sections=[
@@ -1958,11 +2013,21 @@ function renderComponents(){
     cg.dataset.id=c.id;
     if(state.selected===c.id||state.multiSel.some(m=>m.kind==='comp'&&m.id===c.id))cg.classList.add('selected');
     d.render(cg);
+    if(c.ledColor&&c.type.startsWith('led-')){
+      const ch=cg.children;
+      const strk={red:'#7a0000',green:'#003d1a',blue:'#001a4d',yellow:'#827717',white:'#9e9e9e'};
+      if(ch[0])ch[0].setAttribute('fill',`url(#led-glow-${c.ledColor})`);
+      if(ch[1]){ch[1].setAttribute('fill',`url(#led-${c.ledColor})`);if(strk[c.ledColor])ch[1].setAttribute('stroke',strk[c.ledColor]);}
+    }
     cg.appendChild(s('rect',{class:'comp-rect',x:-5,y:-5,width:d.w+10,height:d.h+10,rx:4}));
     d.pins.forEach(p=>{
       cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:8,class:'pin-circle','data-pin':p.id}));
       cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:3,class:'pin-dot','data-pin':p.id}));
     });
+    if(c.label||c.value){
+      const txt=c.value?(c.label?`${c.label} · ${c.value}`:c.value):c.label;
+      cg.appendChild(s('text',{x:d.w/2,y:d.h+14,'text-anchor':'middle',fill:'#94a3b8','font-size':'9','font-family':'Segoe UI,system-ui,sans-serif','pointer-events':'none'},txt));
+    }
     g.appendChild(cg);
   });
 }
@@ -2311,8 +2376,8 @@ function updateSelBar(){
     bar.style.display='flex';
   }catch(e){bar.style.display='none';}
 }
-function select(id){state.selected=id;state.selectedBoard=null;state.multiSel=[];document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}updateSelBar();}
-function selectBoard(id){state.selectedBoard=id;state.selected=null;state.multiSel=[];document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`board-${id}`);if(el)el.classList.add('selected');}updateSelBar();}
+function select(id){state.selected=id;state.selectedBoard=null;state.multiSel=[];document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}updateSelBar();updatePropsPanel();}
+function selectBoard(id){state.selectedBoard=id;state.selected=null;state.multiSel=[];document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`board-${id}`);if(el)el.classList.add('selected');}updateSelBar();updatePropsPanel();}
 function updateView(){document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';updateSelBar();}
 function closeProps(){document.getElementById('props').classList.remove('open');}
 
