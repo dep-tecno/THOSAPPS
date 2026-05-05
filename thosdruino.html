@@ -12,10 +12,10 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .nav-links{display:flex;list-style:none}
 .nav-links a{display:block;padding:0 .9rem;height:56px;line-height:56px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;transition:color .2s}
 .nav-links a:hover,.nav-links a.active{color:var(--green);border-bottom-color:var(--green)}
-#toolbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:.4rem 1rem;background:var(--bg2);border-bottom:1px solid var(--border);height:44px;flex-shrink:0}
-#toolbar select,#toolbar button{height:30px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.25rem .6rem;font-size:.8rem;cursor:pointer}
-#app-brand{display:flex;align-items:center;gap:6px;font-size:.9rem;font-weight:700;letter-spacing:.04em;flex-shrink:0;white-space:nowrap}
-#tb-center{display:flex;align-items:center;gap:.5rem;justify-content:center}
+#toolbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:.35rem .8rem;background:var(--bg2);border-bottom:1px solid var(--border);min-height:44px;flex-shrink:0;flex-wrap:wrap}
+#toolbar select,#toolbar button{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.2rem .5rem;font-size:.78rem;cursor:pointer;line-height:1.4}
+#app-brand{display:flex;align-items:center;gap:6px;font-size:.88rem;font-weight:700;letter-spacing:.04em;flex-shrink:0;white-space:nowrap}
+#tb-center{display:flex;align-items:center;gap:.4rem;justify-content:center;flex-wrap:wrap}
 .wc-dot{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid transparent;flex-shrink:0;transition:border-color .15s,transform .1s}
 .wc-dot:hover{transform:scale(1.2)}
 .wc-dot.active{border-color:#fff}
@@ -25,7 +25,13 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #btn-text.text-on{border-color:#ffd600;color:#ffd600;background:rgba(255,214,0,.1);font-weight:600}
 #text-input{background:var(--bg3);color:var(--text);border:1.5px solid var(--green);border-radius:5px;padding:4px 10px;font-size:.9rem;outline:none;min-width:160px;font-family:inherit}
 #app{display:flex;flex:1;overflow:hidden}
-#palette{width:190px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+#palette{width:190px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:hidden}
+#pal-search-wrap{padding:.5rem .6rem;border-bottom:1px solid var(--border);flex-shrink:0;position:relative}
+#pal-search{width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 24px 4px 8px;font-size:.75rem;outline:none;font-family:inherit}
+#pal-search:focus{border-color:var(--green)}
+#pal-search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;line-height:1;display:none;padding:0}
+#pal-search-clear:hover{color:var(--text)}
+#pal-list{flex:1;overflow-y:auto}
 .pal-section{padding:.5rem .8rem .3rem}
 .pal-title{font-size:.65rem;font-weight:700;color:var(--green);opacity:.7;margin-bottom:.3rem}
 .pal-item{display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:1px;transition:all .15s}
@@ -171,6 +177,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
     <div class="hk"><kbd>Shift+clic</kbd><span>Selecció múltiple</span></div>
     <div class="hk"><kbd>Shift+drag</kbd><span>Rectangle selecció</span></div>
     <div class="hk"><kbd>?</kbd><span>Obrir/tancar dreceres</span></div>
+    <div class="hk"><kbd>Ctrl+F</kbd><span>Cercar component</span></div>
   </div>
 </div>
 <div id="text-overlay" style="position:fixed;display:none;z-index:250"><input id="text-input" placeholder="Escriu text, Enter per confirmar" autocomplete="off"/></div>
@@ -185,7 +192,13 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 <div id="pin-tip" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--green);color:var(--green);padding:2px 8px;font-size:.68rem;border-radius:4px;pointer-events:none;z-index:300;white-space:nowrap;font-family:monospace"></div>
 <div id="wire-ctx" style="position:fixed;display:none;background:#1a1d27;border:1px solid var(--border);border-radius:6px;padding:4px 0;z-index:300;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.5)"></div>
 <div id="app">
-<aside id="palette"></aside>
+<aside id="palette">
+  <div id="pal-search-wrap">
+    <input id="pal-search" type="text" placeholder="🔍 Cercar component…" autocomplete="off"/>
+    <button id="pal-search-clear" title="Netejar">✕</button>
+  </div>
+  <div id="pal-list"></div>
+</aside>
 <div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><g id="texts"></g><path id="wire-preview" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g><rect id="sel-box" fill="rgba(0,230,118,0.08)" stroke="#00e676" stroke-width="1" stroke-dasharray="4 3" pointer-events="none" display="none" x="0" y="0" width="0" height="0"/></g></svg></div>
 <aside id="props"><div id="props-hdr"><span>Plaques</span></div><div id="props-body"></div></aside>
 </div>
@@ -1799,7 +1812,7 @@ function buildBoardsPanel(){
 }
 
 function buildPalette(){
-  const p=document.getElementById('palette');
+  const p=document.getElementById('pal-list');
   const categories=[
     ['⚡ Bàsics',[
       {name:'led-red',icon:'🔴',label:'LED Vermell'},
@@ -1881,6 +1894,7 @@ function buildPalette(){
   categories.forEach(([title,items])=>{
     const sec=document.createElement('div');
     sec.className='pal-section';
+    sec.dataset.section='1';
     const tit=document.createElement('div');
     tit.className='pal-title';
     tit.textContent=title;
@@ -1888,12 +1902,32 @@ function buildPalette(){
     items.forEach(sensor=>{
       const item=document.createElement('div');
       item.className='pal-item';
+      item.dataset.label=sensor.label.toLowerCase();
       item.innerHTML=`<div class="pal-icon" style="width:24px;height:24px;font-size:.85rem;flex-shrink:0">${sensor.icon}</div><div style="font-size:.68rem;line-height:1.2">${sensor.label}</div>`;
       item.onclick=()=>addComponent(sensor.name);
       sec.appendChild(item);
     });
     p.appendChild(sec);
   });
+
+  // Search logic
+  const inp=document.getElementById('pal-search');
+  const clr=document.getElementById('pal-search-clear');
+  const filter=()=>{
+    const q=inp.value.trim().toLowerCase();
+    clr.style.display=q?'block':'none';
+    p.querySelectorAll('.pal-section').forEach(sec=>{
+      let any=false;
+      sec.querySelectorAll('.pal-item').forEach(item=>{
+        const show=!q||item.dataset.label.includes(q);
+        item.style.display=show?'':'none';
+        if(show)any=true;
+      });
+      sec.style.display=any?'':'none';
+    });
+  };
+  inp.addEventListener('input',filter);
+  clr.addEventListener('click',()=>{inp.value='';filter();inp.focus();});
 }
 
 function addBoard(type){
@@ -2302,7 +2336,8 @@ document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){e.preventDefault();redo();return;}
   if((e.ctrlKey||e.metaKey)&&e.key==='c'){e.preventDefault();copySelected();return;}
   if((e.ctrlKey||e.metaKey)&&e.key==='v'){e.preventDefault();pasteClipboard();return;}
-  if(e.key==='Escape'){if(state.wireMode)cancelWire();else setMode('move');}
+  if(e.key==='Escape'){if(state.wireMode)cancelWire();else{setMode('move');const ps=document.getElementById('pal-search');if(ps&&ps.value){ps.value='';ps.dispatchEvent(new Event('input'));}}}
+  if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();document.getElementById('pal-search')?.focus();return;}
   if(e.key==='w'||e.key==='W'){setMode(state.mode==='wire'?'move':'wire');}
   if(e.key==='t'||e.key==='T'){setMode(state.mode==='text'?'move':'text');}
   if(e.key==='r'||e.key==='R'){rotateSelected();return;}
