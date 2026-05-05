@@ -8,6 +8,7 @@
 :root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;--green:#00e676;--text:#e2e8f0;--muted:#8892a4;--border:#2d3347;--red:#ff5555}
 html{scroll-behavior:smooth}body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden}
 nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;height:72px;flex-shrink:0;overflow-x:auto}
+nav::-webkit-scrollbar{display:none}
 .nav-brand{font-size:.8rem;font-weight:700;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-right:1.5rem;text-decoration:none;flex-shrink:0;display:flex;align-items:center;gap:.6rem}
 .nav-links{display:flex;list-style:none}
 .nav-links a{display:block;padding:0 .9rem;height:72px;line-height:72px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;transition:color .2s}
