@@ -2656,6 +2656,7 @@ setInterval(()=>{
 setupDefs();buildPalette();buildBoardsPanel();updateView();renderAll();
 snapshot();
 document.getElementById('canvas-wrap').classList.add('move-mode');
+window.addEventListener('pagehide',()=>{document.documentElement.scrollTop=0;document.body.scrollTop=0;});
 </script>
 </body>
 </html>
