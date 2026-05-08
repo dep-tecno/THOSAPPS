@@ -219,6 +219,8 @@
         .tool-btn i { font-size: 16px; }
 
         .tool-btn:hover { background: #374151; color: #fff; }
+        .tool-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .tool-btn:disabled:hover { background: transparent; color: #d1d5db; }
         .tool-btn.active { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
         
         .tool-separator { 
@@ -263,6 +265,9 @@
                 <i class="fas fa-project-diagram mr-1" style="color:#60a5fa"></i><span style="color:#60a5fa">THOS</span><span class="text-white">MAP</span><span class="text-gray-400 text-sm font-normal ml-1">v2.0</span>
             </span>
         </div>
+        <div class="tool-separator"></div>
+        <button onclick="app.undo()" id="btn-undo" class="tool-btn" title="Desfer (Ctrl+Z)" disabled><i class="fas fa-undo"></i></button>
+        <button onclick="app.redo()" id="btn-redo" class="tool-btn" title="Refer (Ctrl+Y)" disabled><i class="fas fa-redo"></i></button>
         <div class="tool-separator"></div>
         <button onclick="app.addChild()" class="tool-btn" title="Afegir Fill (TAB)"><i class="fas fa-sitemap"></i> Fill</button>
         <button onclick="app.addSibling()" class="tool-btn" title="Afegir Germà (ENTER)"><i class="fas fa-plus"></i> Germà</button>
@@ -353,6 +358,10 @@
                 this.resizeStartX = 0;
                 this.resizeStartWidth = 0;
                 this.dragMoved = false;
+                this.history = [];
+                this.historyIndex = -1;
+                this.maxHistory = 50;
+                this._autoSaveTimer = null;
 
                 this.workspace = document.getElementById('workspace');
                 this.nodesLayer = document.getElementById('nodes-layer');
@@ -390,6 +399,10 @@
                 this.selectNode = this.selectNode.bind(this);
                 this.addExtraConnection = this.addExtraConnection.bind(this);
                 this.render = this.render.bind(this);
+                this.undo = this.undo.bind(this);
+                this.redo = this.redo.bind(this);
+                this.autoSave = this.autoSave.bind(this);
+                this.autoArrange = this.autoArrange.bind(this);
             }
 
             // SECURITY: escapa caràcters HTML perillosos per evitar XSS via innerHTML
@@ -409,7 +422,14 @@
             }
 
             init() {
-                this.addRootNode();
+                const restored = this.loadAutoSave();
+                if (!restored) {
+                    this.addRootNode();
+                } else {
+                    this.render();
+                    this.showToast("✓ Treball anterior recuperat");
+                }
+                this.saveHistory();
                 window.addEventListener('keydown', this.handleKeyDown);
                 window.addEventListener('mousemove', this.handleMouseMove);
                 window.addEventListener('mouseup', this.handleMouseUp);
@@ -491,6 +511,7 @@
                     }
                 } else { color = "#2563eb"; }
 
+                this.saveHistory();
                 const newNode = { id, parentId, text, x, y, isRoot, color, image: null, width: null, fontSize: isRoot ? 18 : 14 };
                 this.nodes.push(newNode);
 
@@ -505,6 +526,7 @@
 
             deleteNode() {
                 if (this.selectedConnectionId) {
+                    this.saveHistory();
                     this.extraConnections = this.extraConnections.filter(c => c.id !== this.selectedConnectionId);
                     this.selectedConnectionId = null;
                     this.render();
@@ -512,6 +534,7 @@
                 }
 
                 if (!this.selectedNodeId) return;
+                this.saveHistory();
                 const deleteRecursive = (id) => {
                     this.extraConnections = this.extraConnections.filter(c => c.from !== id && c.to !== id);
                     const children = this.nodes.filter(n => n.parentId === id);
@@ -739,6 +762,7 @@
                 if (sourceId === targetId) return;
                 const exists = this.extraConnections.find(c => c.from === sourceId && c.to === targetId);
                 if (!exists) {
+                    this.saveHistory();
                     this.extraConnections.push({ id: 'conn_' + Date.now(), from: sourceId, to: targetId });
                     this.renderConnections();
                 }
@@ -816,6 +840,7 @@
                 } else if (this.draggedNodeId) {
                     const node = this.nodes.find(n => n.id === this.draggedNodeId);
                     if (node) {
+                        if (!this.dragMoved) this.saveHistory();
                         this.dragMoved = true;
                         node.x += dx; node.y += dy;
                         // Si estem en MindMap, actualitzem la memòria
@@ -847,6 +872,12 @@
 
             handleKeyDown(e) {
                 const isEditing = document.activeElement && document.activeElement.classList.contains('node-content');
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    if (e.shiftKey) this.redo(); else this.undo();
+                    return;
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); this.redo(); return; }
                 if (isEditing) return;
                 switch(e.key) {
                     case 'Tab': e.preventDefault(); this.addChild(); break;
@@ -863,6 +894,7 @@
                     this.nodesLayer.appendChild(el);
                 });
                 this.renderConnections();
+                this.autoSave();
             }
 
             renderNode(node) {
@@ -932,8 +964,13 @@
                 // SECURITY: límit de 2000 caràcters per evitar DoS via texts molt llargs
                 contentDiv.addEventListener('blur', (e) => {
                     const raw = e.target.innerText || '';
-                    node.text = raw.length > 2000 ? raw.substring(0, 2000) : raw;
-                    if (raw.length > 2000) e.target.innerText = node.text;
+                    const newText = raw.length > 2000 ? raw.substring(0, 2000) : raw;
+                    if (newText !== node.text) {
+                        this.saveHistory();
+                        node.text = newText;
+                        if (raw.length > 2000) e.target.innerText = node.text;
+                        this.autoSave();
+                    }
                 });
                 contentDiv.addEventListener('mousedown', (e) => { if (this.selectedNodeId === node.id) e.stopPropagation(); });
                 
@@ -1061,6 +1098,7 @@
             loadFromJSON(input) {
                 const file = input.files[0];
                 if (!file) return;
+                this.saveHistory();
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
@@ -1151,8 +1189,8 @@
             }
             setNodeColor(color) {
                 if (this.selectedNodeId) {
+                    this.saveHistory();
                     const node = this.nodes.find(n => n.id === this.selectedNodeId);
-                    // SECURITY: valida el color per evitar injecció CSS via JSON o paràmetre
                     node.color = this.sanitizeColor(color);
                     this.render();
                     this.colorMenu.style.display = 'none';
@@ -1161,13 +1199,13 @@
             attachImage(input) {
                 if (!this.selectedNodeId || !input.files[0]) return;
                 const file = input.files[0];
-                // SECURITY: només s'accepten formats d'imatge raster segurs; SVG rebutjat
                 const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 if (!allowedTypes.includes(file.type)) {
                     this.showToast("Format no permès. Usa PNG, JPG, GIF o WEBP.");
                     input.value = '';
                     return;
                 }
+                this.saveHistory();
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const node = this.nodes.find(n => n.id === this.selectedNodeId);
@@ -1182,6 +1220,7 @@
                 if (!this.selectedNodeId) return this.showToast("Selecciona un node");
                 const node = this.nodes.find(n => n.id === this.selectedNodeId);
                 if (node) {
+                    this.saveHistory();
                     if (!node.fontSize) node.fontSize = node.isRoot ? 18 : 14;
                     node.fontSize += delta;
                     if (node.fontSize < 10) node.fontSize = 10;
@@ -1189,6 +1228,80 @@
                     this.render();
                 }
             }
+            saveHistory() {
+                this.history = this.history.slice(0, this.historyIndex + 1);
+                this.history.push({
+                    nodes: JSON.parse(JSON.stringify(this.nodes)),
+                    connections: JSON.parse(JSON.stringify(this.extraConnections))
+                });
+                if (this.history.length > this.maxHistory) this.history.shift();
+                else this.historyIndex++;
+                this.updateUndoRedoButtons();
+            }
+
+            undo() {
+                if (this.historyIndex <= 0) return this.showToast("Res a desfer");
+                this.historyIndex--;
+                const state = this.history[this.historyIndex];
+                this.nodes = JSON.parse(JSON.stringify(state.nodes));
+                this.extraConnections = JSON.parse(JSON.stringify(state.connections));
+                this.selectedNodeId = null;
+                this.render();
+                this.updateUndoRedoButtons();
+                this.showToast("Desfet");
+            }
+
+            redo() {
+                if (this.historyIndex >= this.history.length - 1) return this.showToast("Res a refer");
+                this.historyIndex++;
+                const state = this.history[this.historyIndex];
+                this.nodes = JSON.parse(JSON.stringify(state.nodes));
+                this.extraConnections = JSON.parse(JSON.stringify(state.connections));
+                this.selectedNodeId = null;
+                this.render();
+                this.updateUndoRedoButtons();
+                this.showToast("Refet");
+            }
+
+            updateUndoRedoButtons() {
+                const u = document.getElementById('btn-undo');
+                const r = document.getElementById('btn-redo');
+                if (u) u.disabled = this.historyIndex <= 0;
+                if (r) r.disabled = this.historyIndex >= this.history.length - 1;
+            }
+
+            autoSave() {
+                clearTimeout(this._autoSaveTimer);
+                this._autoSaveTimer = setTimeout(() => {
+                    try {
+                        localStorage.setItem('thosmap_autosave', JSON.stringify({
+                            nodes: this.nodes,
+                            connections: this.extraConnections,
+                            layout: this.currentLayout,
+                            panX: this.panX, panY: this.panY, zoom: this.zoomLevel
+                        }));
+                    } catch(e) {}
+                }, 1500);
+            }
+
+            loadAutoSave() {
+                try {
+                    const raw = localStorage.getItem('thosmap_autosave');
+                    if (!raw) return false;
+                    const state = JSON.parse(raw);
+                    if (!state.nodes || state.nodes.length === 0) return false;
+                    this.nodes = state.nodes;
+                    this.extraConnections = state.connections || [];
+                    this.currentLayout = state.layout || 'mindmap';
+                    this.panX = state.panX ?? window.innerWidth / 2;
+                    this.panY = state.panY ?? window.innerHeight / 2;
+                    this.zoomLevel = state.zoom ?? 1;
+                    if (this.currentLayout === 'outline') this.workspace.classList.add('mode-outline');
+                    if (this.currentLayout === 'hierarchy') this.workspace.classList.add('mode-hierarchy');
+                    return true;
+                } catch(e) { return false; }
+            }
+
             toggleColorMenu(e) { const rect = e.target.getBoundingClientRect(); this.colorMenu.style.top = (rect.bottom + 5) + 'px'; this.colorMenu.style.left = rect.left + 'px'; this.colorMenu.style.display = 'block'; this.layoutMenu.style.display = 'none'; }
             toggleLayoutMenu(e) { const rect = e.target.closest('button').getBoundingClientRect(); this.layoutMenu.style.top = (rect.bottom + 5) + 'px'; this.layoutMenu.style.left = rect.left + 'px'; this.layoutMenu.style.display = 'block'; this.colorMenu.style.display = 'none'; }
             showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 3000); }
