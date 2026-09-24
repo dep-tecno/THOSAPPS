@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Sociograma de convivència</title>
+  <desc id="desc">Nodes que representen persones connectades dins d'un grup.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171d2a"/>
+      <stop offset="1" stop-color="#0d1118"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#00e676" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#00e676" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#8290a5" opacity=".12"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <rect width="1200" height="675" fill="url(#dots)"/>
+  <ellipse cx="600" cy="340" rx="410" ry="290" fill="url(#glow)"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M600 337 375 205M600 337 822 196M600 337 922 365M600 337 759 510M600 337 450 520M600 337 281 382" stroke="#00e676" stroke-opacity=".52" stroke-width="4"/>
+    <path d="M375 205 281 382M375 205 600 337M822 196 922 365M822 196 600 337M922 365 759 510M759 510 450 520M450 520 281 382M375 205 822 196M281 382 450 520" stroke="#58c7a0" stroke-opacity=".22" stroke-width="2.5"/>
+    <path d="M375 205 450 520M822 196 450 520M281 382 822 196" stroke="#9aa6b8" stroke-opacity=".11" stroke-width="2" stroke-dasharray="7 12"/>
+  </g>
+  <g fill="#00e676" opacity=".08" filter="url(#softGlow)">
+    <circle cx="600" cy="337" r="56"/><circle cx="375" cy="205" r="43"/><circle cx="822" cy="196" r="43"/>
+    <circle cx="922" cy="365" r="43"/><circle cx="759" cy="510" r="43"/><circle cx="450" cy="520" r="43"/><circle cx="281" cy="382" r="43"/>
+  </g>
+  <g fill="#1a2430" stroke="#00e676" stroke-width="4">
+    <circle cx="600" cy="337" r="34"/><circle cx="375" cy="205" r="27"/><circle cx="822" cy="196" r="27"/>
+    <circle cx="922" cy="365" r="27"/><circle cx="759" cy="510" r="27"/><circle cx="450" cy="520" r="27"/><circle cx="281" cy="382" r="27"/>
+  </g>
+  <g fill="#00e676">
+    <circle cx="600" cy="328" r="8"/><path d="M584 352c2-13 10-18 16-18s14 5 16 18" fill="none" stroke="#00e676" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="375" cy="198" r="6"/><path d="M363 218c2-9 7-13 12-13s10 4 12 13" fill="none" stroke="#00e676" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="822" cy="189" r="6"/><path d="M810 209c2-9 7-13 12-13s10 4 12 13" fill="none" stroke="#00e676" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="922" cy="358" r="6"/><path d="M910 378c2-9 7-13 12-13s10 4 12 13" fill="none" stroke="#00e676" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="759" cy="503" r="6"/><path d="M747 523c2-9 7-13 12-13s10 4 12 13" fill="none" stroke="#00e676" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="450" cy="513" r="6"/><path d="M438 533c2-9 7-13 12-13s10 4 12 13" fill="none" stroke="#00e676" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="281" cy="375" r="6"/><path d="M269 395c2-9 7-13 12-13s10 4 12 13" fill="none" stroke="#00e676" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g fill="#00e676" opacity=".72">
+    <circle cx="494" cy="273" r="4"/><circle cx="710" cy="267" r="4"/><circle cx="847" cy="380" r="4"/>
+    <circle cx="684" cy="429" r="4"/><circle cx="531" cy="430" r="4"/><circle cx="365" cy="331" r="4"/>
+  </g>
+</svg>
+
