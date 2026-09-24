@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Previsualitzador i Simulador Moodle XML</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .moodle-blue { color: #0f6cbf; }
+    .bg-moodle-blue { background-color: #0f6cbf; }
+    .border-moodle-blue { border-color: #0f6cbf; }
+    .q-text img { max-width: 100%; height: auto; display: block; margin: 0.75rem 0; border-radius: 0.375rem; border: 1px solid #e2e8f0; }
+    @media print {
+      header, #app-controls, #sim-scorebar, #docent-banner, .no-print { display: none !important; }
+      body { background: white; color: black; }
+      .bg-white { border: none !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-16">
+
+  <!-- Header -->
+  <header class="bg-moodle-blue text-white shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-graduation-cap text-3xl text-amber-300"></i>
+        <div>
+          <h1 class="text-xl font-bold">Previsualitzador Moodle XML</h1>
+          <p class="text-xs text-blue-100">Visor Solucionari i Simulador d'Exàmens</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 bg-blue-900/40 p-1.5 rounded-xl border border-white/20">
+        <button id="btn-simulador" onclick="setMode('simulador')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-400 text-slate-900 shadow transition flex items-center gap-1.5">
+          <i class="fa-solid fa-gamepad"></i> Mode Simulador
+        </button>
+        <button id="btn-docent" onclick="setMode('docent')" class="px-3 py-1.5 text-xs font-bold rounded-lg text-white hover:bg-white/10 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-book-open"></i> Mode Docent (Solucionari)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 mt-6">
+
+    <!-- Zona de càrrega de fitxer -->
+    <div id="upload-zone" class="bg-white border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-500 transition cursor-pointer shadow-sm relative">
+      <input type="file" id="xml-input" accept=".xml" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileUpload(event)">
+      <div class="pointer-events-none">
+        <i class="fa-solid fa-file-code text-5xl text-blue-500 mb-3"></i>
+        <h2 class="text-lg font-bold text-slate-700">Carrega aquí el teu fitxer XML de Moodle</h2>
+        <p class="text-sm text-slate-500 mt-1">Fes clic o arrossega el fitxer `.xml` directament</p>
+        <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold">
+          <i class="fa-solid fa-shield-halved"></i> Procés 100% privat al teu navegador
+        </div>
+      </div>
+    </div>
+
+    <!-- Panell de Control i Cerca -->
+    <div id="app-controls" class="hidden bg-white p-4 rounded-xl shadow-sm border border-slate-200 mt-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3 flex-1 min-w-[280px]">
+        <div class="relative w-full">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input type="text" id="search-bar" oninput="renderQuestions()" placeholder="Cerca preguntes per paraula..." class="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <select id="filter-type" onchange="renderQuestions()" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none bg-white font-medium text-slate-700">
+          <option value="all">Tots els tipus</option>
+          <option value="multichoice">Opció Múltiple</option>
+          <option value="truefalse">Vertader / Fals</option>
+          <option value="shortanswer">Resposta Curta</option>
+          <option value="matching">Emparellament</option>
+          <option value="numerical">Numèrica</option>
+          <option value="essay">Desenvolupament</option>
+        </select>
+        <span id="q-counter" class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg font-semibold border border-slate-200">0 preguntes</span>
+      </div>
+    </div>
+
+    <!-- Marcador del Mode Simulador -->
+    <div id="sim-scorebar" class="hidden bg-slate-900 text-white p-4 rounded-xl shadow-md mt-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-amber-400">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-amber-400 text-slate-900 font-bold flex items-center justify-center text-lg shadow">
+          <i class="fa-solid fa-gamepad"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-sm">Mode Simulador d'Examen</h3>
+          <p class="text-xs text-slate-400">Respon les preguntes i clica "Comprovar resposta". La nota és provisional mentre hi hagi preguntes de desenvolupament pendents.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-6">
+        <div class="text-center">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Encerts</span>
+          <span id="score-correct" class="text-lg font-bold text-emerald-400">0</span>
+        </div>
+        <div class="text-center">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Errors</span>
+          <span id="score-incorrect" class="text-lg font-bold text-rose-400">0</span>
+        </div>
+        <div class="pl-4 border-l border-slate-700 text-center">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Nota final</span>
+          <span id="score-grade" class="text-2xl font-black text-amber-400">0.0 / 10</span>
+          <span id="score-note" class="text-[10px] text-slate-400 block mt-1"></span>
+        </div>
+        <button onclick="resetSimulator()" class="ml-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-rotate-right"></i> Reiniciar
+        </button>
+      </div>
+    </div>
+
+    <!-- Banner Explicatiu Mode Docent -->
+    <div id="docent-banner" class="hidden bg-blue-50 border border-blue-200 text-blue-900 p-4 rounded-xl mt-4 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-book-open text-blue-600 text-xl"></i>
+        <div>
+          <h4 class="font-bold text-sm">Mode Docent (Solucionari Actiu)</h4>
+          <p class="text-xs text-blue-700">Mostra directament les respostes correctes en verd, puntuacions i retroalimentació.</p>
+        </div>
+      </div>
+      <button onclick="window.print()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+        <i class="fa-solid fa-print"></i> Imprimir / PDF
+      </button>
+    </div>
+
+    <!-- Llista de Preguntes -->
+    <div id="questions-container" class="mt-6 space-y-6"></div>
+
+  </main>
+
+  <script>
+    let currentMode = 'simulador';
+    let rawQuestions = [];
+    let userAnswers = {};
+
+    function setMode(mode) {
+      currentMode = mode;
+      const btnDocent = document.getElementById('btn-docent');
+      const btnSimulador = document.getElementById('btn-simulador');
+      const scorebar = document.getElementById('sim-scorebar');
+      const docentBanner = document.getElementById('docent-banner');
+
+      if (mode === 'docent') {
+        btnDocent.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-white text-slate-900 shadow transition flex items-center gap-1.5";
+        btnSimulador.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-white hover:bg-white/10 transition flex items-center gap-1.5";
+        scorebar.classList.add('hidden');
+        docentBanner.classList.remove('hidden');
+      } else {
+        btnSimulador.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-400 text-slate-900 shadow transition flex items-center gap-1.5";
+        btnDocent.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-white hover:bg-white/10 transition flex items-center gap-1.5";
+        scorebar.classList.remove('hidden');
+        docentBanner.classList.add('hidden');
+      }
+      renderQuestions();
+    }
+
+    function resetSimulator() {
+      userAnswers = {};
+      renderQuestions();
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseXMLContent(e.target.result);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseXMLContent(xmlText) {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+      const questionNodes = xmlDoc.querySelectorAll("question");
+
+      rawQuestions = [];
+      userAnswers = {};
+
+      questionNodes.forEach((node, idx) => {
+        const type = node.getAttribute("type");
+        if (type === "category") return;
+
+        const nameNode = node.querySelector("name text");
+        const qtextNode = node.querySelector("questiontext text");
+        const defaultgradeNode = node.querySelector("defaultgrade");
+        const generalfeedbackNode = node.querySelector("generalfeedback text");
+        const singleNode = node.querySelector("single");
+        const unitNode = node.querySelector("unit");
+        const unitPenaltyNode = node.querySelector("unitpenalty");
+        const numericalToleranceNode = node.querySelector("tolerance");
+
+        let qtext = qtextNode ? qtextNode.textContent : "";
+        qtext = processImages(qtext, node);
+
+        const qData = {
+          id: idx,
+          type: type,
+          single: singleNode ? singleNode.textContent === "true" : true,
+          name: nameNode ? nameNode.textContent : `Pregunta ${idx + 1}`,
+          text: qtext,
+          grade: defaultgradeNode ? parseFloat(defaultgradeNode.textContent) : 1,
+          generalfeedback: generalfeedbackNode ? generalfeedbackNode.textContent : "",
+          unit: unitNode ? unitNode.textContent.trim() : "",
+          unitPenalty: unitPenaltyNode ? parseFloat(unitPenaltyNode.textContent) || 0 : 0,
+          numericalTolerance: numericalToleranceNode ? parseFloat(numericalToleranceNode.textContent) || 0 : 0,
+          answers: [],
+          subquestions: []
+        };
+
+        if (type === 'matching') {
+          const subNodes = node.querySelectorAll("subquestion");
+          const extraAnswerNodes = node.querySelectorAll(":scope > shuffleanswers");
+          const extraAnswers = [];
+          extraAnswerNodes.forEach(group => {
+            group.querySelectorAll("answer").forEach(answer => {
+              const answerText = answer.querySelector("text")?.textContent.trim();
+              if (answerText) extraAnswers.push(answerText);
+            });
+          });
+          qData.extraAnswers = extraAnswers;
+          subNodes.forEach(sub => {
+            const subTextNode = sub.querySelector("text");
+            const answerNode = sub.querySelector("answer text");
+            if (subTextNode && subTextNode.textContent.trim()) {
+              qData.subquestions.push({
+                text: processImages(subTextNode.textContent, sub),
+                answer: answerNode ? answerNode.textContent.trim() : ""
+              });
+            }
+          });
+        } else {
+          const answerNodes = node.querySelectorAll("answer");
+          answerNodes.forEach(ans => {
+            const fraction = parseFloat(ans.getAttribute("fraction") || "0");
+            const ansTextNode = ans.querySelector("text");
+            const feedbackNode = ans.querySelector("feedback text");
+
+            let ansText = ansTextNode ? ansTextNode.textContent : "";
+            ansText = processImages(ansText, ans);
+
+            qData.answers.push({
+              text: ansText,
+              fraction: fraction,
+              isCorrect: fraction > 0,
+              tolerance: type === 'numerical' ? parseFloat(ans.querySelector("tolerance")?.textContent || qData.numericalTolerance || "0") : 0,
+              feedback: feedbackNode ? feedbackNode.textContent : ""
+            });
+          });
+        }
+
+        rawQuestions.push(qData);
+      });
+
+      document.getElementById('upload-zone').classList.add('hidden');
+      document.getElementById('app-controls').classList.remove('hidden');
+      setMode('simulador');
+    }
+
+    function processImages(htmlContent, contextNode) {
+      if (!htmlContent) return "";
+      const fileNodes = contextNode.querySelectorAll("file");
+      fileNodes.forEach(file => {
+        const name = file.getAttribute("name");
+        const encoding = file.getAttribute("encoding");
+        const content = file.textContent.trim();
+
+        if (encoding === "base64" && name && content) {
+          const extension = name.split('.').pop().toLowerCase();
+          let mime = 'image/jpeg';
+          if (extension === 'png') mime = 'image/png';
+          else if (extension === 'svg') mime = 'image/svg+xml';
+          else if (extension === 'webp') mime = 'image/webp';
+          else if (extension === 'gif') mime = 'image/gif';
+
+          const dataUri = `data:${mime};base64,${content}`;
+          
+          const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const encodedName = encodeURIComponent(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+          const regex1 = new RegExp(`@@PLUGINFILE@@/${escapedName}`, 'g');
+          const regex2 = new RegExp(`@@PLUGINFILE@@/${encodedName}`, 'g');
+
+          htmlContent = htmlContent.replace(regex1, dataUri).replace(regex2, dataUri);
+        }
+      });
+      return htmlContent;
+    }
+
+    function cleanHtmlText(str) {
+      const temp = document.createElement('div');
+      temp.innerHTML = str;
+      return temp.textContent || temp.innerText || "";
+    }
+
+    function renderQuestions() {
+      const container = document.getElementById('questions-container');
+      const searchText = document.getElementById('search-bar').value.toLowerCase();
+      const filterType = document.getElementById('filter-type').value;
+
+      container.innerHTML = "";
+
+      const filtered = rawQuestions.filter(q => {
+        const matchesSearch = q.name.toLowerCase().includes(searchText) || q.text.toLowerCase().includes(searchText);
+        const matchesType = filterType === "all" || q.type === filterType;
+        return matchesSearch && matchesType;
+      });
+
+      document.getElementById('q-counter').textContent = `${filtered.length} preguntes`;
+
+      filtered.forEach((q, index) => {
+        const qCard = document.createElement('div');
+        qCard.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition";
+
+        let typeLabel = q.type;
+        let badgeColor = "bg-slate-100 text-slate-600";
+        if (q.type === 'multichoice') { typeLabel = q.single ? "Opció Múltiple (Única)" : "Opció Múltiple (Múltiple)"; badgeColor = "bg-blue-50 text-blue-700 border-blue-200"; }
+        if (q.type === 'truefalse') { typeLabel = "Vertader/Fals"; badgeColor = "bg-indigo-50 text-indigo-700 border-indigo-200"; }
+        if (q.type === 'shortanswer') { typeLabel = "Resposta Curta"; badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200"; }
+        if (q.type === 'matching') { typeLabel = "Emparellament"; badgeColor = "bg-amber-50 text-amber-700 border-amber-200"; }
+        if (q.type === 'numerical') { typeLabel = "Numèrica"; badgeColor = "bg-purple-50 text-purple-700 border-purple-200"; }
+        if (q.type === 'essay') { typeLabel = "Desenvolupament"; badgeColor = "bg-rose-50 text-rose-700 border-rose-200"; }
+
+        let cardHeader = `
+          <div class="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+            <span class="font-bold text-sm text-slate-700">Pregunta ${index + 1}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs px-2.5 py-0.5 rounded-full border ${badgeColor} font-medium">${typeLabel}</span>
+              <span class="text-xs font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">${q.grade} punt(s)</span>
+            </div>
+          </div>
+        `;
+
+        let bodyHTML = `<div class="p-5">
+          <div class="q-text text-sm text-slate-800 leading-relaxed font-medium mb-4">${q.text}</div>
+        `;
+
+        if (currentMode === 'docent') {
+          bodyHTML += renderDocentAnswers(q);
+        } else {
+          bodyHTML += renderSimuladorAnswers(q);
+        }
+
+        bodyHTML += `</div>`;
+        qCard.innerHTML = cardHeader + bodyHTML;
+        container.appendChild(qCard);
+      });
+
+      updateScoreboard();
+    }
+
+    function renderDocentAnswers(q) {
+      let html = `<div class="space-y-2 mt-3">`;
+
+      if (q.type === 'matching') {
+        html += `<div class="border rounded-lg overflow-hidden text-xs"><table class="w-full text-left">
+          <thead class="bg-slate-100 text-slate-600 border-b">
+            <tr><th class="p-2.5">Concepte</th><th class="p-2.5">Parella Correcta</th></tr>
+          </thead><tbody>`;
+        q.subquestions.forEach(sub => {
+          html += `<tr class="border-b last:border-0 hover:bg-slate-50">
+            <td class="p-2.5 text-slate-800 font-medium">${sub.text}</td>
+            <td class="p-2.5 text-emerald-700 font-bold bg-emerald-50/50"><i class="fa-solid fa-check text-emerald-600 mr-1"></i>${sub.answer}</td>
+          </tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else if (q.type === 'essay') {
+        html += `<div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 italic">
+          <i class="fa-solid fa-pen-clip mr-1"></i> Aquesta pregunta és de resposta oberta / desenvolupament. Requereix avaluació manual per part del professorat.
+        </div>`;
+      } else {
+        q.answers.forEach((ans) => {
+          const isCorrect = ans.fraction > 0;
+          const colorStyle = isCorrect ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600';
+          const icon = isCorrect ? '<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>' : '<i class="fa-regular fa-circle text-slate-300"></i>';
+
+          html += `
+            <div class="p-3 rounded-lg border text-xs flex items-start gap-3 ${colorStyle}">
+              <div class="mt-0.5">${icon}</div>
+              <div class="flex-1">
+                <div>${ans.text}</div>
+                ${ans.feedback ? `<div class="mt-1 text-[11px] text-slate-500 italic"><i class="fa-regular fa-comment"></i> ${ans.feedback}</div>` : ''}
+              </div>
+              ${isCorrect ? `<span class="text-[10px] font-bold uppercase bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded">+${ans.fraction}%</span>` : ''}
+            </div>
+          `;
+        });
+      }
+
+      html += `</div>`;
+
+      if (q.generalfeedback) {
+        html += `
+          <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
+            <span class="font-bold block mb-0.5"><i class="fa-solid fa-lightbulb"></i> Retroalimentació general:</span>
+            ${q.generalfeedback}
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function renderSimuladorAnswers(q) {
+      const state = userAnswers[q.id] || { selectedIdx: null, selectedArray: [], textVal: '', matches: {}, checked: false, isCorrect: false };
+      let html = `<div class="space-y-2 mt-3">`;
+
+      if (q.type === 'multichoice' || q.type === 'truefalse') {
+        q.answers.forEach((ans, idx) => {
+          const isSelected = q.single ? state.selectedIdx === idx : (state.selectedArray && state.selectedArray.includes(idx));
+
+          let btnStyle = "bg-white border-slate-200 hover:border-slate-300 text-slate-700";
+          let icon = q.single ? '<i class="fa-regular fa-circle text-slate-300"></i>' : '<i class="fa-regular fa-square text-slate-300"></i>';
+
+          if (!state.checked) {
+            if (isSelected) {
+              btnStyle = "bg-blue-50 border-blue-500 text-blue-900 font-semibold shadow-sm";
+              icon = q.single ? '<i class="fa-solid fa-circle-dot text-blue-600 text-base"></i>' : '<i class="fa-solid fa-square-check text-blue-600 text-base"></i>';
+            }
+          } else {
+            if (isSelected && ans.isCorrect) {
+              btnStyle = "bg-emerald-100 border-emerald-500 text-emerald-900 font-semibold";
+              icon = '<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>';
+            } else if (isSelected && !ans.isCorrect) {
+              btnStyle = "bg-rose-100 border-rose-500 text-rose-900 font-semibold";
+              icon = '<i class="fa-solid fa-circle-xmark text-rose-600 text-base"></i>';
+            } else if (!isSelected && ans.isCorrect) {
+              btnStyle = "bg-emerald-50 border-emerald-300 text-emerald-800 opacity-90";
+              icon = '<i class="fa-solid fa-check text-emerald-600"></i>';
+            } else {
+              btnStyle = "bg-slate-50 border-slate-100 text-slate-400 opacity-60";
+            }
+          }
+
+          const disabledAttr = state.checked ? 'disabled' : '';
+
+          html += `
+            <button onclick="selectOption(${q.id}, ${idx}, ${q.single})" ${disabledAttr} class="w-full text-left p-3 rounded-lg border text-xs flex items-center gap-3 transition ${btnStyle}">
+              <div>${icon}</div>
+              <div class="flex-1">${ans.text}</div>
+              ${state.checked && !isSelected && ans.isCorrect ? '<span class="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded">Solució correcta</span>' : ''}
+            </button>
+          `;
+        });
+
+        html += `</div>`;
+
+        if (!state.checked) {
+          const hasSelection = q.single ? state.selectedIdx !== null : (state.selectedArray && state.selectedArray.length > 0);
+          if (hasSelection) {
+            html += `
+              <button onclick="checkQuestion(${q.id})" class="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-solid fa-check"></i> Comprovar resposta
+              </button>
+            `;
+          } else {
+            html += `<p class="text-[11px] text-slate-400 italic mt-2">Selecciona una opció per poder comprovar-la.</p>`;
+          }
+        }
+
+      } else if (q.type === 'matching') {
+        const allAnswers = [...new Set([...q.subquestions.map(s => s.answer), ...(q.extraAnswers || [])])].sort();
+        
+        html += `<div class="space-y-3">`;
+        q.subquestions.forEach((sub, sIdx) => {
+          const userVal = (state.matches && state.matches[sIdx]) || "";
+          const disabledAttr = state.checked ? 'disabled' : '';
+          
+          let selectStyle = "border-slate-300";
+          if (state.checked) {
+            const isMatchCorrect = userVal === sub.answer;
+            selectStyle = isMatchCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900 font-bold" : "border-rose-500 bg-rose-50 text-rose-900 font-bold";
+          }
+
+          html += `
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 border rounded-lg text-xs gap-2">
+              <div class="font-medium text-slate-700 flex-1">${sub.text}</div>
+              <select onchange="setMatchAnswer(${q.id}, ${sIdx}, this.value)" ${disabledAttr} class="p-2 border rounded-lg text-xs bg-white outline-none ${selectStyle}">
+                <option value="">-- Selecciona --</option>
+                ${allAnswers.map(ans => `<option value="${ans}" ${userVal === ans ? 'selected' : ''}>${ans}</option>`).join('')}
+              </select>
+            </div>
+          `;
+        });
+        html += `</div>`;
+
+        if (!state.checked) {
+          const matchCount = Object.keys(state.matches || {}).length;
+          if (matchCount === q.subquestions.length) {
+            html += `
+              <button onclick="checkMatchingQuestion(${q.id})" class="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-solid fa-check"></i> Comprovar parelles
+              </button>
+            `;
+          } else {
+            html += `<p class="text-[11px] text-slate-400 italic mt-2">Selecciona opcions per a totes les parelles.</p>`;
+          }
+        }
+
+      } else if (q.type === 'essay') {
+        const essayState = userAnswers[q.id] || { textVal: '' };
+        const essayValue = (essayState.textVal || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');
+        html += `
+          <textarea oninput="saveEssayAnswer(${q.id}, this.value)" placeholder="Escriu la teva resposta de desenvolupament aquí..." class="w-full p-3 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 h-28">${essayValue}</textarea>
+          <p class="text-[11px] text-amber-700 font-semibold mt-2"><i class="fa-solid fa-clock"></i> Pendent de correcció manual. Aquesta pregunta no s’inclou en la nota provisional.</p>
+        `;
+      } else {
+        const disabledAttr = state.checked ? 'disabled' : '';
+        let inputStyle = "border-slate-300";
+        if (state.checked) {
+          inputStyle = state.isCorrect ? "border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold" : "border-rose-500 bg-rose-50 text-rose-900";
+        }
+
+        html += `
+          <div class="flex gap-2">
+            <input type="text" id="input-q-${q.id}" value="${state.textVal || ''}" ${disabledAttr} placeholder="${q.type === 'numerical' ? 'Escriu un valor numèric...' : 'Escriu la teva resposta...'}" class="flex-1 p-2.5 border rounded-lg text-xs outline-none ${inputStyle}">
+            ${!state.checked ? `<button onclick="checkTextQuestion(${q.id})" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition">Comprovar</button>` : ''}
+          </div>
+          ${q.type === 'numerical' && q.unit ? `<p class="text-[11px] text-slate-500 mt-1">Unitat esperada: ${q.unit}</p>` : ''}
+        `;
+      }
+
+      if (state.checked) {
+        let feedbackText = q.generalfeedback;
+        const hasPartialCredit = q.type === 'shortanswer' && state.fraction > 0 && state.fraction < 100;
+        const resultLabel = hasPartialCredit
+          ? `Puntuació parcial: ${state.fraction}% (${state.grade} de ${q.grade} punts)`
+          : (state.isCorrect ? 'Resposta Correcta!' : 'Resposta Incorrecta');
+        const resultIcon = hasPartialCredit
+          ? '<i class="fa-solid fa-circle-half-stroke text-amber-600"></i>'
+          : (state.isCorrect ? '<i class="fa-solid fa-circle-check text-emerald-600"></i>' : '<i class="fa-solid fa-circle-xmark text-rose-600"></i>');
+        const resultStyle = hasPartialCredit
+          ? 'bg-amber-50 border-amber-200 text-amber-900'
+          : (state.isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900');
+        if (q.type === 'multichoice' || q.type === 'truefalse') {
+          const chosenAns = state.selectedIdx !== null ? q.answers[state.selectedIdx] : null;
+          if (chosenAns && chosenAns.feedback) feedbackText = chosenAns.feedback;
+        }
+
+        html += `
+          <div class="mt-4 p-3 rounded-lg text-xs border ${resultStyle}">
+            <div class="font-bold flex items-center gap-1.5 mb-1">
+              ${resultIcon} ${resultLabel}
+            </div>
+            ${feedbackText ? `<div class="mt-1 text-slate-700">${feedbackText}</div>` : ''}
+          </div>
+        `;
+      }
+
+      return html;
+    }
+
+    function selectOption(qId, ansIdx, isSingle) {
+      if (!userAnswers[qId]) {
+        userAnswers[qId] = { selectedIdx: null, selectedArray: [], textVal: '', matches: {}, checked: false, isCorrect: false };
+      }
+      if (userAnswers[qId].checked) return;
+
+      if (isSingle) {
+        userAnswers[qId].selectedIdx = ansIdx;
+      } else {
+        const arr = userAnswers[qId].selectedArray || [];
+        const pos = arr.indexOf(ansIdx);
+        if (pos > -1) arr.splice(pos, 1);
+        else arr.push(ansIdx);
+        userAnswers[qId].selectedArray = arr;
+      }
+
+      renderQuestions();
+    }
+
+    function saveEssayAnswer(qId, value) {
+      if (!userAnswers[qId]) {
+        userAnswers[qId] = { selectedIdx: null, selectedArray: [], textVal: '', matches: {}, checked: false, isCorrect: false };
+      }
+      userAnswers[qId].textVal = value;
+    }
+
+    function setMatchAnswer(qId, subIdx, val) {
+      if (!userAnswers[qId]) {
+        userAnswers[qId] = { selectedIdx: null, selectedArray: [], textVal: '', matches: {}, checked: false, isCorrect: false };
+      }
+      if (userAnswers[qId].checked) return;
+
+      userAnswers[qId].matches[subIdx] = val;
+      renderQuestions();
+    }
+
+    function checkQuestion(qId) {
+      const q = rawQuestions.find(item => item.id === qId);
+      const state = userAnswers[qId];
+      if (!state) return;
+
+      state.checked = true;
+
+      if (q.single) {
+        const chosenAns = q.answers[state.selectedIdx];
+        state.isCorrect = chosenAns ? chosenAns.isCorrect : false;
+      } else {
+        const correctIndices = q.answers.map((a, i) => a.isCorrect ? i : -1).filter(i => i !== -1);
+        const userIndices = (state.selectedArray || []).sort();
+        state.isCorrect = JSON.stringify(correctIndices) === JSON.stringify(userIndices.sort());
+      }
+
+      state.grade = state.isCorrect ? q.grade : 0;
+      renderQuestions();
+    }
+
+    function checkMatchingQuestion(qId) {
+      const q = rawQuestions.find(item => item.id === qId);
+      const state = userAnswers[qId];
+      if (!state) return;
+
+      state.checked = true;
+      let allCorrect = true;
+
+      q.subquestions.forEach((sub, sIdx) => {
+        if (state.matches[sIdx] !== sub.answer) allCorrect = false;
+      });
+
+      state.isCorrect = allCorrect;
+      state.grade = state.isCorrect ? q.grade : 0;
+      renderQuestions();
+    }
+
+    function checkTextQuestion(qId) {
+      const q = rawQuestions.find(item => item.id === qId);
+      const inputEl = document.getElementById(`input-q-${qId}`);
+      const val = inputEl ? inputEl.value.trim().toLowerCase() : "";
+
+      const match = q.type === 'numerical' ? findNumericalAnswer(q, val) : q.answers
+        .filter(a => cleanHtmlText(a.text).trim().toLowerCase() === val)
+        .sort((a, b) => b.fraction - a.fraction)[0] || null;
+
+      userAnswers[qId] = {
+        selectedIdx: null,
+        textVal: val,
+        checked: true,
+        isCorrect: !!match && match.fraction >= 100,
+        fraction: match ? Math.max(0, match.fraction) : 0,
+        grade: match ? q.grade * Math.max(0, match.fraction) / 100 : 0
+      };
+
+      renderQuestions();
+    }
+
+    function findNumericalAnswer(q, input) {
+      const parsed = parseNumericalInput(input, q.unit);
+      if (!parsed) return null;
+
+      return q.answers.find(answer => {
+        if (!answer.isCorrect) return false;
+        const expected = parseNumericalInput(cleanHtmlText(answer.text), q.unit);
+        if (!expected) return false;
+        const allowedDifference = Math.max(0, answer.tolerance || 0);
+        return Math.abs(parsed.value - expected.value) <= allowedDifference;
+      }) || null;
+    }
+
+    function parseNumericalInput(input, expectedUnit) {
+      const text = String(input || '').trim().replace(',', '.');
+      const match = text.match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*(.*?)$/i);
+      if (!match) return null;
+
+      const value = Number(match[1]);
+      if (!Number.isFinite(value)) return null;
+      const enteredUnit = match[2].trim().toLowerCase();
+      const normalizedExpectedUnit = String(expectedUnit || '').trim().toLowerCase();
+      if (enteredUnit && enteredUnit !== normalizedExpectedUnit) return null;
+      return { value };
+    }
+
+    function updateScoreboard() {
+      if (currentMode !== 'simulador') return;
+
+      let totalPoints = 0;
+      let earnedPoints = 0;
+      let correctCount = 0;
+      let incorrectCount = 0;
+      let pendingEssayCount = 0;
+      let unansweredCount = 0;
+
+      rawQuestions.forEach(q => {
+        if (q.type === 'essay') {
+          pendingEssayCount++;
+        } else {
+          totalPoints += q.grade;
+        }
+        const state = userAnswers[q.id];
+        if (q.type !== 'essay' && (!state || !state.checked)) unansweredCount++;
+        if (state && state.checked) {
+          const earnedFraction = typeof state.fraction === 'number'
+            ? state.fraction
+            : (state.isCorrect ? 100 : 0);
+          earnedPoints += q.grade * earnedFraction / 100;
+          if (earnedFraction >= 100) correctCount++;
+          else incorrectCount++;
+        }
+      });
+
+      const gradeOn10 = totalPoints > 0 ? ((earnedPoints / totalPoints) * 10).toFixed(1) : "0.0";
+
+      document.getElementById('score-correct').textContent = correctCount;
+      document.getElementById('score-incorrect').textContent = incorrectCount;
+      document.getElementById('score-grade').textContent = `${gradeOn10} / 10`;
+      const noteParts = [];
+      if (unansweredCount > 0) {
+        noteParts.push(`${unansweredCount} ${unansweredCount === 1 ? 'pregunta sense respondre' : 'preguntes sense respondre'}`);
+      }
+      if (pendingEssayCount > 0) {
+        noteParts.push(`${pendingEssayCount} ${pendingEssayCount === 1 ? 'pregunta de desenvolupament pendent de correcció' : 'preguntes de desenvolupament pendents de correcció'}`);
+      }
+      document.getElementById('score-note').textContent = noteParts.length > 0
+        ? `Nota provisional · ${noteParts.join(' · ')}`
+        : 'Qüestionari completat · nota de les preguntes corregibles automàticament';
+    }
+  </script>
+</body>
+</html>
+
