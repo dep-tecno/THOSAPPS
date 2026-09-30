@@ -8,7 +8,7 @@
   const wiresLayer = $('#wires-layer');
   const inspector = $('#inspector');
   const palette = $('#palette');
-  const model = { components: [], wires: [], junctions: [], mode: 'edit', selected: null, tool: 'select', wireStart: null, wireBefore: null, wireHover: null, collapsed: false, expandedCard: null, result: null, revision: 0, zoom: 1, panX: 0, panY: 0, panel: { x: null, y: 16 } };
+  const model = { components: [], wires: [], junctions: [], mode: 'edit', selected: null, selectedWire: null, selectedJunction: null, selectedWirePoint: null, tool: 'select', wireStart: null, wireBefore: null, wireHover: null, collapsed: false, expandedCard: null, result: null, revision: 0, zoom: 1, panX: 0, panY: 0, panel: { x: null, y: 16 } };
   const types = {
     source: { label: 'Font AC', short: 'Font', glyph: '∿', prefix: 'V' },
     resistor: { label: 'Resistència', short: 'R', glyph: 'R', prefix: 'R' },
@@ -32,7 +32,7 @@
   }
   function restoreHistory(index) {
     historyIndex = Math.max(0, Math.min(history.length - 1, index));
-    const data = JSON.parse(history[historyIndex]); model.components = data.components; model.wires = data.wires; model.junctions = data.junctions || []; model.selected = null; model.wireStart = null; model.wireBefore = null; model.wireHover=null; model.result = null; model.revision++; inspector.classList.add('hidden');
+    const data = JSON.parse(history[historyIndex]); model.components = data.components; model.wires = data.wires; model.junctions = data.junctions || []; model.selected = null; model.selectedWire = null; model.selectedJunction = null; model.selectedWirePoint = null; model.wireStart = null; model.wireBefore = null; model.wireHover=null; model.result = null; model.revision++; inspector.classList.add('hidden');
     updateHistoryButtons(); render();
   }
   function updateHistoryButtons() {
@@ -63,7 +63,7 @@
     const cols = Math.max(2, Math.floor((rect.width - 160) / 150));
     const sx = 110 + (n % cols) * 150, sy = 100 + Math.floor(n / cols) * 115;
     const c = { id: nextId(type), type, x: (sx - model.panX) / model.zoom, y: (sy - model.panY) / model.zoom, rotation: 0, ...structuredClone(defaults[type]) };
-    model.components.push(c); model.revision++; model.selected = c.id; model.result = null;
+    model.components.push(c); model.revision++; model.selected = c.id; model.selectedWire = null; model.selectedJunction = null; model.selectedWirePoint = null; model.result = null;
     commitHistory(before);
     render(); openInspector(c.id);
   }
@@ -110,16 +110,17 @@
       el.addEventListener('pointerenter', e => showComponentHover(c, e)); el.addEventListener('pointermove', moveHover); el.addEventListener('pointerleave', hideHover);
       el.querySelectorAll('.terminal').forEach(t => { t.addEventListener('pointerenter', e => showNodeHover(t.dataset.terminal, e)); t.addEventListener('pointermove', moveHover); });
       if (model.tool === 'wire' && model.mode === 'edit') el.querySelectorAll('.terminal').forEach(t => t.addEventListener('click', terminalClick));
-      el.addEventListener('click', e => { if (e.target.closest('.terminal')) return; e.stopPropagation(); model.selected = c.id; render(); openInspector(c.id); });
+      el.addEventListener('click', e => { if (e.target.closest('.terminal')) return; e.stopPropagation(); model.selected = c.id; model.selectedWire = null; model.selectedJunction = null; model.selectedWirePoint = null; render(); openInspector(c.id); });
       if (model.mode === 'edit') enableDrag(el, c);
       layer.append(el);
     }
     for (const j of model.junctions) {
       const degree = model.wires.filter(w => w.a === j.id || w.b === j.id).length;
-      const el = document.createElement('button'); el.className = `junction ${degree > 2 ? 'branched' : ''} ${model.wireStart === j.id ? 'wire-start' : ''}`;
+      const el = document.createElement('button'); el.className = `junction ${degree > 2 ? 'branched' : ''} ${model.wireStart === j.id ? 'wire-start' : ''} ${model.selectedJunction === j.id ? 'selected' : ''}`;
       el.style.left = `${j.x}px`; el.style.top = `${j.y}px`; el.title = degree > 2 ? 'Node de connexió' : 'Punt de connexió'; el.setAttribute('aria-label', el.title);
       el.addEventListener('pointerenter', e => showJunctionHover(j, e)); el.addEventListener('pointermove', moveHover); el.addEventListener('pointerleave', hideHover);
       if (model.tool === 'wire' && model.mode === 'edit') el.addEventListener('click', e => endpointClick(e, j.id));
+      else if (model.mode === 'edit' && model.tool !== 'pan') { el.addEventListener('click', e => { e.stopPropagation(); selectJunction(j.id); }); enableJunctionDrag(el, j); }
       layer.append(el);
     }
     setViewport();
@@ -131,9 +132,13 @@
     $('#wire-btn').classList.toggle('active', model.tool === 'wire'); $('#pan-btn').classList.toggle('active', model.tool === 'pan'); $('#wire-btn').disabled = model.mode === 'sim';
     ['new-btn','open-btn','undo-btn','redo-btn'].forEach(id => $(`#${id}`).disabled = model.mode === 'sim');
     renderPalette(); updateHistoryButtons();
-    $('#tool-hint').textContent = model.tool === 'wire' ? (model.wireStart ? 'Tria un terminal, node, cable o espai buit per crear una branca' : 'Tria terminals o clica un cable per crear un node') : model.tool === 'pan' ? 'Arrossega l’espai de treball per desplaçar el circuit' : 'Tria un component per afegir-lo al circuit';
+    $('#tool-hint').textContent = model.tool === 'wire' ? (model.wireStart ? 'Tria un terminal, node, cable o espai buit per crear una branca' : 'Tria terminals o clica un cable per crear un node') : model.tool === 'pan' ? 'Arrossega l’espai de treball per desplaçar el circuit' : 'Clica un component, cable o node · Supr elimina · Arrossega nodes per allargar cables';
     if (model.result) renderAnalysis(); else renderEmptyAnalysis();
-    if (model.selected && !inspector.classList.contains('hidden')) openInspector(model.selected);
+    if (!inspector.classList.contains('hidden')) {
+      if (model.selected) openInspector(model.selected);
+      else if (model.selectedWire) openWireInspector(model.selectedWire);
+      else if (model.selectedJunction) openJunctionInspector(model.selectedJunction);
+    }
   }
   const TERMINAL_OFFSET = 50;
   function endpointGeometry(endpointId) {
@@ -186,10 +191,10 @@
     wiresLayer.innerHTML = '';
     for (const w of model.wires) {
       const points=wireRoute(w.a,w.b);if(points.length<2)continue;const d=pathData(points);
-      const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', d); p.setAttribute('class',`wire-line ${model.wireHover?.wireId===w.id?'connection-target':''}`);p.dataset.wireId=w.id;wiresLayer.append(p);
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', d); p.setAttribute('class',`wire-line ${model.wireHover?.wireId===w.id?'connection-target':''} ${model.selectedWire===w.id?'selected':''}`);p.dataset.wireId=w.id;wiresLayer.append(p);
       const hit = document.createElementNS('http://www.w3.org/2000/svg','path'); hit.setAttribute('d',d); hit.setAttribute('class','wire-hit');
       hit.addEventListener('pointerenter', e => {showWireHover(w,e);updateWireHover(w,e);}); hit.addEventListener('pointermove', e => {moveHover(e);updateWireHover(w,e);}); hit.addEventListener('pointerleave', () => {hideHover();if(model.wireHover?.wireId===w.id){model.wireHover=null;clearWirePreview();}});
-      if (model.mode === 'edit') hit.addEventListener('click', e => { e.stopPropagation(); if (model.tool === 'pan') return; if(model.tool==='wire'){if(model.wireStart===w.a||model.wireStart===w.b){toast('Aquest cable ja pertany al node d’inici. Tria un altre cable.');return;}splitWireAt(w,e);return;} const before=circuitSnapshot(); model.wires = model.wires.filter(x => x.id !== w.id); pruneJunctions(); commitHistory(before); invalidate(); render(); toast('Connexió eliminada.'); }); wiresLayer.append(hit);
+      if (model.mode === 'edit') hit.addEventListener('click', e => { e.stopPropagation(); if (model.tool === 'pan') return; if(model.tool==='wire'){if(model.wireStart===w.a||model.wireStart===w.b){toast('Aquest cable ja pertany al node d’inici. Tria un altre cable.');return;}splitWireAt(w,e);return;} selectWire(w,e); }); wiresLayer.append(hit);
     }
   }
   function enableDrag(el, c) {
@@ -203,6 +208,24 @@
     });
     el.addEventListener('pointerup', () => { if (!start) return; commitHistory(start.before); start = null; });
     el.addEventListener('pointercancel', () => { start = null; });
+  }
+  function enableJunctionDrag(el, j) {
+    let start = null;
+    el.addEventListener('pointerdown', e => {
+      if (model.mode !== 'edit' || model.tool !== 'select') return;
+      e.stopPropagation(); const p = eventWorldPoint(e);
+      start = { x:p.x, y:p.y, jx:j.x, jy:j.y, before:circuitSnapshot(), moved:false };
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointermove', e => {
+      if (!start) return; const p = eventWorldPoint(e);
+      if (Math.abs(p.x-start.x)+Math.abs(p.y-start.y)>2) start.moved = true;
+      if (!start.moved) return;
+      j.x = Math.max(8, start.jx + p.x-start.x); j.y = Math.max(8, start.jy + p.y-start.y);
+      el.style.left = `${j.x}px`; el.style.top = `${j.y}px`; renderWires();
+    });
+    el.addEventListener('pointerup', () => { if (!start) return; if (start.moved) commitHistory(start.before); start = null; });
+    el.addEventListener('pointercancel', () => { if (!start) return; j.x = start.jx; j.y = start.jy; el.style.left = `${j.x}px`; el.style.top = `${j.y}px`; renderWires(); start = null; });
   }
   function terminalClick(e) { endpointClick(e, e.currentTarget.dataset.terminal); }
   function endpointClick(e, endpoint) {
@@ -238,10 +261,13 @@
     snap.setAttribute('cx',point.x);snap.setAttribute('cy',point.y);
   }
   function clearWirePreview() { $('#wire-preview')?.remove();$('#wire-snap-point')?.remove();$$('.wire-line.connection-target').forEach(line=>line.classList.remove('connection-target')); }
+  function splitWireAtPoint(w,point) {
+    const id=nextJunctionId(); model.junctions.push({id,x:point.x,y:point.y}); model.wires=model.wires.filter(x=>x.id!==w.id);
+    model.wires.push({id:crypto.randomUUID(),a:w.a,b:id},{id:crypto.randomUUID(),a:id,b:w.b}); return id;
+  }
   function splitWireAt(w,e) {
     const point=nearestOnWire(w,e); if(!point)return;
-    const before=model.wireBefore||circuitSnapshot(),previousStart=model.wireStart,id=nextJunctionId(); model.junctions.push({id,x:point.x,y:point.y}); model.wires=model.wires.filter(x=>x.id!==w.id);
-    model.wires.push({id:crypto.randomUUID(),a:w.a,b:id},{id:crypto.randomUUID(),a:id,b:w.b});
+    const before=model.wireBefore||circuitSnapshot(),previousStart=model.wireStart,id=splitWireAtPoint(w,point);
     model.wireHover=null;
     if(previousStart){model.wires.push({id:crypto.randomUUID(),a:previousStart,b:id});model.wireStart=null;model.wireBefore=null;commitHistory(before);invalidate();render();toast('Branca connectada al cable en el node '+id+'.');}
     else{model.wireStart=id;model.wireBefore=before;render();toast('Node '+id+' marcat. Tria ara on connectar la branca.');}
@@ -258,13 +284,65 @@
   function showComponentHover(comp,e){const result=model.result?.components[comp.id];const rows=[componentText(comp)];if(result)rows.push(`V = ${fmt(abs(result.voltage))} V RMS`,`I = ${fmt(abs(result.current))} A RMS`);showHover(componentName(comp),rows,e);}
   function showNodeHover(terminal,e){const n=model.result?.terminalNodes?.[terminal],v=n&&model.result?.nodeValues[n];showHover(n||'Terminal',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Simula per consultar la tensió'],e);}
   function showJunctionHover(j,e){const n=model.result?.terminalNodes?.[j.id],v=n&&model.result?.nodeValues[n];showHover(n||'Node',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Punt d’unió de cables'],e);}
-  function showWireHover(w,e){if(model.tool==='wire'){const same=model.wireStart===w.a||model.wireStart===w.b;showHover(same?'Aquest cable ja està connectat':'Crear un node en aquest cable',[same?'Tria un altre cable per afegir una branca':model.wireStart?'Clica per connectar la branca al punt marcat':'Clica per iniciar una derivació'],e);return;}const n=model.result?.terminalNodes?.[w.a],v=n&&model.result?.nodeValues[n];showHover(n?`Node ${n}`:'Connexió',[v?`V = ${fmt(abs(v))} V RMS`:'Simula per consultar la tensió'],e);}
+  function showWireHover(w,e){if(model.tool==='wire'){const same=model.wireStart===w.a||model.wireStart===w.b;showHover(same?'Aquest cable ja està connectat':'Crear un node en aquest cable',[same?'Tria un altre cable per afegir una branca':model.wireStart?'Clica per connectar la branca al punt marcat':'Clica per iniciar una derivació'],e);return;}const n=model.result?.terminalNodes?.[w.a],v=n&&model.result?.nodeValues[n];showHover('Connexió',[v?`V = ${fmt(abs(v))} V RMS`:'Clica per seleccionar, afegir un node o eliminar el cable'],e);}
+  function positionInspector() {
+    if (model.panel.x === null) model.panel.x = Math.max(12, workspace.clientWidth - 246);
+    inspector.style.left = `${model.panel.x}px`; inspector.style.right = 'auto'; inspector.style.top = `${model.panel.y}px`;
+  }
+  function selectWire(w,e) {
+    model.selected = null; model.selectedJunction = null; model.selectedWire = w.id; model.selectedWirePoint = nearestOnWire(w,e);
+    hideHover(); model.wireHover = null; clearWirePreview(); render(); openWireInspector(w.id);
+  }
+  function selectJunction(id) {
+    model.selected = null; model.selectedWire = null; model.selectedWirePoint = null; model.selectedJunction = id;
+    render(); openJunctionInspector(id);
+  }
+  function openWireInspector(id) {
+    const w=model.wires.find(x=>x.id===id); if(!w)return;
+    positionInspector();
+    inspector.innerHTML=`<div class="panel-head"><span>Cable</span><button id="close-inspector" aria-label="Tanca">×</button></div><div class="panel-row">Connexió seleccionada</div><div class="analysis-note">Afegeix un node al cable i arrossega’l per allargar o ajustar-ne el traçat.</div><div class="panel-actions">${model.mode==='edit'?'<button id="edit-wire-node">Afegeix node</button><button id="delete-selected" class="danger">Elimina cable</button>':''}</div>`;
+    inspector.classList.remove('hidden'); $('#close-inspector').onclick=()=>inspector.classList.add('hidden'); makePanelDraggable();
+    if($('#delete-selected'))$('#delete-selected').onclick=deleteSelectedElement;
+    if($('#edit-wire-node'))$('#edit-wire-node').onclick=addNodeToSelectedWire;
+  }
+  function openJunctionInspector(id) {
+    const j=model.junctions.find(x=>x.id===id); if(!j)return;
+    const degree=model.wires.filter(w=>w.a===id||w.b===id).length;
+    positionInspector();
+    inspector.innerHTML=`<div class="panel-head"><span>Node ${id}</span><button id="close-inspector" aria-label="Tanca">×</button></div><div class="panel-row">${degree} ${degree===1?'connexió':'connexions'}</div><div class="analysis-note">Arrossega el punt per allargar o redistribuir els cables connectats.</div><div class="panel-actions">${model.mode==='edit'?'<button id="delete-selected" class="danger">Elimina node i connexions</button>':''}</div>`;
+    inspector.classList.remove('hidden'); $('#close-inspector').onclick=()=>inspector.classList.add('hidden'); makePanelDraggable();
+    if($('#delete-selected'))$('#delete-selected').onclick=deleteSelectedElement;
+  }
+  function addNodeToSelectedWire() {
+    const w=model.wires.find(x=>x.id===model.selectedWire),point=model.selectedWirePoint; if(!w||!point)return;
+    const a=endpointPoint(w.a),b=endpointPoint(w.b),near=(p,q)=>Math.hypot(p.x-q.x,p.y-q.y)<16;
+    if((a&&near(point,a))||(b&&near(point,b))){toast('Tria un punt més allunyat de l’extrem del cable.');return;}
+    const before=circuitSnapshot(),id=splitWireAtPoint(w,point);
+    model.selected=null;model.selectedWire=null;model.selectedWirePoint=null;model.selectedJunction=id;
+    commitHistory(before);invalidate();render();openJunctionInspector(id);toast(`Node ${id} creat. Arrossega’l per allargar el cable.`);
+  }
+  function deleteSelectedElement() {
+    if(model.mode!=='edit')return;
+    const before=circuitSnapshot(); let message='';
+    if(model.selected){
+      const c=model.components.find(x=>x.id===model.selected); if(!c)return;
+      message=`${componentName(c)} eliminat.`; model.components=model.components.filter(x=>x.id!==c.id);
+      model.wires=model.wires.filter(w=>!w.a.startsWith(`${c.id}:`)&&!w.b.startsWith(`${c.id}:`)); pruneJunctions();
+    } else if(model.selectedWire){
+      if(!model.wires.some(w=>w.id===model.selectedWire))return;
+      model.wires=model.wires.filter(w=>w.id!==model.selectedWire); pruneJunctions(); message='Cable eliminat.';
+    } else if(model.selectedJunction){
+      const id=model.selectedJunction,degree=model.wires.filter(w=>w.a===id||w.b===id).length; if(!model.junctions.some(j=>j.id===id))return;
+      model.wires=model.wires.filter(w=>w.a!==id&&w.b!==id); model.junctions=model.junctions.filter(j=>j.id!==id); pruneJunctions();
+      message=`Node ${id} eliminat amb ${degree} ${degree===1?'connexió.':'connexions.'}`;
+    } else return;
+    commitHistory(before);model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');invalidate();render();toast(message);
+  }
   function openInspector(id) {
     const c = model.components.find(x => x.id === id); if (!c) return;
     model.selected = id;
-    if (model.panel.x === null) model.panel.x = Math.max(12, workspace.clientWidth - 246);
-    inspector.style.left = `${model.panel.x}px`; inspector.style.right = 'auto'; inspector.style.top = `${model.panel.y}px`;
-    inspector.innerHTML = `<div class="panel-head"><span>${componentName(c)}</span><button id="close-inspector" aria-label="Tanca">×</button></div>${inspectorFields(c)}<div class="panel-actions">${model.mode === 'edit' ? '<button id="rotate-component" title="Gira 90° amb la tecla R">Gira 90° (R)</button><button id="delete-component" class="danger">Elimina</button>' : ''}</div>`;
+    positionInspector();
+    inspector.innerHTML = `<div class="panel-head"><span>${componentName(c)}</span><button id="close-inspector" aria-label="Tanca">×</button></div>${inspectorFields(c)}<div class="panel-actions">${model.mode === 'edit' ? '<button id="rotate-component" title="Gira 90° amb la tecla R">Gira 90° (R)</button><button id="delete-component" class="danger">Elimina component</button>' : ''}</div>`;
     inspector.classList.remove('hidden');
     $('#close-inspector').onclick = () => inspector.classList.add('hidden');
     makePanelDraggable();
@@ -273,7 +351,7 @@
     if (['resistor','inductor','capacitor'].includes(c.type)) bindField('component-value', v => c.value = v, c.type === 'resistor' ? 'Ω' : c.type === 'inductor' ? 'H' : 'F');
     if (c.type === 'switch') $('#switch-toggle').onclick = () => { const before=circuitSnapshot();c.closed = !c.closed;commitHistory(before);changedElectrical();openInspector(id); };
     if ($('#rotate-component')) $('#rotate-component').onclick = () => rotateComponent(id);
-    if ($('#delete-component')) $('#delete-component').onclick = () => { const before=circuitSnapshot();model.components = model.components.filter(x => x.id !== id); model.wires = model.wires.filter(w => !w.a.startsWith(`${id}:`) && !w.b.startsWith(`${id}:`));pruneJunctions();commitHistory(before);model.selected = null; inspector.classList.add('hidden'); invalidate(); render(); };
+    if ($('#delete-component')) $('#delete-component').onclick = deleteSelectedElement;
   }
   function rotateComponent(id=model.selected) {
     if(model.mode!=='edit')return;
@@ -341,7 +419,7 @@
     try {
       if(model.components.length&&!window.confirm('Obrir aquest circuit substituirà el circuit actual. Vols continuar?')){$('#open-file-input').value='';return;}
       const parsed=JSON.parse(await file.text()),loaded=validateCircuitFile(parsed);cancelWireGesture();const before=circuitSnapshot();
-      model.components=loaded.components;model.wires=loaded.wires;model.junctions=loaded.junctions;model.selected=null;model.result=null;model.mode='edit';model.tool='select';model.wireStart=null;model.wireBefore=null;model.revision++;inspector.classList.add('hidden');commitHistory(before);resetView();render();toast('Circuit obert.');
+      model.components=loaded.components;model.wires=loaded.wires;model.junctions=loaded.junctions;model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;model.result=null;model.mode='edit';model.tool='select';model.wireStart=null;model.wireBefore=null;model.revision++;inspector.classList.add('hidden');commitHistory(before);resetView();render();toast('Circuit obert.');
     } catch(err) { toast(err instanceof SyntaxError?'No s’ha pogut llegir el fitxer JSON.':err.message||'No s’ha pogut obrir el circuit.'); }
     $('#open-file-input').value='';
   }
@@ -349,7 +427,7 @@
     if(model.mode==='sim')return;
     if(model.components.length&&!window.confirm('Es substituirà el circuit actual. Vols començar-ne un de nou?'))return;
     cancelWireGesture();
-    const before=circuitSnapshot();model.components=[];model.wires=[];model.junctions=[];model.selected=null;model.result=null;model.tool='select';model.wireStart=null;model.wireBefore=null;model.revision++;inspector.classList.add('hidden');commitHistory(before);resetView();render();
+    const before=circuitSnapshot();model.components=[];model.wires=[];model.junctions=[];model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;model.result=null;model.tool='select';model.wireStart=null;model.wireBefore=null;model.revision++;inspector.classList.add('hidden');commitHistory(before);resetView();render();
   }
   function exportPng() {
     const width=workspace.clientWidth,height=workspace.clientHeight,ratio=2,canvas=document.createElement('canvas');canvas.width=width*ratio;canvas.height=height*ratio;
@@ -467,7 +545,7 @@
   function simulate(){cancelWireGesture();model.tool='select';const r=solveCircuit();if(!r.ok){model.mode='edit';model.result=null;toast(r.error);render();return;}model.result=r;model.mode='sim';model.revision++;render();}
   function stop(){model.mode='edit';model.result=null;model.tool='select';render();}
   $('#simulate-btn').addEventListener('click',simulate);$('#stop-btn').addEventListener('click',stop);
-  $('#wire-btn').addEventListener('click',()=>{if(model.mode!=='edit')return;if(model.tool==='wire'){cancelWireGesture();model.tool='select';}else{model.tool='wire';model.wireStart=null;model.wireBefore=null;}render();});
+  $('#wire-btn').addEventListener('click',()=>{if(model.mode!=='edit')return;if(model.tool==='wire'){cancelWireGesture();model.tool='select';}else{model.tool='wire';model.wireStart=null;model.wireBefore=null;model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');}render();});
   $('#new-btn').addEventListener('click',newCircuit);
   $('#save-btn').addEventListener('click',saveCircuit);
   $('#open-btn').addEventListener('click',()=>$('#open-file-input').click());
@@ -480,10 +558,15 @@
   workspace.addEventListener('pointerdown', e => { if(model.tool!=='pan'||e.target.closest('.component')||e.target.closest('#inspector'))return; panDrag={x:e.clientX,y:e.clientY,px:model.panX,py:model.panY};panMoved=false;workspace.setPointerCapture(e.pointerId); });
   workspace.addEventListener('pointermove', e => { if(!panDrag)return;const dx=e.clientX-panDrag.x,dy=e.clientY-panDrag.y;if(Math.abs(dx)+Math.abs(dy)>2)panMoved=true;model.panX=panDrag.px+dx;model.panY=panDrag.py+dy;setViewport(); });
   workspace.addEventListener('pointerup', () => { panDrag=null; }); workspace.addEventListener('pointercancel',()=>{panDrag=null;});
-  workspace.addEventListener('click',e=>{if(panMoved){panMoved=false;return;}if(model.tool==='pan')return;const blank=e.target===workspace||e.target.classList.contains('workspace-grid')||e.target===wiresLayer||e.target===layer;if(!blank)return;model.selected=null;inspector.classList.add('hidden');if(model.tool==='wire'&&model.wireStart){addFreeJunction(e);return;}if(model.tool==='wire'){cancelWireGesture();model.tool='select';}render();});
-  window.addEventListener('keydown',e=>{if(e.target instanceof HTMLElement&&e.target.closest('input,textarea,select,[contenteditable="true"]'))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey){if(historyIndex<history.length-1)restoreHistory(historyIndex+1);}else if(historyIndex>0)restoreHistory(historyIndex-1);}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();if(historyIndex<history.length-1)restoreHistory(historyIndex+1);}else if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&e.key.toLowerCase()==='r'&&model.selected){e.preventDefault();rotateComponent();}});
+  workspace.addEventListener('click',e=>{if(panMoved){panMoved=false;return;}if(model.tool==='pan')return;const blank=e.target===workspace||e.target.classList.contains('workspace-grid')||e.target===wiresLayer||e.target===layer;if(!blank)return;if(model.tool==='wire'&&model.wireStart){model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');addFreeJunction(e);return;}if(model.tool==='wire'){cancelWireGesture();model.tool='select';}model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');render();});
+  window.addEventListener('keydown',e=>{
+    if(e.target instanceof HTMLElement&&e.target.closest('input,textarea,select,[contenteditable="true"]'))return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey){if(historyIndex<history.length-1)restoreHistory(historyIndex+1);}else if(historyIndex>0)restoreHistory(historyIndex-1);}
+    else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();if(historyIndex<history.length-1)restoreHistory(historyIndex+1);}
+    else if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&e.key.toLowerCase()==='r'&&model.selected){e.preventDefault();rotateComponent();}
+    else if(model.mode==='edit'&&(e.key==='Delete'||e.key==='Backspace')&&(model.selected||model.selectedWire||model.selectedJunction)){e.preventDefault();deleteSelectedElement();}
+  });
   $('#collapse-analysis').addEventListener('click',()=>{model.collapsed=!model.collapsed;$('#analysis-area').classList.toggle('collapsed',model.collapsed);$('#collapse-analysis').textContent=model.collapsed?'⌃':'⌄';$('#collapse-analysis').title=model.collapsed?'Mostra les targetes':'Plega les targetes';if(!model.collapsed&&model.result)renderAnalysis();});
   window.addEventListener('resize',()=>render());
   renderPalette(); render();
 })();
-
