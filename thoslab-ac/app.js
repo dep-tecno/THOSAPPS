@@ -25,6 +25,12 @@
   let currentAnimationFrame = null;
   let currentAnimationEpoch = 0;
   const CURRENT_VISUAL_PERIOD = 2400;
+  const scopeZoomLevels = [.5, 1, 2, 4, 8];
+  let scopeZoom = 1;
+  let scopeDrawing = null;
+  const scopeResizeObserver = new ResizeObserver(() => {
+    if (scopeDrawing && model.mode === 'sim') drawScope(...scopeDrawing);
+  });
   let history = [circuitSnapshot()];
   let historyIndex = 0;
 
@@ -605,7 +611,7 @@
   function fmt(n, digits=2){if(!Number.isFinite(n))return '—';if(Math.abs(n)>0&&Math.abs(n)<.001||Math.abs(n)>=10000)return n.toExponential(2);return Number(n.toFixed(digits)).toLocaleString('ca-ES',{maximumFractionDigits:digits});}
   function polarText(z, unit='') {return `${fmt(abs(z))} ${unit} ∠ ${fmt(arg(z)*180/Math.PI)}°`;}
   function metric(label,value){return `<div class="metric"><label>${label}</label><strong>${value}</strong></div>`;}
-  function renderEmptyAnalysis(){ $('#analysis-area').classList.add('hidden'); }
+  function renderEmptyAnalysis(){ scopeResizeObserver.disconnect();scopeDrawing=null;$('#analysis-area').classList.add('hidden'); }
   function renderAnalysis(){
     const r=model.result;if(!r)return renderEmptyAnalysis();
     const selected=model.components.find(x=>x.id===model.selected),selectedResult=selected?r.components[selected.id]:null;
@@ -615,18 +621,62 @@
     const scopeBody=$('#scope-card-content'),phasorBody=$('#phasors-card-content'),analysisBody=$('#analysis-card-content');
     const expanded=model.expandedCard;
     $$('.analysis-card').forEach(card=>{const open=card.dataset.card===expanded;card.classList.toggle('expanded',open);const control=$('[data-expand]',card);control.querySelector('span').textContent=open?'Plega':'Ampliar';});
-    scopeBody.innerHTML=`<div class="card-context">${context}</div><canvas class="scope-chart ${expanded==='scope'?'scope-large':''}" id="scope-card-canvas"></canvas><div class="card-summary">V ${fmt(abs(pair.voltage))} V · I ${fmt(abs(pair.current))} A${expanded==='scope'?` · f ${fmt(r.frequency)} Hz · φ ${fmt((arg(pair.voltage)-arg(pair.current))*180/Math.PI)}°`:''}</div>`;
+    const scopeSpan = 2 / scopeZoom / r.frequency;
+    scopeBody.innerHTML=`<div class="card-context">${context}</div><div class="scope-controls" role="group" aria-label="Zoom temporal del Scope"><button data-scope-zoom="out" title="Allunya el Scope: més temps" aria-label="Allunya el Scope" ${scopeZoom===scopeZoomLevels[0]?'disabled':''}>−</button><span class="scope-window">${fmt(scopeZoom)}× · ${fmt(scopeSpan*1000)} ms</span><button data-scope-zoom="in" title="Apropa el Scope: menys temps" aria-label="Apropa el Scope" ${scopeZoom===scopeZoomLevels.at(-1)?'disabled':''}>+</button><button data-scope-zoom="auto" title="Restableix el Scope a dos períodes">Auto</button></div><canvas class="scope-chart ${expanded==='scope'?'scope-large':''}" id="scope-card-canvas" role="img" aria-label="Sinusoides de tensió i corrent; escales verticals independents"></canvas><div class="card-summary"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span> · <span class="scope-current">I ${fmt(abs(pair.current))} A</span> RMS${expanded==='scope'?` · f ${fmt(r.frequency)} Hz · φ ${fmt((arg(pair.voltage)-arg(pair.current))*180/Math.PI)}°`:''}</div><div class="scope-scale-note">V i I amb escala pròpia · pics ajustats</div>`;
     const phasors=[];if(selectedResult){phasors.push([`V ${selected.id}`,selectedResult.voltage,'#48d7d2'],[`I ${selected.id}`,selectedResult.current,'#ffb86b']);}else{phasors.push(['V font',r.voltage,'#48d7d2'],['I total',r.current,'#ffb86b']);const series=model.components.filter(x=>['resistor','inductor','capacitor'].includes(x.type));if(series.length&&series.every(x=>r.components[x.id])&&isSeriesRlc(series))for(const x of series)phasors.push([`V ${x.id}`,r.components[x.id].voltage,['#9ee7b5','#ff8f8f','#b69aff'][['resistor','inductor','capacitor'].indexOf(x.type)]]);}
     phasorBody.innerHTML=`<div class="card-context">${context}</div><div class="card-visual-row"><canvas class="phasor-chart" id="phasors-card-canvas"></canvas><div class="card-summary">φ ${fmt((arg(pair.voltage)-arg(pair.current))*180/Math.PI)}°${expanded==='phasors'?`<div class="phasor-list">${phasors.map(([name,z])=>`<span class="phasor-chip">${name}: ${polarText(z,name.startsWith('I')?'A':'V')}</span>`).join('')}</div>`:''}</div></div>`;
     const analysisMetrics=selectedResult
       ? [metric('Tensió RMS',`${fmt(abs(selectedResult.voltage))} V`),metric('Corrent RMS',`${fmt(abs(selectedResult.current))} A`),metric('Potència activa',`${fmt(selectedResult.power.re)} W`),...(expanded?[metric('Potència reactiva',`${fmt(selectedResult.power.im)} var`),metric('Angle V − I',`${fmt((arg(selectedResult.voltage)-arg(selectedResult.current))*180/Math.PI)}°`)]:[])]
       : [metric('Tensió',`${fmt(abs(r.voltage))} V`),metric('Intensitat',`${fmt(abs(r.current))} A`),metric('Impedància',r.impedance?`${fmt(abs(r.impedance))} Ω`:'—'),metric('Fase',`${fmt(r.phase*180/Math.PI)}°`),...(expanded?[metric('cos φ',fmt(r.pf,3)),metric('P activa',`${fmt(r.power.re)} W`),metric('Q reactiva',`${fmt(r.reactive.im)} var`),metric('S aparent',`${fmt(r.apparent)} VA`),metric('Freqüència',`${fmt(r.frequency)} Hz`)]:[])];
     analysisBody.innerHTML=`<div class="card-context">${context}</div><div class="card-metrics ${expanded?'metrics-expanded':''}">${analysisMetrics.join('')}</div>`;
-    drawScope($('#scope-card-canvas'),pair,r.omega);drawPhasors($('#phasors-card-canvas'),phasors);
+    scopeResizeObserver.disconnect();scopeDrawing=[$('#scope-card-canvas'),pair,r.omega];
+    drawScope(...scopeDrawing);scopeResizeObserver.observe(scopeDrawing[0]);drawPhasors($('#phasors-card-canvas'),phasors);
+    $$('[data-scope-zoom]',scopeBody).forEach(button=>button.onclick=()=>{
+      const action=button.dataset.scopeZoom,index=scopeZoomLevels.indexOf(scopeZoom);
+      scopeZoom=action==='auto'?1:scopeZoomLevels[Math.max(0,Math.min(scopeZoomLevels.length-1,index+(action==='in'?1:-1)))];
+      renderAnalysis();
+      const control=$(`[data-scope-zoom="${action}"]`,scopeBody);
+      (control.disabled?$('[data-scope-zoom="auto"]',scopeBody):control).focus({preventScroll:true});
+    });
     $$('.analysis-card-head').forEach(button=>button.onclick=()=>{model.expandedCard=model.expandedCard===button.dataset.expand?null:button.dataset.expand;renderAnalysis();});
   }
   function isSeriesRlc(list){const branches=model.components.filter(x=>x.type==='source'||['resistor','inductor','capacitor'].includes(x.type));if(list.length<2||branches.length!==list.length+1)return false;const degree={};for(const x of branches)for(const side of ['a','b']){const n=model.result.terminalNodes[`${x.id}:${side}`];degree[n]=(degree[n]||0)+1;}return Object.values(degree).length===branches.length&&Object.values(degree).every(n=>n===2);}
-  function drawScope(canvas,pair,omega){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height;ctx.strokeStyle='#263a51';ctx.lineWidth=1;for(let i=1;i<8;i++){ctx.beginPath();ctx.moveTo(w*i/8,0);ctx.lineTo(w*i/8,h);ctx.stroke();}for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke();}const ampV=abs(pair.voltage),ampI=abs(pair.current),max=Math.max(ampV,ampI,1e-6),phV=arg(pair.voltage),phI=arg(pair.current);[[ampV,phV,'#48d7d2'],[ampI,phI,'#ffb86b']].forEach(([amp,phase,color])=>{ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();for(let x=0;x<=w;x++){const t=(x/w)*4*Math.PI;const y=h/2-Math.sqrt(2)*amp/max*(h*.38)*Math.sin(t+phase);if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();});}
+  function drawScope(canvas,pair,omega){
+    const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
+    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+    const w=rect.width,h=rect.height,labels=h>=80;
+    const left=5,right=w-5,top=5,bottom=h-(labels?18:5);
+    if(right<=left||bottom<=top)return;
+    const center=(top+bottom)/2,amplitude=(bottom-top)*.43;
+    const period=2*Math.PI/omega,span=2*period/scopeZoom,start=period-span/2;
+    ctx.strokeStyle='#263a51';ctx.lineWidth=1;
+    for(let i=1;i<8;i++){const x=left+(right-left)*i/8;ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bottom);ctx.stroke();}
+    for(let i=0;i<=4;i++){const y=top+(bottom-top)*i/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();}
+    ctx.strokeStyle='#40556d';ctx.beginPath();ctx.moveTo(left,center);ctx.lineTo(right,center);ctx.stroke();
+    // Voltage and current have different units: each uses its own peak scale.
+    // Scaling by the peak (rather than RMS) leaves room for the entire sine.
+    [[pair.voltage,'#48d7d2'],[pair.current,'#ffb86b']].forEach(([z,color])=>{
+      const peak=Math.sqrt(2)*abs(z),phase=arg(z);
+      ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.setLineDash(color==='#ffb86b'?[4,3]:[]);ctx.beginPath();
+      const samples=Math.max(2,Math.ceil(right-left));
+      for(let k=0;k<=samples;k++){
+        const fraction=k/samples,x=left+(right-left)*fraction,t=start+span*fraction;
+        const instant=peak*Math.sin(omega*t+phase);
+        const y=center-(peak>0?instant/peak:0)*amplitude;
+        if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    if(labels){
+      ctx.fillStyle='#8da3b9';ctx.font='9px monospace';ctx.textBaseline='bottom';
+      [[left,start,'left'],[(left+right)/2,start+span/2,'center'],[right,start+span,'right']].forEach(([x,t,align])=>{
+        ctx.textAlign=align;ctx.fillText(`${fmt(t*1000)} ms`,x,h-2);
+      });
+    }
+  }
   function drawPhasors(canvas,list){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height,cx=w/2,cy=h/2,scale=Math.min(w,h)*.39,max=Math.max(1e-8,...list.map(x=>abs(x[1])));ctx.strokeStyle='#2a4058';ctx.beginPath();ctx.moveTo(8,cy);ctx.lineTo(w-8,cy);ctx.moveTo(cx,8);ctx.lineTo(cx,h-8);ctx.stroke();for(let k=1;k<=2;k++){ctx.beginPath();ctx.arc(cx,cy,scale*k/2,0,Math.PI*2);ctx.stroke();}list.forEach(([name,z,color])=>{const x=cx+z.re/max*scale,y=cy-z.im/max*scale;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke();ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});}
   function simulate(){cancelWireGesture();model.tool='select';const r=solveCircuit();if(!r.ok){model.mode='edit';model.result=null;toast(r.error);render();return;}model.result=r;model.mode='sim';currentAnimationEpoch=performance.now();model.revision++;render();}
   function stop(){model.mode='edit';model.result=null;model.tool='select';render();}
