@@ -1,5 +1,6 @@
 "use strict";
 
+
 // THOSFLUID MVP: simulació lògica pneumàtica, sense magnituds físiques.
 const NS = "http://www.w3.org/2000/svg";
 const FORMAT = "thosfluid-circuit";
@@ -1403,6 +1404,11 @@ function setupLibrary() {
   }
 }
 function setupCanvas() {
+  $("circuitCanvas").addEventListener("pointerdown", () => {
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) document.activeElement.blur();
+}, { capture: true });
+
+  
   const canvas = $("circuitCanvas");
   canvas.addEventListener("keydown", e => {
     if (running || !pendingPort) return;
