@@ -111,6 +111,12 @@ Un arc representa el desfasament \(\phi=\arg(V)-\arg(I)\), reduït a l’interva
 **Σ Anàlisi**  
 Vista numèrica dels resultats. Sense selecció mostra les magnituds globals pertinents: font, freqüència, intensitat, impedància equivalent, fase, factor de potència i potències activa \(P\), reactiva \(Q\) i aparent \(S\), segons siguin definides per a l’estat actual. Amb un component seleccionat mostra les magnituds calculades per a aquest component. La presentació per defecte prioritza mòduls, unitats i angles (per exemple, \(Z=|Z|\angle\phi\)); no exposa la forma complexa rectangular com a requisit de v1.0. No s’afegeix una opció «Veure càlculs» en aquesta especificació.
 
+La targeta compacta mostra V RMS, I RMS, impedància i P, amb una indicació del comportament elèctric. En seleccionar la font, la fase substitueix la impedància perquè una font ideal no té una impedància de càrrega pròpia. La vista ampliada té blocs **Circuit** (o **Component**), **Fase** i **Potències**, amb unitats visibles i explicacions breus; el contingut es pot desplaçar dins la targeta.
+
+La interpretació diferencia comportament inductiu (Q > 0), capacitiu (Q < 0) i resistiu (Q ≈ 0), segons la potència reactiva del resultat. S’explica que P és la potència activa, Q la reactiva i S l’aparent. A la font seleccionada es respecta el conveni d’absorció: P < 0 significa que lliura potència activa, i el signe de Q es descriu com a potència reactiva absorbida o lliurada. No es classifica la font com una càrrega inductiva o capacitiva.
+
+Els casos especials tenen descripció pròpia: circuit obert, corrent total nul, component sense corrent, interruptor obert/tancat i instruments ideals. L’absència de camí conductor identifica el circuit obert; un corrent total nul també pot ser una compensació entre branques. Les impedàncies de R/L/C i dels elements de curtcircuit ideal formen part dels resultats del solver, fins i tot si no hi circula corrent. Una branca ideal oberta té impedància infinita; la fase V − I no es defineix si V o I és nul, ni cos φ si S = 0. Les magnituds no definides s’etiqueten com a tals, sense substituir-les per zero. La fase segueix el mateix conveni de Fasors i cos φ = P/S quan S > 0.
+
 ### 6.4 Estat sense resultat
 
 Abans d’una simulació vàlida, o després d’una fallada de validació/solució, les eines i el hover no han de mostrar resultats antics com si corresponguessin al circuit actual. Poden indicar que cal simular o que el resultat no està disponible; no es prescriu cap disseny concret del missatge.
@@ -312,6 +318,7 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 26. Els cables amb corrent nul no mostren punts; canviar valors o interruptors actualitza el moviment immediatament i ATURAR elimina l’animació. En bucles redundants de cables ideals, els trams amb corrent no únic no s’animen i el hover explica la indeterminació.
 27. El Scope mostra els pics sencers tant a la targeta compacta com ampliada. El zoom temporal − / + / Auto canvia la durada visible sense afectar el circuit, indica la finestra en ms i Auto restaura dos períodes; tensió i corrent es distingeixen també en fase i les seves escales verticals pròpies queden identificades.
 28. Fasors mostra fletxes i etiquetes, escala comuna per a les tensions i escala pròpia per als corrents, arc φ i la relació avançat/endarrerit/en fase. Els casos amb V o I nul no mostren un angle fictici. Els colors coincideixen amb el Scope, els valors es deriven del mateix resultat i el gràfic s’ajusta a la targeta compacta o ampliada.
+29. Anàlisi presenta dades essencials i comportament a la vista compacta, i blocs Circuit/Component, Fase i Potències a la vista ampliada. La selecció contextualitza les dades, les magnituds no definides queden identificades, el circuit obert es diferencia de la compensació de corrents, i la potència de la font respecta el conveni d’absorció.
 
 ## 13. Regla d’interpretació per al desenvolupament
 

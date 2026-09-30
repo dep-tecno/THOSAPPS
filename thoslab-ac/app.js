@@ -574,7 +574,9 @@
       else if(comp.type==='switch'&&!comp.closed)i=c(0);
       else if(comp.type==='voltmeter')i=c(0);
       else {const br=branches.find(x=>x.comp.id===comp.id);i=mul(br.y,v);}
-      const s=mul(v,conj(i));const cr={voltage:v,current:i,power:c(s.re,s.im),closed:comp.closed};componentResults[comp.id]=cr;currents[comp.id]=i;
+      const s=mul(v,conj(i));
+      const impedance=['resistor','inductor','capacitor'].includes(comp.type)?div(c(1),branches.find(x=>x.comp.id===comp.id).y):comp.type==='ammeter'||(comp.type==='switch'&&comp.closed)?c(0):null;
+      const cr={voltage:v,current:i,power:c(s.re,s.im),impedance,closed:comp.closed};componentResults[comp.id]=cr;currents[comp.id]=i;
     }
     const totalI=mul(voltageBranchCurrent.get(source.id)||c(0),c(-1)); const zEq=abs(totalI)>1e-12?div(c(source.voltage,0),totalI):null; const totalS=mul(c(source.voltage,0),conj(totalI));
     const nodeValues={};for(const n of nodes)nodeValues[n]=volts.get(n);
@@ -631,10 +633,7 @@
     const phaseInfo=phasorPhase(pair);
     const phaseLabel=phaseInfo.angle===null?'φ no definit':`φ ${fmt(phaseInfo.angle*180/Math.PI)}°`;
     phasorBody.innerHTML=`<div class="card-context">${context}</div><div class="phasor-visual-row"><canvas class="phasor-chart" id="phasors-card-canvas" role="img" aria-label="Fasors de tensió i corrent amb escales pròpies; ${phaseLabel}; ${phaseInfo.description}"></canvas><div class="phasor-details"><strong class="phasor-phase">${phaseLabel}</strong><div class="phasor-relation">${phaseInfo.description}</div>${expanded==='phasors'?`<div class="phasor-list">${phasors.map(([name,z,color])=>`<span class="phasor-chip"><span style="color:${color}">${name}</span>: ${polarText(z,name.startsWith('I')?'A RMS':'V RMS')}</span>`).join('')}</div>`:`<div class="phasor-values"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span><span class="scope-current">I ${fmt(abs(pair.current))} A</span><span>Valors RMS</span></div>`}</div></div><div class="phasor-scale-note">Escales pròpies: tensions en V · corrents en A</div>`;
-    const analysisMetrics=selectedResult
-      ? [metric('Tensió RMS',`${fmt(abs(selectedResult.voltage))} V`),metric('Corrent RMS',`${fmt(abs(selectedResult.current))} A`),metric('Potència activa',`${fmt(selectedResult.power.re)} W`),...(expanded?[metric('Potència reactiva',`${fmt(selectedResult.power.im)} var`),metric('Angle V − I',`${fmt((arg(selectedResult.voltage)-arg(selectedResult.current))*180/Math.PI)}°`)]:[])]
-      : [metric('Tensió',`${fmt(abs(r.voltage))} V`),metric('Intensitat',`${fmt(abs(r.current))} A`),metric('Impedància',r.impedance?`${fmt(abs(r.impedance))} Ω`:'—'),metric('Fase',`${fmt(r.phase*180/Math.PI)}°`),...(expanded?[metric('cos φ',fmt(r.pf,3)),metric('P activa',`${fmt(r.power.re)} W`),metric('Q reactiva',`${fmt(r.reactive.im)} var`),metric('S aparent',`${fmt(r.apparent)} VA`),metric('Freqüència',`${fmt(r.frequency)} Hz`)]:[])];
-    analysisBody.innerHTML=`<div class="card-context">${context}</div><div class="card-metrics ${expanded?'metrics-expanded':''}">${analysisMetrics.join('')}</div>`;
+    analysisBody.innerHTML=circuitAnalysis(r,selected,selectedResult,expanded==='analysis');
     scopeResizeObserver.disconnect();scopeDrawing=[$('#scope-card-canvas'),pair,r.omega];
     drawScope(...scopeDrawing);scopeResizeObserver.observe(scopeDrawing[0]);
     phasorResizeObserver.disconnect();phasorDrawing=[$('#phasors-card-canvas'),phasors,pair];
@@ -647,6 +646,53 @@
       (control.disabled?$('[data-scope-zoom="auto"]',scopeBody):control).focus({preventScroll:true});
     });
     $$('.analysis-card-head').forEach(button=>button.onclick=()=>{model.expandedCard=model.expandedCard===button.dataset.expand?null:button.dataset.expand;renderAnalysis();});
+  }
+  function hasConductingPath(result){
+    const source=model.components.find(comp=>comp.type==='source');
+    const graph=new Map(),link=(a,b)=>{if(!graph.has(a))graph.set(a,[]);graph.get(a).push(b);};
+    for(const comp of model.components){
+      if(comp.type==='source'||comp.type==='voltmeter'||(comp.type==='switch'&&!comp.closed))continue;
+      const a=result.terminalNodes[`${comp.id}:a`],b=result.terminalNodes[`${comp.id}:b`];link(a,b);link(b,a);
+    }
+    const start=result.terminalNodes[`${source.id}:a`],target=result.terminalNodes[`${source.id}:b`];
+    const visited=new Set([start]),queue=[start];
+    for(let k=0;k<queue.length;k++){const node=queue[k];if(node===target)return true;for(const next of graph.get(node)||[])if(!visited.has(next)){visited.add(next);queue.push(next);}}
+    return false;
+  }
+  function circuitAnalysis(result,component,componentResult,expanded){
+    const pair=componentResult||result,voltage=abs(pair.voltage),current=abs(pair.current);
+    const p=componentResult?pair.power.re:result.power.re,q=componentResult?pair.power.im:result.reactive.im;
+    const apparent=componentResult?abs(pair.power):result.apparent;
+    const phase=phasorPhase(pair),phaseText=phase.angle===null?'No definit':`${fmt(phase.angle*180/Math.PI)}°`;
+    const pf=apparent>0?Math.max(-1,Math.min(1,p/apparent)):null;
+    const tolerance=apparent*1e-10,reactive=Math.abs(q)<=tolerance?0:q;
+    const source=component?.type==='source';
+    const impedance=componentResult?pair.impedance:result.impedance||(current>0?div(result.voltage,result.current):null);
+    const impedanceText=source?'No aplicable':impedance?`${fmt(abs(impedance))} Ω`:current===0?'∞ Ω':'No definida';
+    const impedancePhase=impedance&&abs(impedance)>0?`${fmt(arg(impedance)*180/Math.PI)}°`:'No definit';
+    let behavior,explanation;
+    if(source){behavior='Font AC ideal';explanation='La potència de la font segueix el conveni d’absorció: P < 0 significa que lliura potència activa.';}
+    else if(component?.type==='voltmeter'){behavior='Voltímetre ideal';explanation='No carrega el circuit: I = 0 i impedància infinita. La fase V − I i cos φ no estan definits.';}
+    else if(component?.type==='ammeter'){behavior='Amperímetre ideal';explanation='Impedància zero i V = 0. Mesura el corrent de la branca; la fase V − I i cos φ no estan definits.';}
+    else if(component?.type==='switch'){behavior=component.closed?'Interruptor tancat':'Interruptor obert';explanation=component.closed?'Element ideal amb impedància zero i V = 0. No absorbeix potència.':'Branca oberta: I = 0 i impedància infinita. La fase i cos φ no estan definits.';}
+    else if(!component&&!hasConductingPath(result)){behavior='Circuit obert';explanation='No hi ha un camí conductor entre els terminals de la font. I = 0; P, Q i S són nuls. La fase i cos φ no estan definits.';}
+    else if(current===0){behavior=component?'Component sense corrent':'Corrent total nul';explanation=component?'No hi circula corrent: les potències són nul·les i la fase i cos φ no estan definits.':'I total = 0 i les potències globals són nul·les. Pot haver-hi corrents en branques que es compensen; la fase global i cos φ no estan definits.';}
+    else if(reactive>0){behavior=component?'Component inductiu':'Circuit inductiu';explanation='Q > 0: comportament inductiu; el corrent s’endarrereix respecte de la tensió.';}
+    else if(reactive<0){behavior=component?'Component capacitiu':'Circuit capacitiu';explanation='Q < 0: comportament capacitiu; el corrent s’avança respecte de la tensió.';}
+    else{behavior='Comportament resistiu';explanation='Q ≈ 0: sense potència reactiva neta; tensió i corrent estan en fase.';}
+    const context=component?componentName(component):'Circuit global';
+    const compactMetrics=[metric('V RMS',`${fmt(voltage)} V`),metric('I RMS',`${fmt(current)} A`),source?metric('Fase φ',phaseText):metric(component?'Impedància |Z|':'Z equivalent',impedanceText),metric('P activa',`${fmt(p)} W`)];
+    const header=`<div class="card-context">${context}</div><div class="analysis-behavior">${behavior}</div>`;
+    if(!expanded)return `${header}<div class="card-metrics">${compactMetrics.join('')}</div>`;
+    const group=(title,metrics,note='')=>`<section class="analysis-section"><h3>${title}</h3><div class="card-metrics">${metrics.join('')}</div>${note?`<p class="analysis-explanation">${note}</p>`:''}</section>`;
+    const circuitMetrics=[metric('V RMS',`${fmt(voltage)} V`),metric('I RMS',`${fmt(current)} A`),metric('Freqüència',`${fmt(result.frequency)} Hz`),metric(component?'Impedància |Z|':'Z equivalent',impedanceText)];
+    if(!source)circuitMetrics.push(metric('Angle de Z',impedancePhase));
+    const phaseMetrics=[metric('Fase φ = V − I',phaseText),metric('cos φ',pf===null?'No definit':fmt(pf,3))];
+    const phaseNote=phase.angle===null?'La fase V − I requereix tensió i corrent no nuls. Si S = 0, cos φ tampoc està definit.':phase.description;
+    const powerMetrics=[metric('P activa',`${fmt(p)} W`),metric('Q reactiva',`${reactive===0&&q!==0?'≈0':fmt(q)} var`),metric('S aparent',`${fmt(apparent)} VA`)];
+    const qNote=source?(reactive>0?'Q > 0: la font absorbeix potència reactiva.':reactive<0?'Q < 0: la font lliura potència reactiva.':'Q = 0: la font no intercanvia potència reactiva neta.'):reactive>0?'Q > 0 indica comportament inductiu.':reactive<0?'Q < 0 indica comportament capacitiu.':'Q ≈ 0: no hi ha potència reactiva neta.';
+    const powerNote=`P és la potència activa; Q, la reactiva; S, l’aparent. ${qNote}`;
+    return `${header}<p class="analysis-explanation analysis-state">${explanation}</p>${group(component?'Component':'Circuit',circuitMetrics)}${group('Fase',phaseMetrics,phaseNote)}${group(source?'Potències de la font (absorbides)':'Potències',powerMetrics,powerNote)}`;
   }
   function isSeriesRlc(list){const branches=model.components.filter(x=>x.type==='source'||['resistor','inductor','capacitor'].includes(x.type));if(list.length<2||branches.length!==list.length+1)return false;const degree={};for(const x of branches)for(const side of ['a','b']){const n=model.result.terminalNodes[`${x.id}:${side}`];degree[n]=(degree[n]||0)+1;}return Object.values(degree).length===branches.length&&Object.values(degree).every(n=>n===2);}
   function drawScope(canvas,pair,omega){
