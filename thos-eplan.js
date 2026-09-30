@@ -36,3 +36,11 @@ function validate(p){const finite=q=>q&&Number.isFinite(q.x)&&Number.isFinite(q.
 $('file').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>20e6)throw Error();const p=JSON.parse(await f.text());if(!validate(p))throw Error();snapshot();restore(p);message('Projecte carregat.')}catch{message('Projecte no vàlid. El plànol actual es conserva.')}finally{e.target.value=''}};
 $('png').onclick=()=>{const saved=selected;selected=null;render();canvas.toBlob(b=>{if(b)download(b,'thos-eplan.png')});selected=saved;render();message('S’exporta la vista actual. Centra el plànol abans d’exportar-lo.')};$('new').onclick=()=>{if((project.walls.length||project.background)&&!confirm('Vols començar un plànol nou? Desa el projecte si el vols conservar.'))return;snapshot();restore(empty());message('Plànol nou. Marca el primer extrem de la paret.')};
 new ResizeObserver(render).observe($('area'));render();
+
+const compactScreen=matchMedia('(max-width:900px)');
+function setPanel(open){document.body.classList.toggle('panel-closed',!open);$('togglePanel').setAttribute('aria-expanded',String(open));$('togglePanel').textContent=open?'Amaga eines':'Mostra eines';}
+setPanel(!compactScreen.matches);
+$('togglePanel').onclick=()=>setPanel(document.body.classList.contains('panel-closed'));
+compactScreen.addEventListener('change',e=>setPanel(!e.matches));
+document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',()=>{if(compactScreen.matches){setPanel(false);$('togglePanel').focus();}}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&compactScreen.matches&&!document.body.classList.contains('panel-closed')){setPanel(false);$('togglePanel').focus();}});
