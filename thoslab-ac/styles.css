@@ -29,4 +29,6 @@
 .wire-preview{fill:none;stroke:#ffd06f;stroke-width:3;stroke-dasharray:7 6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px #ffd06f88)}
 .wire-snap-point{fill:#ffd06f;stroke:#fff2c7;stroke-width:2;filter:drop-shadow(0 0 5px #ffd06faa)}
 .wire-hit{stroke-width:18;vector-effect:non-scaling-stroke}
-
+.wire-line.selected{stroke:#ffc36c;stroke-width:4;filter:drop-shadow(0 0 5px #ffc36caa)}
+.junction{cursor:grab;touch-action:none}.junction:active{cursor:grabbing}
+.junction.selected::after{width:9px;height:9px;background:#ff4058;border-color:#fff;box-shadow:0 0 0 4px #ff405880,0 0 13px #ff263f;opacity:1}
