@@ -1084,7 +1084,10 @@ function render() {
   const advanceTimeStep = stepAdvancePending;
   stepAdvancePending = false;
   simulation = running ? buildSimulation(advanceTimeStep) : null;
-  const world = $("world"); world.replaceChildren();
+  const world = $("world");
+  // Rendering replaces focused SVG components; transfer focus before removal.
+  if (world.contains(document.activeElement)) $("circuitCanvas").focus({ preventScroll: true });
+  world.replaceChildren();
   world.setAttribute("transform", `translate(${circuit.view.pan.x} ${circuit.view.pan.y}) scale(${circuit.view.zoom})`);
   $("circuitCanvas").classList.toggle("pan", panMode);
   for (const wire of circuit.connections) renderWire(world, wire);
@@ -1404,12 +1407,11 @@ function setupLibrary() {
   }
 }
 function setupCanvas() {
-  $("circuitCanvas").addEventListener("pointerdown", () => {
-  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) document.activeElement.blur();
-}, { capture: true });
-
-  
   const canvas = $("circuitCanvas");
+  // Keep keyboard events inside the editor iframe on a stable SVG element.
+  canvas.addEventListener("pointerdown", () => {
+    canvas.focus({ preventScroll: true });
+  }, { capture: true });
   canvas.addEventListener("keydown", e => {
     if (running || !pendingPort) return;
     const directions = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] };
@@ -1448,7 +1450,9 @@ function setupCanvas() {
   const endPointer = () => {
     if (pointerAction?.kind === "move" && pointerAction.moved) { dirty = true; storeBackup(); }
     if (pointerAction?.kind === "move" && !pointerAction.moved) history.pop();
+    const returnFocusToCanvas = !!pointerAction;
     pointerAction = null; canvas.classList.remove("dragging"); render();
+    if (returnFocusToCanvas) canvas.focus({ preventScroll: true });
   };
   canvas.addEventListener("pointerup", endPointer); canvas.addEventListener("pointercancel", endPointer);
   canvas.addEventListener("dragover", e => { if (!running) e.preventDefault(); });
@@ -1537,16 +1541,17 @@ function setupControls() {
       circuit = recovered; selected = null; pendingPort = null; history = []; future = []; running = false; dirty = true; resetRuntime(); $("restorePanel").hidden = true; render(); status("Últim circuit recuperat. Descarrega el JSON per conservar-lo.");
     } catch (_) { status("La còpia de recuperació no és vàlida."); }
   });
-  document.addEventListener("keydown", e => {
-    const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
+  window.addEventListener("keydown", e => {
+    const target = e.target;
+    const typing = target?.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName);
     if (typing) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") { e.preventDefault(); copySelected(); }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") { e.preventDefault(); pasteSelected(); }
-    if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelected(); }
+    if (!running && selected && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === "Delete" || e.code === "Delete" || e.key === "Backspace")) { e.preventDefault(); deleteSelected(); }
     if (e.key === "Escape") { pendingPort = null; selectedType = null; panMode = false; render(); }
-  });
+  }, { capture: true });
   window.addEventListener("beforeunload", e => { if (!dirty) return; e.preventDefault(); e.returnValue = ""; });
 }
 function init() {
