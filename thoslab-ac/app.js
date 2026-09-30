@@ -31,6 +31,10 @@
   const scopeResizeObserver = new ResizeObserver(() => {
     if (scopeDrawing && model.mode === 'sim') drawScope(...scopeDrawing);
   });
+  let phasorDrawing = null;
+  const phasorResizeObserver = new ResizeObserver(() => {
+    if (phasorDrawing && model.mode === 'sim') drawPhasors(...phasorDrawing);
+  });
   let history = [circuitSnapshot()];
   let historyIndex = 0;
 
@@ -611,7 +615,7 @@
   function fmt(n, digits=2){if(!Number.isFinite(n))return '—';if(Math.abs(n)>0&&Math.abs(n)<.001||Math.abs(n)>=10000)return n.toExponential(2);return Number(n.toFixed(digits)).toLocaleString('ca-ES',{maximumFractionDigits:digits});}
   function polarText(z, unit='') {return `${fmt(abs(z))} ${unit} ∠ ${fmt(arg(z)*180/Math.PI)}°`;}
   function metric(label,value){return `<div class="metric"><label>${label}</label><strong>${value}</strong></div>`;}
-  function renderEmptyAnalysis(){ scopeResizeObserver.disconnect();scopeDrawing=null;$('#analysis-area').classList.add('hidden'); }
+  function renderEmptyAnalysis(){ scopeResizeObserver.disconnect();scopeDrawing=null;phasorResizeObserver.disconnect();phasorDrawing=null;$('#analysis-area').classList.add('hidden'); }
   function renderAnalysis(){
     const r=model.result;if(!r)return renderEmptyAnalysis();
     const selected=model.components.find(x=>x.id===model.selected),selectedResult=selected?r.components[selected.id]:null;
@@ -624,13 +628,17 @@
     const scopeSpan = 2 / scopeZoom / r.frequency;
     scopeBody.innerHTML=`<div class="card-context">${context}</div><div class="scope-controls" role="group" aria-label="Zoom temporal del Scope"><button data-scope-zoom="out" title="Allunya el Scope: més temps" aria-label="Allunya el Scope" ${scopeZoom===scopeZoomLevels[0]?'disabled':''}>−</button><span class="scope-window">${fmt(scopeZoom)}× · ${fmt(scopeSpan*1000)} ms</span><button data-scope-zoom="in" title="Apropa el Scope: menys temps" aria-label="Apropa el Scope" ${scopeZoom===scopeZoomLevels.at(-1)?'disabled':''}>+</button><button data-scope-zoom="auto" title="Restableix el Scope a dos períodes">Auto</button></div><canvas class="scope-chart ${expanded==='scope'?'scope-large':''}" id="scope-card-canvas" role="img" aria-label="Sinusoides de tensió i corrent; escales verticals independents"></canvas><div class="card-summary"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span> · <span class="scope-current">I ${fmt(abs(pair.current))} A</span> RMS${expanded==='scope'?` · f ${fmt(r.frequency)} Hz · φ ${fmt((arg(pair.voltage)-arg(pair.current))*180/Math.PI)}°`:''}</div><div class="scope-scale-note">V i I amb escala pròpia · pics ajustats</div>`;
     const phasors=[];if(selectedResult){phasors.push([`V ${selected.id}`,selectedResult.voltage,'#48d7d2'],[`I ${selected.id}`,selectedResult.current,'#ffb86b']);}else{phasors.push(['V font',r.voltage,'#48d7d2'],['I total',r.current,'#ffb86b']);const series=model.components.filter(x=>['resistor','inductor','capacitor'].includes(x.type));if(series.length&&series.every(x=>r.components[x.id])&&isSeriesRlc(series))for(const x of series)phasors.push([`V ${x.id}`,r.components[x.id].voltage,['#9ee7b5','#ff8f8f','#b69aff'][['resistor','inductor','capacitor'].indexOf(x.type)]]);}
-    phasorBody.innerHTML=`<div class="card-context">${context}</div><div class="card-visual-row"><canvas class="phasor-chart" id="phasors-card-canvas"></canvas><div class="card-summary">φ ${fmt((arg(pair.voltage)-arg(pair.current))*180/Math.PI)}°${expanded==='phasors'?`<div class="phasor-list">${phasors.map(([name,z])=>`<span class="phasor-chip">${name}: ${polarText(z,name.startsWith('I')?'A':'V')}</span>`).join('')}</div>`:''}</div></div>`;
+    const phaseInfo=phasorPhase(pair);
+    const phaseLabel=phaseInfo.angle===null?'φ no definit':`φ ${fmt(phaseInfo.angle*180/Math.PI)}°`;
+    phasorBody.innerHTML=`<div class="card-context">${context}</div><div class="phasor-visual-row"><canvas class="phasor-chart" id="phasors-card-canvas" role="img" aria-label="Fasors de tensió i corrent amb escales pròpies; ${phaseLabel}; ${phaseInfo.description}"></canvas><div class="phasor-details"><strong class="phasor-phase">${phaseLabel}</strong><div class="phasor-relation">${phaseInfo.description}</div>${expanded==='phasors'?`<div class="phasor-list">${phasors.map(([name,z,color])=>`<span class="phasor-chip"><span style="color:${color}">${name}</span>: ${polarText(z,name.startsWith('I')?'A RMS':'V RMS')}</span>`).join('')}</div>`:`<div class="phasor-values"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span><span class="scope-current">I ${fmt(abs(pair.current))} A</span><span>Valors RMS</span></div>`}</div></div><div class="phasor-scale-note">Escales pròpies: tensions en V · corrents en A</div>`;
     const analysisMetrics=selectedResult
       ? [metric('Tensió RMS',`${fmt(abs(selectedResult.voltage))} V`),metric('Corrent RMS',`${fmt(abs(selectedResult.current))} A`),metric('Potència activa',`${fmt(selectedResult.power.re)} W`),...(expanded?[metric('Potència reactiva',`${fmt(selectedResult.power.im)} var`),metric('Angle V − I',`${fmt((arg(selectedResult.voltage)-arg(selectedResult.current))*180/Math.PI)}°`)]:[])]
       : [metric('Tensió',`${fmt(abs(r.voltage))} V`),metric('Intensitat',`${fmt(abs(r.current))} A`),metric('Impedància',r.impedance?`${fmt(abs(r.impedance))} Ω`:'—'),metric('Fase',`${fmt(r.phase*180/Math.PI)}°`),...(expanded?[metric('cos φ',fmt(r.pf,3)),metric('P activa',`${fmt(r.power.re)} W`),metric('Q reactiva',`${fmt(r.reactive.im)} var`),metric('S aparent',`${fmt(r.apparent)} VA`),metric('Freqüència',`${fmt(r.frequency)} Hz`)]:[])];
     analysisBody.innerHTML=`<div class="card-context">${context}</div><div class="card-metrics ${expanded?'metrics-expanded':''}">${analysisMetrics.join('')}</div>`;
     scopeResizeObserver.disconnect();scopeDrawing=[$('#scope-card-canvas'),pair,r.omega];
-    drawScope(...scopeDrawing);scopeResizeObserver.observe(scopeDrawing[0]);drawPhasors($('#phasors-card-canvas'),phasors);
+    drawScope(...scopeDrawing);scopeResizeObserver.observe(scopeDrawing[0]);
+    phasorResizeObserver.disconnect();phasorDrawing=[$('#phasors-card-canvas'),phasors,pair];
+    drawPhasors(...phasorDrawing);phasorResizeObserver.observe(phasorDrawing[0]);
     $$('[data-scope-zoom]',scopeBody).forEach(button=>button.onclick=()=>{
       const action=button.dataset.scopeZoom,index=scopeZoomLevels.indexOf(scopeZoom);
       scopeZoom=action==='auto'?1:scopeZoomLevels[Math.max(0,Math.min(scopeZoomLevels.length-1,index+(action==='in'?1:-1)))];
@@ -677,7 +685,62 @@
       });
     }
   }
-  function drawPhasors(canvas,list){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height,cx=w/2,cy=h/2,scale=Math.min(w,h)*.39,max=Math.max(1e-8,...list.map(x=>abs(x[1])));ctx.strokeStyle='#2a4058';ctx.beginPath();ctx.moveTo(8,cy);ctx.lineTo(w-8,cy);ctx.moveTo(cx,8);ctx.lineTo(cx,h-8);ctx.stroke();for(let k=1;k<=2;k++){ctx.beginPath();ctx.arc(cx,cy,scale*k/2,0,Math.PI*2);ctx.stroke();}list.forEach(([name,z,color])=>{const x=cx+z.re/max*scale,y=cy-z.im/max*scale;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke();ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});}
+  function phasorPhase(pair){
+    if(abs(pair.current)===0)return {angle:null,description:'Corrent nul · fase no definida'};
+    if(abs(pair.voltage)===0)return {angle:null,description:'Tensió nul·la · fase no definida'};
+    const difference=arg(pair.voltage)-arg(pair.current);
+    const angle=Math.atan2(Math.sin(difference),Math.cos(difference));
+    const description=Math.abs(angle)<1e-8?'Corrent en fase':Math.abs(Math.abs(angle)-Math.PI)<1e-8?'Corrent en oposició':angle>0?'Corrent endarrerit':'Corrent avançat';
+    return {angle,description};
+  }
+  function drawPhasors(canvas,list,pair){
+    const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
+    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+    const w=rect.width,h=rect.height,cx=w/2,cy=h/2,font=h>100?10:8;
+    ctx.font=`${font}px monospace`;ctx.textBaseline='middle';
+    const labelWidth=Math.max(...list.map(([name])=>ctx.measureText(name).width),0);
+    const radius=Math.max(0,Math.min(w/2-labelWidth/2-7,h/2-font-6));
+    if(radius<3)return;
+    const maxV=Math.max(0,...list.filter(([name])=>!name.startsWith('I')).map(([,z])=>abs(z)));
+    const maxI=Math.max(0,...list.filter(([name])=>name.startsWith('I')).map(([,z])=>abs(z)));
+    ctx.strokeStyle='#2a4058';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(5,cy);ctx.lineTo(w-5,cy);ctx.moveTo(cx,5);ctx.lineTo(cx,h-5);ctx.stroke();
+    for(let k=1;k<=2;k++){ctx.beginPath();ctx.arc(cx,cy,radius*k/2,0,Math.PI*2);ctx.stroke();}
+    const phase=phasorPhase(pair);
+    if(phase.angle!==null&&Math.abs(phase.angle)>1e-8){
+      const start=-arg(pair.voltage),end=start+phase.angle,arcRadius=radius*.43;
+      ctx.strokeStyle='#ead57a';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,arcRadius,start,end,phase.angle<0);ctx.stroke();
+      const middle=(start+end)/2;ctx.fillStyle='#ead57a';ctx.textAlign='center';ctx.fillText('φ',cx+(arcRadius+7)*Math.cos(middle),cy+(arcRadius+7)*Math.sin(middle));
+    }
+    const labels=[];
+    list.forEach(([name,z,color])=>{
+      const current=name.startsWith('I'),maximum=current?maxI:maxV,magnitude=abs(z);
+      const dx=maximum>0?z.re/maximum*radius:0,dy=maximum>0?-z.im/maximum*radius:0;
+      const x=cx+dx,y=cy+dy;
+      ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=1.8;ctx.setLineDash(current?[4,3]:[]);
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke();ctx.setLineDash([]);
+      if(magnitude>0){
+        const direction=Math.atan2(dy,dx),tip=Math.min(6,Math.hypot(dx,dy)*.45);
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-tip*Math.cos(direction-.45),y-tip*Math.sin(direction-.45));ctx.lineTo(x-tip*Math.cos(direction+.45),y-tip*Math.sin(direction+.45));ctx.closePath();
+        if(current)ctx.stroke();else ctx.fill();
+      }else{ctx.beginPath();ctx.arc(cx,cy,2,0,Math.PI*2);ctx.fill();}
+      const textWidth=ctx.measureText(name).width;
+      const labelX=Math.max(4,Math.min(w-textWidth-4,x-textWidth/2));
+      const baseY=y+(dy>0?font+4:-font-4);
+      let labelY=Math.max(font/2+3,Math.min(h-font/2-3,baseY));
+      for(const shift of [0,font+4,-font-4,2*(font+4),-2*(font+4)]){
+        const candidate=Math.max(font/2+3,Math.min(h-font/2-3,baseY+shift));
+        if(labels.every(box=>labelX+textWidth+3<box.x||labelX>box.x+box.width+3||Math.abs(candidate-box.y)>font+2)){labelY=candidate;break;}
+      }
+      labels.push({name,color,x:labelX,y:labelY,width:textWidth});
+    });
+    labels.forEach(label=>{
+      ctx.fillStyle='#0d1928';ctx.fillRect(label.x-2,label.y-font/2-1,label.width+4,font+2);
+      ctx.fillStyle=label.color;ctx.textAlign='left';ctx.fillText(label.name,label.x,label.y);
+    });
+  }
   function simulate(){cancelWireGesture();model.tool='select';const r=solveCircuit();if(!r.ok){model.mode='edit';model.result=null;toast(r.error);render();return;}model.result=r;model.mode='sim';currentAnimationEpoch=performance.now();model.revision++;render();}
   function stop(){model.mode='edit';model.result=null;model.tool='select';render();}
   $('#simulate-btn').addEventListener('click',simulate);$('#stop-btn').addEventListener('click',stop);

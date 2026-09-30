@@ -104,6 +104,10 @@ El Scope té zoom temporal intern amb botons **− / + / Auto**, independent del
 **↗ Fasors**  
 Sense selecció mostra automàticament el fasor de la font i el del corrent total, amb l’angle de fase. Amb un component seleccionat mostra els fasors rellevants d’aquell component. Per a un circuit RLC sèrie, la vista global mostra automàticament \(V_R\), \(V_L\), \(V_C\) i \(V\), una construcció fasorial didàctica. No hi ha configuració manual dels fasors que es mostren.
 
+Els vectors tenen fletxes i etiquetes, amb els colors del Scope: V turquesa i I taronja discontinu. Les tensions comparteixen una escala proporcional entre elles; els corrents tenen una escala pròpia, perquè V i A són unitats diferents. L’ajust és automàtic i la targeta indica explícitament les escales pròpies. Es preserven les proporcions entre les tensions \(V_R\), \(V_L\), \(V_C\) i \(V\).
+
+Un arc representa el desfasament \(\phi=\arg(V)-\arg(I)\), reduït a l’interval \([-180^\circ,180^\circ]\). La targeta indica «Corrent endarrerit» si \(\phi>0\), «Corrent avançat» si \(\phi<0\), «Corrent en fase» a zero i «Corrent en oposició» a 180°. Si V o I és nul, el desfasament no està definit: s’explica l’estat i no es dibuixa l’arc. La targeta compacta mostra els valors RMS de V i I; l’ampliada mostra mòduls, unitats i angles de tots els fasors pertinents. Les fletxes, les etiquetes i el gràfic s’ajusten a l’espai disponible, també després d’ampliar, plegar o redimensionar la vista.
+
 **Σ Anàlisi**  
 Vista numèrica dels resultats. Sense selecció mostra les magnituds globals pertinents: font, freqüència, intensitat, impedància equivalent, fase, factor de potència i potències activa \(P\), reactiva \(Q\) i aparent \(S\), segons siguin definides per a l’estat actual. Amb un component seleccionat mostra les magnituds calculades per a aquest component. La presentació per defecte prioritza mòduls, unitats i angles (per exemple, \(Z=|Z|\angle\phi\)); no exposa la forma complexa rectangular com a requisit de v1.0. No s’afegeix una opció «Veure càlculs» en aquesta especificació.
 
@@ -307,6 +311,7 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 25. Durant SIMULAR, els punts dels cables alternen el sentit segons la fase del seu corrent i es mouen més ràpid quan augmenta la intensitat. Les branques paral·leles mostren els seus propis corrents i el cable comú representa la suma fasorial. El ritme visual alentit queda indicat a la interfície.
 26. Els cables amb corrent nul no mostren punts; canviar valors o interruptors actualitza el moviment immediatament i ATURAR elimina l’animació. En bucles redundants de cables ideals, els trams amb corrent no únic no s’animen i el hover explica la indeterminació.
 27. El Scope mostra els pics sencers tant a la targeta compacta com ampliada. El zoom temporal − / + / Auto canvia la durada visible sense afectar el circuit, indica la finestra en ms i Auto restaura dos períodes; tensió i corrent es distingeixen també en fase i les seves escales verticals pròpies queden identificades.
+28. Fasors mostra fletxes i etiquetes, escala comuna per a les tensions i escala pròpia per als corrents, arc φ i la relació avançat/endarrerit/en fase. Els casos amb V o I nul no mostren un angle fictici. Els colors coincideixen amb el Scope, els valors es deriven del mateix resultat i el gràfic s’ajusta a la targeta compacta o ampliada.
 
 ## 13. Regla d’interpretació per al desenvolupament
 
