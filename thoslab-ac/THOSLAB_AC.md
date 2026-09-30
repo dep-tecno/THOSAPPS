@@ -79,7 +79,11 @@ No cal fer desaparèixer les eines durant SIMULAR. Les accions estructurals cont
 - En apropar el cursor a un cable mentre hi ha una connexió iniciada, el cable objectiu es ressalta i es mostra el punt exacte d’unió i una previsualització discontínua de la branca. En confirmar-la, es mostra un avís de connexió; si el cable ja pertany al node d’inici, s’indica que cal triar-ne un altre.
 - Els indicadors dels terminals són punts d’unió petits i no han de tapar ni ocultar els extrems gràfics dels símbols. Els nodes amb branques addicionals es distingeixen visualment.
 - Els cables surten dels terminals segons l’orientació actual del component i el recorregut ortogonal evita travessar el cos dels components quan hi ha un traçat lliure alternatiu. El botó «Gira 90°» i la tecla `R` giren el component seleccionat 90°; el gir és una acció d’historial.
-- Clicar un cable en mode Seleccionar l’elimina; Desfer recupera la connexió anterior. Els canvis de connexió i nodes es tracten com una sola acció d’historial per gest.
+- En mode Seleccionar, clicar un cable o node el selecciona i obre les seves accions contextuals; el cable queda ressaltat.
+- Un cable seleccionat es pot eliminar o dividir en un node d’edició. Arrossegar aquest node allarga o redistribueix els trams connectats sense desfer-ne la continuïtat elèctrica.
+- Arrossegar un node existent mou el punt d’unió i actualitza el recorregut dels cables que hi arriben. Eliminar un node elimina també els trams connectats a aquell node; l’acció es pot desfer.
+- El component seleccionat es pot eliminar des de les seves propietats. La tecla `Supr` o `Backspace` elimina l’element seleccionat (component, cable o node); `Desfer` recupera les modificacions.
+- Els canvis de connexió, nodes i eliminacions es tracten com una sola acció d’historial per gest.
 - **Clic en una zona buida** treu la selecció i retorna les vistes al circuit global.
 - El hover no fa canviar el contingut de Scope, Fasors o Anàlisi. Això evita canvis de vista accidentals en moure el cursor.
 - La posició o rotació gràfica, per si soles, no canvien la topologia ni requereixen un nou càlcul.
@@ -292,8 +296,9 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 20. Desar baixa un JSON v1 local que es pot tornar a obrir; l’obertura rebutja fitxers malformats i no transmet circuits a cap servidor.
 21. Nou i Obrir protegeixen contra la substitució accidental d’un circuit amb components; Desfer/Refer recupera els canvis del circuit.
 22. Zoom i Pan afecten només la vista del workspace, i Baixar PNG produeix una imatge del workspace en la vista actual.
+23. Components, cables i nodes es poden seleccionar i eliminar amb Supr/Backspace; les eliminacions es poden recuperar amb Desfer. Eliminar un node elimina els seus trams incidents.
+24. Es pot seleccionar un cable, afegir-hi un node d’edició i arrossegar aquest node o un node existent per allargar o redistribuir els cables sense perdre la continuïtat de les branques.
 
 ## 13. Regla d’interpretació per al desenvolupament
 
 Quan un detall d’implementació no estigui especificat, triar la solució més simple que preservi els objectius, els límits, les fórmules i els criteris d’acceptació d’aquest document. No convertir els exemples de presentació en nous requisits funcionals. No afegir funcionalitats perquè siguin habituals en altres simuladors. Si una decisió imprescindible no es pot deduir sense ampliar l’abast, deixar-la assenyalada perquè es decideixi explícitament.
-
