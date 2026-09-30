@@ -22,6 +22,9 @@
   let toastTimer;
   let panDrag = null;
   let panMoved = false;
+  let currentAnimationFrame = null;
+  let currentAnimationEpoch = 0;
+  const CURRENT_VISUAL_PERIOD = 2400;
   let history = [circuitSnapshot()];
   let historyIndex = 0;
 
@@ -100,6 +103,7 @@
     }
   }
   function render() {
+    stopCurrentAnimation();
     layer.innerHTML = ''; wiresLayer.innerHTML = '';
     const rect = workspace.getBoundingClientRect(); wiresLayer.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
     $('#empty-state').classList.toggle('hidden', model.components.length > 0);
@@ -132,7 +136,7 @@
     $('#wire-btn').classList.toggle('active', model.tool === 'wire'); $('#pan-btn').classList.toggle('active', model.tool === 'pan'); $('#wire-btn').disabled = model.mode === 'sim';
     ['new-btn','open-btn','undo-btn','redo-btn'].forEach(id => $(`#${id}`).disabled = model.mode === 'sim');
     renderPalette(); updateHistoryButtons();
-    $('#tool-hint').textContent = model.tool === 'wire' ? (model.wireStart ? 'Tria un terminal, node, cable o espai buit per crear una branca' : 'Tria terminals o clica un cable per crear un node') : model.tool === 'pan' ? 'Arrossega l’espai de treball per desplaçar el circuit' : 'Clica un component, cable o node · Supr elimina · Arrossega nodes per allargar cables';
+    $('#tool-hint').textContent = model.mode === 'sim' ? 'Animació AC alentida · velocitat segons I RMS · sentit segons la fase' : model.tool === 'wire' ? (model.wireStart ? 'Tria un terminal, node, cable o espai buit per crear una branca' : 'Tria terminals o clica un cable per crear un node') : model.tool === 'pan' ? 'Arrossega l’espai de treball per desplaçar el circuit' : 'Clica un component, cable o node · Supr elimina · Arrossega nodes per allargar cables';
     if (model.result) renderAnalysis(); else renderEmptyAnalysis();
     if (!inspector.classList.contains('hidden')) {
       if (model.selected) openInspector(model.selected);
@@ -188,14 +192,65 @@
     model.wireStart=null;model.wireBefore=null;model.wireHover=null;
   }
   function renderWires() {
+    stopCurrentAnimation();
     wiresLayer.innerHTML = '';
+    const flows = [];
+    const wireResults = model.mode === 'sim' ? model.result?.wireCurrents || {} : {};
+    const threshold = Math.max(1e-12, ...Object.values(wireResults).filter(Boolean).map(i => abs(i) * 1e-10));
     for (const w of model.wires) {
       const points=wireRoute(w.a,w.b);if(points.length<2)continue;const d=pathData(points);
       const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', d); p.setAttribute('class',`wire-line ${model.wireHover?.wireId===w.id?'connection-target':''} ${model.selectedWire===w.id?'selected':''}`);p.dataset.wireId=w.id;wiresLayer.append(p);
+      const current = wireResults[w.id];
+      if (current && abs(current) > threshold) {
+        p.classList.add('energized');
+        const length = p.getTotalLength();
+        if (length > 0) {
+          const group = document.createElementNS('http://www.w3.org/2000/svg','g');
+          group.setAttribute('class', 'current-particles');
+          const count = Math.min(180, Math.max(1, Math.ceil(length / 24)));
+          const spacing = length / count;
+          const dots = Array.from({ length: count }, () => {
+            const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+            dot.setAttribute('r', '2.4'); group.append(dot); return dot;
+          });
+          wiresLayer.append(group); flows.push({ path: p, length, current, spacing, dots, group });
+        }
+      }
       const hit = document.createElementNS('http://www.w3.org/2000/svg','path'); hit.setAttribute('d',d); hit.setAttribute('class','wire-hit');
       hit.addEventListener('pointerenter', e => {showWireHover(w,e);updateWireHover(w,e);}); hit.addEventListener('pointermove', e => {moveHover(e);updateWireHover(w,e);}); hit.addEventListener('pointerleave', () => {hideHover();if(model.wireHover?.wireId===w.id){model.wireHover=null;clearWirePreview();}});
       if (model.mode === 'edit') hit.addEventListener('click', e => { e.stopPropagation(); if (model.tool === 'pan') return; if(model.tool==='wire'){if(model.wireStart===w.a||model.wireStart===w.b){toast('Aquest cable ja pertany al node d’inici. Tria un altre cable.');return;}splitWireAt(w,e);return;} selectWire(w,e); }); wiresLayer.append(hit);
     }
+    if (flows.length && !document.hidden) animateWireCurrents(flows);
+  }
+  function stopCurrentAnimation() {
+    if (currentAnimationFrame !== null) cancelAnimationFrame(currentAnimationFrame);
+    currentAnimationFrame = null;
+  }
+  function currentFlowOffset(current, phase) {
+    const magnitude = abs(current);
+    if (magnitude <= 1e-12) return 0;
+    const amplitude = Math.min(110, 12 + 32 * Math.log1p(magnitude / .02));
+    // The derivative has the sign of i(t) = sqrt(2) * Im(I * exp(j * phase)).
+    return -amplitude * (current.re * Math.cos(phase) - current.im * Math.sin(phase)) / magnitude;
+  }
+  function animateWireCurrents(flows) {
+    const frame = now => {
+      currentAnimationFrame = null;
+      if (model.mode !== 'sim' || !model.result || document.hidden) return;
+      const phase = 2 * Math.PI * ((now - currentAnimationEpoch) % CURRENT_VISUAL_PERIOD) / CURRENT_VISUAL_PERIOD;
+      for (const flow of flows) {
+        const offset = currentFlowOffset(flow.current, phase);
+        const start = ((offset % flow.spacing) + flow.spacing) % flow.spacing;
+        const instant = (flow.current.re * Math.sin(phase) + flow.current.im * Math.cos(phase)) / abs(flow.current);
+        flow.group.style.opacity = String(.35 + .65 * Math.abs(instant));
+        flow.dots.forEach((dot, index) => {
+          const point = flow.path.getPointAtLength(Math.min(flow.length, index * flow.spacing + start));
+          dot.setAttribute('cx', point.x); dot.setAttribute('cy', point.y);
+        });
+      }
+      currentAnimationFrame = requestAnimationFrame(frame);
+    };
+    frame(performance.now());
   }
   function enableDrag(el, c) {
     let start;
@@ -284,7 +339,7 @@
   function showComponentHover(comp,e){const result=model.result?.components[comp.id];const rows=[componentText(comp)];if(result)rows.push(`V = ${fmt(abs(result.voltage))} V RMS`,`I = ${fmt(abs(result.current))} A RMS`);showHover(componentName(comp),rows,e);}
   function showNodeHover(terminal,e){const n=model.result?.terminalNodes?.[terminal],v=n&&model.result?.nodeValues[n];showHover(n||'Terminal',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Simula per consultar la tensió'],e);}
   function showJunctionHover(j,e){const n=model.result?.terminalNodes?.[j.id],v=n&&model.result?.nodeValues[n];showHover(n||'Node',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Punt d’unió de cables'],e);}
-  function showWireHover(w,e){if(model.tool==='wire'){const same=model.wireStart===w.a||model.wireStart===w.b;showHover(same?'Aquest cable ja està connectat':'Crear un node en aquest cable',[same?'Tria un altre cable per afegir una branca':model.wireStart?'Clica per connectar la branca al punt marcat':'Clica per iniciar una derivació'],e);return;}const n=model.result?.terminalNodes?.[w.a],v=n&&model.result?.nodeValues[n];showHover('Connexió',[v?`V = ${fmt(abs(v))} V RMS`:'Clica per seleccionar, afegir un node o eliminar el cable'],e);}
+  function showWireHover(w,e){if(model.tool==='wire'){const same=model.wireStart===w.a||model.wireStart===w.b;showHover(same?'Aquest cable ja està connectat':'Crear un node en aquest cable',[same?'Tria un altre cable per afegir una branca':model.wireStart?'Clica per connectar la branca al punt marcat':'Clica per iniciar una derivació'],e);return;}const n=model.result?.terminalNodes?.[w.a],v=n&&model.result?.nodeValues[n];const rows=[v?`V = ${fmt(abs(v))} V RMS`:'Clica per seleccionar, afegir un node o eliminar el cable'];if(model.result){const current=model.result.wireCurrents[w.id];rows.push(current?`I = ${polarText(current,'A RMS')}`:'Corrent no únic en aquest bucle de cables ideals');}showHover('Connexió',rows,e);}
   function positionInspector() {
     if (model.panel.x === null) model.panel.x = Math.max(12, workspace.clientWidth - 246);
     inspector.style.left = `${model.panel.x}px`; inspector.style.right = 'auto'; inspector.style.top = `${model.panel.y}px`;
@@ -515,7 +570,37 @@
     const nodeValues={};for(const n of nodes)nodeValues[n]=volts.get(n);
     const meterValues={};for(const m of model.components.filter(x=>x.type==='voltmeter'||x.type==='ammeter'))meterValues[m.id]=m.type==='voltmeter'?componentResults[m.id].voltage:componentResults[m.id].current;
     const terminalNodes={};for(const comp of model.components)for(const side of ['a','b'])terminalNodes[`${comp.id}:${side}`]=nodeFor(`${comp.id}:${side}`);for(const j of model.junctions)terminalNodes[j.id]=nodeFor(j.id);
-    return {ok:true,revision:model.revision,frequency:source.frequency,voltage:c(source.voltage,0),current:totalI,impedance:zEq,nodeValues,terminalNodes,components:componentResults,meterValues,power:c(totalS.re,0),reactive:c(0,totalS.im),apparent:abs(c(totalS.re,totalS.im)),pf:abs(totalS.re)/Math.max(abs(c(totalS.re,totalS.im)),1e-15),phase:-arg(totalI),omega};
+    const wireCurrents = deriveWireCurrents(componentResults);
+    return {ok:true,revision:model.revision,frequency:source.frequency,voltage:c(source.voltage,0),current:totalI,impedance:zEq,nodeValues,terminalNodes,components:componentResults,wireCurrents,meterValues,power:c(totalS.re,0),reactive:c(0,totalS.im),apparent:abs(c(totalS.re,totalS.im)),pf:abs(totalS.re)/Math.max(abs(c(totalS.re,totalS.im)),1e-15),phase:-arg(totalI),omega};
+  }
+  function deriveWireCurrents(componentResults) {
+    const graph = new Map(), supply = new Map(), result = {};
+    const ensure = id => { if (!graph.has(id)) graph.set(id, []); };
+    for (const comp of model.components) {
+      const a = `${comp.id}:a`, b = `${comp.id}:b`, current = componentResults[comp.id].current;
+      ensure(a); ensure(b); supply.set(a, mul(current, c(-1))); supply.set(b, current);
+    }
+    for (const wire of model.wires) {
+      ensure(wire.a); ensure(wire.b); result[wire.id] = null;
+      graph.get(wire.a).push({ to: wire.b, wire }); graph.get(wire.b).push({ to: wire.a, wire });
+    }
+    const visited = new Map(), low = new Map(); let clock = 0;
+    const visit = (id, parentEdge) => {
+      visited.set(id, ++clock); low.set(id, clock);
+      let total = supply.get(id) || c(0);
+      for (const { to, wire } of graph.get(id)) {
+        if (wire.id === parentEdge) continue;
+        if (!visited.has(to)) {
+          const branchSupply = visit(to, wire.id); total = add(total, branchSupply);
+          low.set(id, Math.min(low.get(id), low.get(to)));
+          // A bridge has a unique current fixed by KCL. An ideal-wire cycle does not.
+          if (low.get(to) > visited.get(id)) result[wire.id] = mul(branchSupply, c(wire.a === id ? -1 : 1));
+        } else low.set(id, Math.min(low.get(id), visited.get(to)));
+      }
+      return total;
+    };
+    for (const id of graph.keys()) if (!visited.has(id)) visit(id, null);
+    return result;
   }
   function fmt(n, digits=2){if(!Number.isFinite(n))return '—';if(Math.abs(n)>0&&Math.abs(n)<.001||Math.abs(n)>=10000)return n.toExponential(2);return Number(n.toFixed(digits)).toLocaleString('ca-ES',{maximumFractionDigits:digits});}
   function polarText(z, unit='') {return `${fmt(abs(z))} ${unit} ∠ ${fmt(arg(z)*180/Math.PI)}°`;}
@@ -543,7 +628,7 @@
   function isSeriesRlc(list){const branches=model.components.filter(x=>x.type==='source'||['resistor','inductor','capacitor'].includes(x.type));if(list.length<2||branches.length!==list.length+1)return false;const degree={};for(const x of branches)for(const side of ['a','b']){const n=model.result.terminalNodes[`${x.id}:${side}`];degree[n]=(degree[n]||0)+1;}return Object.values(degree).length===branches.length&&Object.values(degree).every(n=>n===2);}
   function drawScope(canvas,pair,omega){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height;ctx.strokeStyle='#263a51';ctx.lineWidth=1;for(let i=1;i<8;i++){ctx.beginPath();ctx.moveTo(w*i/8,0);ctx.lineTo(w*i/8,h);ctx.stroke();}for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke();}const ampV=abs(pair.voltage),ampI=abs(pair.current),max=Math.max(ampV,ampI,1e-6),phV=arg(pair.voltage),phI=arg(pair.current);[[ampV,phV,'#48d7d2'],[ampI,phI,'#ffb86b']].forEach(([amp,phase,color])=>{ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();for(let x=0;x<=w;x++){const t=(x/w)*4*Math.PI;const y=h/2-Math.sqrt(2)*amp/max*(h*.38)*Math.sin(t+phase);if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();});}
   function drawPhasors(canvas,list){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height,cx=w/2,cy=h/2,scale=Math.min(w,h)*.39,max=Math.max(1e-8,...list.map(x=>abs(x[1])));ctx.strokeStyle='#2a4058';ctx.beginPath();ctx.moveTo(8,cy);ctx.lineTo(w-8,cy);ctx.moveTo(cx,8);ctx.lineTo(cx,h-8);ctx.stroke();for(let k=1;k<=2;k++){ctx.beginPath();ctx.arc(cx,cy,scale*k/2,0,Math.PI*2);ctx.stroke();}list.forEach(([name,z,color])=>{const x=cx+z.re/max*scale,y=cy-z.im/max*scale;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke();ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});}
-  function simulate(){cancelWireGesture();model.tool='select';const r=solveCircuit();if(!r.ok){model.mode='edit';model.result=null;toast(r.error);render();return;}model.result=r;model.mode='sim';model.revision++;render();}
+  function simulate(){cancelWireGesture();model.tool='select';const r=solveCircuit();if(!r.ok){model.mode='edit';model.result=null;toast(r.error);render();return;}model.result=r;model.mode='sim';currentAnimationEpoch=performance.now();model.revision++;render();}
   function stop(){model.mode='edit';model.result=null;model.tool='select';render();}
   $('#simulate-btn').addEventListener('click',simulate);$('#stop-btn').addEventListener('click',stop);
   $('#wire-btn').addEventListener('click',()=>{if(model.mode!=='edit')return;if(model.tool==='wire'){cancelWireGesture();model.tool='select';}else{model.tool='wire';model.wireStart=null;model.wireBefore=null;model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');}render();});
@@ -569,5 +654,6 @@
   });
   $('#collapse-analysis').addEventListener('click',()=>{model.collapsed=!model.collapsed;$('#analysis-area').classList.toggle('collapsed',model.collapsed);$('#collapse-analysis').textContent=model.collapsed?'⌃':'⌄';$('#collapse-analysis').title=model.collapsed?'Mostra les targetes':'Plega les targetes';if(!model.collapsed&&model.result)renderAnalysis();});
   window.addEventListener('resize',()=>render());
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCurrentAnimation();else if(model.mode==='sim')renderWires();});
   renderPalette(); render();
 })();

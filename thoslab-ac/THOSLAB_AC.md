@@ -88,6 +88,10 @@ No cal fer desaparèixer les eines durant SIMULAR. Les accions estructurals cont
 - El hover no fa canviar el contingut de Scope, Fasors o Anàlisi. Això evita canvis de vista accidentals en moure el cursor.
 - La posició o rotació gràfica, per si soles, no canvien la topologia ni requereixen un nou càlcul.
 
+**Animació del corrent als cables:** durant SIMULAR, els cables amb corrent mostren punts grocs lluminosos com a THOSLAB. El moviment alterna el sentit segons la fase del corrent de cada tram; la velocitat augmenta amb I RMS amb una escala visual logarítmica limitada. Una fase comuna recorre un cicle visual cada 2,4 s, alentit i independent de la freqüència real. El peu del workspace ho indica. Els punts s’alenteixen fins a aturar-se en els passos per zero; els trams amb corrent nul no mostren punts. Els canvis de R/L/C, font i interruptors actualitzen els corrents animats immediatament, mantenint la fase visual comuna. Aturar elimina l’animació, que també es pausa quan la pàgina és oculta.
+
+Els corrents de cable es deriven dels corrents complexos dels components aplicant Kirchhoff a la xarxa de terminals i nodes. En una xarxa de cables sense bucles redundants, cada tram té un corrent únic, inclosa la suma de corrents en un tronc de branques paral·leles. Un bucle format només per cables ideals no determina un repartiment únic: aquests trams no s’animen i el hover ho explica; els trams amb corrent determinat continuen animats. El fasor del tram segueix l’orientació de l’extrem `a` cap a `b`. És una representació didàctica derivada del resultat fasorial, sense solver de transitoris ni impedància afegida als cables.
+
 ### 6.3 Eines inferiors
 
 Les tres targetes compactes poden aparèixer simultàniament mentre hi ha resultats de simulació. L’usuari pot ampliar-ne una per consultar més detall; ampliar una targeta no canvia ni redimensiona el workspace. Es pot plegar el conjunt de targetes.
@@ -180,7 +184,7 @@ Resultats normalitzats
 - **Model de circuit:** font única de veritat persistent durant la sessió. Separa la geometria del canvas de la connectivitat elèctrica.
 - **Validador:** comprèn regles de construcció i de valors; rebutja models incorrectes abans del solver.
 - **Solver:** rep dades elèctriques validades; no coneix píxels, canvas, estils ni estat de selecció.
-- **Resultats:** objecte de sortida únic identificat amb la revisió o snapshot del circuit que s’ha resolt. Conté les magnituds necessàries per a l’app.
+- **Resultats:** objecte de sortida únic identificat amb la revisió o snapshot del circuit que s’ha resolt. Conté les magnituds necessàries per a l’app, inclosos els fasors de corrent dels cables determinats per Kirchhoff; els corrents no únics dels bucles de cables ideals es marquen com a indeterminats.
 - **Presentació:** les vistes només llegeixen l’objecte de resultats i apliquen formats/un­itats visuals; no resolen el circuit.
 
 Un canvi només gràfic (moure o girar sense canviar terminals connectats) redibuixa sense resoldre. Un canvi de topologia o de paràmetres elèctrics invalida el resultat anterior. En SIMULAR, els únics canvis elèctrics admesos són els de valors permesos i interruptors.
@@ -298,6 +302,8 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 22. Zoom i Pan afecten només la vista del workspace, i Baixar PNG produeix una imatge del workspace en la vista actual.
 23. Components, cables i nodes es poden seleccionar i eliminar amb Supr/Backspace; les eliminacions es poden recuperar amb Desfer. Eliminar un node elimina els seus trams incidents.
 24. Es pot seleccionar un cable, afegir-hi un node d’edició i arrossegar aquest node o un node existent per allargar o redistribuir els cables sense perdre la continuïtat de les branques.
+25. Durant SIMULAR, els punts dels cables alternen el sentit segons la fase del seu corrent i es mouen més ràpid quan augmenta la intensitat. Les branques paral·leles mostren els seus propis corrents i el cable comú representa la suma fasorial. El ritme visual alentit queda indicat a la interfície.
+26. Els cables amb corrent nul no mostren punts; canviar valors o interruptors actualitza el moviment immediatament i ATURAR elimina l’animació. En bucles redundants de cables ideals, els trams amb corrent no únic no s’animen i el hover explica la indeterminació.
 
 ## 13. Regla d’interpretació per al desenvolupament
 
