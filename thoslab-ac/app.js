@@ -336,6 +336,7 @@
       model.wires=model.wires.filter(w=>w.a!==id&&w.b!==id); model.junctions=model.junctions.filter(j=>j.id!==id); pruneJunctions();
       message=`Node ${id} eliminat amb ${degree} ${degree===1?'connexió.':'connexions.'}`;
     } else return;
+    hideHover();
     commitHistory(before);model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');invalidate();render();toast(message);
   }
   function openInspector(id) {
