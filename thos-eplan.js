@@ -45,3 +45,5 @@ canvas.addEventListener('dblclick',e=>{if(tool!=='select')return;const target=hi
 initializeElectrical();
 
 initializeIgnition();
+
+$('rotateElement').onclick=()=>{if(ignitionBusy())return;if(selected?.kind==='element'){snapshot();const element=project.elements.find(e=>e.id===selected.id);element.rotation=((element.rotation||0)+90)%360;render()}else if(selected?.kind==='opening'&&project.openings.find(o=>o.id===selected.id)?.type==='door')$('flip').click();else message('Selecciona un símbol elèctric o una porta per girar-lo.');};
