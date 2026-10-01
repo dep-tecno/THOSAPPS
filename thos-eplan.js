@@ -37,7 +37,7 @@ $('file').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.siz
 $('png').onclick=()=>{const saved=selected;selected=null;render();canvas.toBlob(b=>{if(b)download(b,'thoseplant.png')});selected=saved;render();message('S’exporta la vista actual. Centra el plànol abans d’exportar-lo.')};$('new').onclick=()=>{if(ignitionBusy())return;if((project.walls.length||project.elements.length||project.background)&&!confirm('Vols començar un plànol nou? Desa el projecte si el vols conservar.'))return;snapshot();restore(empty());message('Plànol nou. Marca el primer extrem de la paret.')};
 new ResizeObserver(render).observe($('area'));render();
 
-function setPanel(open){document.body.classList.toggle('panel-closed',!open);$('togglePanel').setAttribute('aria-expanded',String(open));$('togglePanel').textContent=open?'Amaga eines':'Mostra eines';}
+function setPanel(open){document.body.classList.toggle('panel-closed',!open);$('togglePanel').setAttribute('aria-expanded',String(open));$('togglePanel').textContent='Amaga Menú lateral';$('showPanel').setAttribute('aria-expanded',String(open));$('showPanel').hidden=open;}
 setPanel(true);
 $('togglePanel').onclick=()=>setPanel(document.body.classList.contains('panel-closed'));
 canvas.addEventListener('dblclick',e=>{if(tool!=='select')return;const target=hit(point(e,false));if(target?.kind==='opening'&&project.openings.find(o=>o.id===target.id)?.type==='door'){selected=target;$('flip').click();}});
@@ -47,3 +47,5 @@ initializeElectrical();
 initializeIgnition();
 
 $('rotateElement').onclick=()=>{if(ignitionBusy())return;if(selected?.kind==='element'){snapshot();const element=project.elements.find(e=>e.id===selected.id);element.rotation=((element.rotation||0)+90)%360;render()}else if(selected?.kind==='opening'&&project.openings.find(o=>o.id===selected.id)?.type==='door')$('flip').click();else message('Selecciona un símbol elèctric o una porta per girar-lo.');};
+
+$('showPanel').onclick=()=>{setPanel(true);$('togglePanel').focus()};
