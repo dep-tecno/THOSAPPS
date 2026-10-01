@@ -1,5 +1,5 @@
 # THOSAPPS 🛠️
-### Aplicacions per a ús educatiu a l'aula de Tecnologia i Digitalització
+### Aplicacions per educatiu a l'aula de Tecnologia i Digitalització
 
 **Autor:** Jacob Yerga 
 
