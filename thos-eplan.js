@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
-const empty=()=>({version:1,walls:[],openings:[],background:null,circuits:makeCircuits(),elements:[]});
+const empty=()=>({version:1,circuitStandard:'itc-bt-25-v1',walls:[],openings:[],background:null,circuits:makeCircuits(),elements:[]});
 let project=empty(),past=[],future=[],tool='wall',selected=null,anchor=null,hover=null,drag=null,space=false,image=null,scale=65,offset={x:80,y:80};
 const copy=x=>JSON.parse(JSON.stringify(x)),message=t=>$('status').textContent=t;
 function snapshot(){past.push(copy(project));if(past.length>80)past.shift();future=[]}
