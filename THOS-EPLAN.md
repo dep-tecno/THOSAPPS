@@ -22,3 +22,8 @@ Projectes nous amb C1–C5: 10 A/1,5 mm²; 16 A/2,5 mm²; 25 A/6 mm²; 20 A/4 mm
 C4 utilitza bases de 16 A amb protecció individual. S’explica l’alternativa de desdoblament, però no s’implementa un assistent de desdoblament. Els valors són referències de la taula 1, no càlculs de dimensionament. Informació de diferencials per cada cinc circuits generals i exclusius de C13, IGA independent d’ICP i sobretensions segons ITC-BT-23. No dibuixa proteccions ni certifica compliment.
 
 Migració de circuits antics per ús, conservant els identificadors i les assignacions dels elements. Comprovat amb Edge: valors, addicionals repetits, variants C12, C13, receptors, JSON, referències invàlides, desfer/refés i projectes antics. Font: https://www.boe.es/buscar/act.php?id=BOE-A-2002-18099#ib-25
+
+## Eines de vista i filtre
+Zoom +/−, centrat i PAN traslladats a la barra superior. PAN arrossega la vista sense modificar el projecte. Nou creuament (commutador doble) per a circuits d’il·luminació. Símbols elèctrics aproximadament un 30% més petits; dimensions constructives intactes.
+
+Vista de tots els circuits o només de l’actiu. El filtre afecta el dibuix, la selecció i l’exportació PNG, però no elimina dades del JSON. Caixes d’empalmes i arquitectura sempre visibles. En canviar de circuit o de filtre es neteja la selecció. Verificat amb Edge: eines superiors, creuament, filtre de dibuix i selecció, PAN, zoom, mida, circuits, projectes antics i portes.
