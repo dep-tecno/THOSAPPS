@@ -91,3 +91,7 @@
 .card-drag-handle:focus-visible,#reset-card-positions:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
 .analysis-card.dragging{transition:none;border-color:var(--cyan);box-shadow:0 12px 30px #000a}
 .analysis-card.dragging .card-drag-handle{cursor:grabbing;color:var(--cyan)}
+.component-value-editor{display:flex;align-items:center;gap:5px;min-width:0}
+.component-value-editor #component-value{width:85px;min-width:0}
+.component-value-editor select{width:57px;flex:none;padding:6px 3px;background:#0d1928;color:var(--text);border:1px solid #344a62;border-radius:5px;font:11px var(--mono)}
+.component-value-editor input:focus-visible,.component-value-editor select:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}

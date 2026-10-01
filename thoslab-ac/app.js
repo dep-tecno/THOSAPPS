@@ -19,6 +19,12 @@
     ammeter: { label: 'Amperímetre', short: 'A', glyph: 'A', prefix: 'A' }
   };
   const defaults = { source: { voltage: 12, frequency: 50 }, resistor: { value: 100 }, inductor: { value: .1 }, capacitor: { value: .0001 }, switch: { closed: true }, voltmeter: {}, ammeter: {} };
+  const componentUnits = {
+    resistor: [{label:'Ω',exponent:0},{label:'kΩ',exponent:3}],
+    inductor: [{label:'H',exponent:0},{label:'mH',exponent:-3}],
+    capacitor: [{label:'F',exponent:0},{label:'µF',exponent:-6}]
+  };
+  const componentUnitChoices = new WeakMap();
   let toastTimer;
   let panDrag = null;
   let panMoved = false;
@@ -85,11 +91,18 @@
     render(); openInspector(c.id);
   }
   function componentName(c) { return `${types[c.type].label} ${c.id}`; }
+  function decimalShift(value,exponent){
+    const [mantissa,power='0']=String(value).split('e');
+    return Number(`${mantissa}e${Number(power)+exponent}`);
+  }
+  function componentUnit(comp){
+    const units=componentUnits[comp.type],saved=componentUnitChoices.get(comp);
+    if(saved)return saved;
+    return units[comp.type==='resistor'?(comp.value>=1000?1:0):(comp.value<1?1:0)];
+  }
   function componentText(c) {
     if (c.type === 'source') return `${fmt(c.voltage, 2)} V RMS · ${fmt(c.frequency, 2)} Hz`;
-    if (c.type === 'resistor') return `${fmt(c.value, 3)} Ω`;
-    if (c.type === 'inductor') return `${fmt(c.value, 4)} H`;
-    if (c.type === 'capacitor') return `${fmt(c.value, 4)} F`;
+    if (componentUnits[c.type]) {const unit=componentUnit(c);return `${fmt(decimalShift(c.value,-unit.exponent),4)} ${unit.label}`;}
     if (c.type === 'switch') return c.closed ? 'Tancat' : 'Obert';
     return c.type === 'voltmeter' ? 'Ideal' : 'Ideal';
   }
@@ -418,7 +431,7 @@
     makePanelDraggable();
     if (c.type === 'source') bindField('source-voltage', v => c.voltage = v, 'V RMS');
     if (c.type === 'source') bindField('source-frequency', v => c.frequency = v, 'Hz');
-    if (['resistor','inductor','capacitor'].includes(c.type)) bindField('component-value', v => c.value = v, c.type === 'resistor' ? 'Ω' : c.type === 'inductor' ? 'H' : 'F');
+    if (componentUnits[c.type]) bindComponentValue(c);
     if (c.type === 'switch') $('#switch-toggle').onclick = () => { const before=circuitSnapshot();c.closed = !c.closed;commitHistory(before);changedElectrical();openInspector(id); };
     if ($('#rotate-component')) $('#rotate-component').onclick = () => rotateComponent(id);
     if ($('#delete-component')) $('#delete-component').onclick = deleteSelectedElement;
@@ -430,10 +443,35 @@
   }
   function inspectorFields(c) {
     if (c.type === 'source') return `<label class="panel-row">Tensió RMS<input id="source-voltage" type="number" min="0.000001" step="any" value="${c.voltage}"></label><label class="panel-row">Freqüència<input id="source-frequency" type="number" min="0.000001" step="any" value="${c.frequency}"></label><div class="analysis-note">Fase fixada a 0°</div>`;
-    if (['resistor','inductor','capacitor'].includes(c.type)) return `<label class="panel-row">Valor (${c.type === 'resistor' ? 'Ω' : c.type === 'inductor' ? 'H' : 'F'})<input id="component-value" type="number" min="0.000001" step="any" value="${c.value}"></label>`;
+    if (componentUnits[c.type]) {
+      const unit=componentUnit(c),value=decimalShift(c.value,-unit.exponent);
+      return `<div class="panel-row"><label for="component-value">Valor</label><div class="component-value-editor"><input id="component-value" type="number" min="0" step="any" value="${value}"><select id="component-unit" aria-label="Unitat del valor" title="Canvia la unitat conservant el valor físic">${componentUnits[c.type].map(option=>`<option value="${option.label}" ${option===unit?'selected':''}>${option.label}</option>`).join('')}</select></div></div>`;
+    }
     if (c.type === 'switch') return `<div class="panel-row">Estat <span>${c.closed ? 'Tancat' : 'Obert'}</span></div><div class="panel-actions"><button id="switch-toggle">${c.closed ? 'Obre interruptor' : 'Tanca interruptor'}</button></div>`;
     if (c.type === 'voltmeter') return `<div class="panel-row">Mesura <span>Tensió RMS</span></div>`;
     return `<div class="panel-row">Mesura <span>Corrent RMS</span></div>`;
+  }
+  function bindComponentValue(comp){
+    const input=$('#component-value'),select=$('#component-unit'),unit=componentUnit(comp);
+    componentUnitChoices.set(comp,unit);
+    input.addEventListener('change',()=>{
+      const value=decimalShift(Number(input.value),unit.exponent);
+      if(!Number.isFinite(value)||value<=0){
+        toast(`Introdueix un valor positiu i finit en ${unit.label}.`);
+        input.value=decimalShift(comp.value,-unit.exponent);return;
+      }
+      if(value===comp.value){input.value=decimalShift(comp.value,-unit.exponent);return;}
+      const before=circuitSnapshot();comp.value=value;commitHistory(before);changedElectrical();
+    });
+    select.addEventListener('change',()=>{
+      const next=componentUnits[comp.type].find(option=>option.label===select.value);
+      const displayed=next?decimalShift(comp.value,-next.exponent):NaN;
+      if(!Number.isFinite(displayed)||displayed<=0){
+        select.value=unit.label;toast('Aquest valor no es pot representar en aquesta unitat.');return;
+      }
+      componentUnitChoices.set(comp,next);hideHover();render();
+      $('#component-unit')?.focus({preventScroll:true});
+    });
   }
   function bindField(id, setter, unit) {
     const input = $(`#${id}`); input.disabled = false;

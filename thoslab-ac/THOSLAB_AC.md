@@ -56,6 +56,12 @@ Tots els components són ideals. Els components de dos terminals es poden connec
 
 La freqüència ha de ser positiva i comuna a tot el circuit, fixada per l’única font AC. El domini numèric admissible i els límits de rang de la interfície no s’especifiquen aquí: no s’han d’inventar restriccions didàctiques addicionals. Les entrades han de ser finites i respectar les unitats i els valors estrictament positius indicats.
 
+L’editor de R/L/C combina un camp numèric i un selector d’unitat: **Ω/kΩ**, **H/mH** i **F/µF**. Per defecte, una resistència de 1.000 Ω o més es presenta en kΩ; les inductàncies inferiors a 1 H es presenten en mH i les capacitats inferiors a 1 F en µF. Així, els valors inicials 0,1 H i 0,0001 F es llegeixen com 100 mH i 100 µF.
+
+Canviar només la unitat converteix el nombre visible i conserva el valor físic: no canvia el resultat, la revisió ni l’historial del circuit. Canviar el nombre el converteix a SI abans d’actualitzar el model i, durant SIMULAR, provoca el recàlcul immediat habitual. El camp valida el valor convertit com a finit i estrictament positiu; rebutjar una entrada recupera el nombre correcte en la unitat activa. No hi ha un mínim didàctic arbitrari per a R/L/C.
+
+L’elecció d’unitat és estat de visualització del component durant la sessió i s’utilitza també a l’etiqueta, el hover i l’exportació PNG. El solver, l’historial i els fitxers JSON v1 continuen expressant els valors en Ω, H i F; les unitats de presentació no s’afegeixen al JSON. Els circuits existents es poden obrir sense migració. En tornar a obrir un circuit o recuperar-lo de l’historial, es trien les unitats per defecte segons el valor físic.
+
 ## 6. Interfície i interacció
 
 ### 6.1 Estructura de pantalla
@@ -322,6 +328,7 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 28. Fasors mostra fletxes i etiquetes, escala comuna per a les tensions i escala pròpia per als corrents, arc φ i la relació avançat/endarrerit/en fase. Els casos amb V o I nul no mostren un angle fictici. Els colors coincideixen amb el Scope, els valors es deriven del mateix resultat i el gràfic s’ajusta a la targeta compacta o ampliada.
 29. Anàlisi presenta dades essencials i comportament a la vista compacta, i blocs Circuit/Component, Fase i Potències a la vista ampliada. La selecció contextualitza les dades, les magnituds no definides queden identificades, el circuit obert es diferencia de la compensació de corrents, i la potència de la font respecta el conveni d’absorció.
 30. Scope, Fasors i Anàlisi es poden moure independentment amb la nansa, també amb teclat. El moviment no amplia la targeta ni desplaça el circuit. Els controls interiors continuen operatius; els límits mantenen les targetes accessibles, els recalculs conserven la disposició i Posició inicial restaura la ubicació de les tres.
+31. L’edició de R/L/C admet Ω/kΩ, H/mH i F/µF. Canviar la unitat conserva el valor físic sense crear un canvi d’historial; canviar el nombre aplica la conversió a SI i recalcula en SIMULAR. Les etiquetes reflecteixen la unitat escollida, les entrades invàlides es restitueixen en aquesta unitat i el JSON v1 manté els valors en SI.
 
 ## 13. Regla d’interpretació per al desenvolupament
 
