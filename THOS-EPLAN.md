@@ -28,11 +28,11 @@ Zoom +/−, centrat i PAN traslladats a la barra superior. PAN arrossega la vist
 
 Vista de tots els circuits o només de l’actiu. El filtre afecta el dibuix, la selecció i l’exportació PNG, però no elimina dades del JSON. Caixes d’empalmes i arquitectura sempre visibles. En canviar de circuit o de filtre es neteja la selecció. Verificat amb Edge: eines superiors, creuament, filtre de dibuix i selecció, PAN, zoom, mida, circuits, projectes antics i portes.
 
-## Pulsador, timbre i CGP
-Afegits a la barra amb símbols compartits amb el plànol. Pulsador i timbre disponibles en circuits d’il·luminació; CGP independent dels circuits interiors i visible amb el filtre de circuit actiu. Representació gràfica, sense simulació de proteccions. Verificats assignació, independència, filtre, desfer/refés i JSON.
+## Pulsador, timbre i quadre general
+Afegits a la barra amb símbols compartits amb el plànol. Pulsador i timbre disponibles en circuits d’il·luminació; quadre general independent dels circuits interiors i visible amb el filtre de circuit actiu. Representació gràfica, sense simulació de proteccions. Verificats assignació, independència, filtre, desfer/refés i JSON.
 
 ## Gestió dels circuits
-Selectors identificats com Circuit actiu i Circuit nou, amb botó + Afegeix. Paperera per eliminar el circuit actiu; si té elements requereix confirmació. Elimina només els elements assignats, preserva caixes i CGP, i permet desfer/refés. Permet eliminar l’últim circuit i desar/reobrir un projecte sense circuits. No recrea circuits eliminats en obrir projectes moderns. Verificat cancel·lació, confirmació, desfer/refés, JSON buit i recreació.
+Selectors identificats com Circuit actiu i Circuit nou, amb botó + Afegeix. Paperera per eliminar el circuit actiu; si té elements requereix confirmació. Elimina només els elements assignats, preserva caixes i quadre general, i permet desfer/refés. Permet eliminar l’últim circuit i desar/reobrir un projecte sense circuits. No recrea circuits eliminats en obrir projectes moderns. Verificat cancel·lació, confirmació, desfer/refés, JSON buit i recreació.
 
 ## Connexió d’encesa
 Nova eina a la barra: seleccionar dos elements del circuit de llums actiu. Admet llums, interruptors, commutadors i creuaments; connectant successivament es poden representar maniobres i grups de llums. No admet caixes, CGP, altres circuits ni connexions duplicades. Esc cancel·la el primer punt. Línies discontínues de comandament, sense recorregut físic ni conductors.
@@ -44,3 +44,7 @@ L’eina inicia una encesa en esborrany i passa a FI ENCESA. Els clics connecten
 
 ## Selecció de maniobra sense ordre de clics
 L’encesa es defineix seleccionant membres, ressaltats en verd. Un segon clic desmarca. FI ENCESA accepta un interruptor amb una o més llums, dos commutadors amb una o més llums, o dos commutadors amb un o més creuaments i una o més llums. Combinacions incompletes o barrejades mostren el motiu i mantenen el grup obert. Les connexions lògiques es generen en tancar; les llums deriven del mateix comandament. Eliminar una connexió agrupada elimina l’encesa completa per poder-la redefinir. Les comprovacions les fa l’usuari.
+
+
+## Correcció del quadre general
+La CGP s’ha retirat perquè pertany a la instal·lació d’enllaç de l’edifici. El símbol de l’habitatge és ara el Quadre general de maniobra i protecció (QGMP), independent dels circuits dibuixats i origen previst dels futurs esquemes unifilars. En obrir un projecte anterior, qualsevol element intern cgp es converteix automàticament a panel abans de validar-lo.
