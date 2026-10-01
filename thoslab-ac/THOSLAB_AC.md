@@ -294,6 +294,7 @@ La validació mínima cobreix:
 Els circuits incomplets no se simulen. Un interruptor obert, per si mateix, és un estat vàlid i el solver ha de calcular les conseqüències d’aquest estat quan la xarxa continua ben definida. La validació ha de distingir una branca oberta intencional d’una connexió accidentalment incompleta.
 
 Errors de validació han d’identificar de manera útil l’element o condició que cal corregir, sempre que es pugui. No s’especifica aquí un catàleg textual concret.
+En prémer SIMULAR amb un circuit incorrecte, es manté EDITAR i es mostra un avís persistent. Els terminals incomplets, nodes lliures o components amb valors incorrectes es marquen al circuit; un curtcircuit ideal de la font ressalta un camí concret de cables, amperímetres o interruptors tancats que uneix els seus terminals. Un interruptor obert correctament cablejat continua sent vàlid. Els errors numèrics sense un element identificable mostren l’explicació general sense atribuir-los a un component arbitrari. En modificar el circuit o tornar a simular s’elimina el diagnòstic anterior; no forma part del JSON ni de l’historial.
 
 ## 12. Criteris d’acceptació v1.0
 
@@ -331,6 +332,9 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 30. Scope, Fasors i Anàlisi es poden moure independentment amb la nansa, també amb teclat. El moviment no amplia la targeta ni desplaça el circuit. Els controls interiors continuen operatius; els límits mantenen les targetes accessibles, els recalculs conserven la disposició i Posició inicial restaura la ubicació de les tres.
 31. L’edició de R/L/C admet Ω/kΩ, H/mH i F/µF. Canviar la unitat conserva el valor físic sense crear un canvi d’historial; canviar el nombre aplica la conversió a SI i recalcula en SIMULAR. Les etiquetes reflecteixen la unitat escollida, les entrades invàlides es restitueixen en aquesta unitat i el JSON v1 manté els valors en SI.
 32. Les unions de cables es representen amb punts plens i els encreuaments sense unió amb salts. Moure, girar, zoom i PNG conserven aquest conveni; els punts de selecció i de connexió segueixen el traçat mostrat, i el canvi de representació no modifica el model elèctric ni els fitxers JSON existents.
+33. La validació identifica visualment terminals incomplets, extrems lliures, valors incorrectes i un camí de curtcircuit ideal de la font. L’avís no desapareix per temps, els elements continuen editables i cap resultat anterior queda mostrat com a vàlid. Un interruptor obert ben connectat no es marca com a connexió incompleta; modificar el circuit elimina els avisos antics.
+34. Les targetes s’ajusten a l’alçada disponible sense envair els controls del peu. Els textos i valors poden ocupar més d’una línia; si el contingut no hi cap, es desplaça dins la targeta. Scope i Fasors conserven una alçada mínima útil de gràfic i el Scope omet les etiquetes temporals del canvas quan l’amplada és insuficient, mantenint el temps visible als controls.
+35. RMS, fase, P, Q i S ofereixen explicacions breus contextuals al passar-hi el ratolí. Els instruments expliquen connexió en sèrie/paral·lel i el seu model ideal, i les accions contextuals indiquen R i Supr/Backspace. Les ajudes no introdueixen cap pantalla nova ni alteren el càlcul; les dreceres d’historial respecten el bloqueig estructural de SIMULAR.
 
 ## 13. Regla d’interpretació per al desenvolupament
 

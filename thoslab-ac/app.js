@@ -26,6 +26,17 @@
   };
   const componentUnitChoices = new WeakMap();
   let displayedWireRoutes = new Map();
+  let validationIssue = null;
+  const learningHelp={
+    rms:'Valor eficaç. En una resistència produeix el mateix escalfament que aquest valor continu. En una sinusoide, el pic és √2 vegades el valor RMS.',
+    phase:'φ = fase de V − fase d’I. φ positiu: el corrent s’endarrereix; φ negatiu: s’avança. Amb V o I nul, la fase no està definida.',
+    active:'Potència mitjana absorbida o lliurada, en W. P negatiu indica que l’element lliura potència.',
+    reactive:'Potència associada a l’intercanvi d’energia amb L i C, en var. No és potència dissipada.',
+    apparent:'S = V RMS × I RMS = √(P² + Q²), en VA. És el mòdul de la potència complexa.',
+    factor:'Relació P/S quan S és diferent de zero. En règim sinusoidal correspon a cos φ.',
+    voltmeter:'Voltímetre ideal: es connecta en paral·lel, mesura V RMS i no carrega el circuit.',
+    ammeter:'Amperímetre ideal: es connecta en sèrie, mesura I RMS i té impedància zero.'
+  };
   let toastTimer;
   let panDrag = null;
   let panMoved = false;
@@ -52,9 +63,11 @@
   function circuitSnapshot() { return JSON.stringify({ components: model.components, wires: model.wires, junctions: model.junctions }); }
   function commitHistory(before) {
     const now = circuitSnapshot(); if (before === now) return;
+    clearValidation();
     history = history.slice(0, historyIndex + 1); history.push(now); historyIndex = history.length - 1; updateHistoryButtons();
   }
   function restoreHistory(index) {
+    clearValidation();
     historyIndex = Math.max(0, Math.min(history.length - 1, index));
     const data = JSON.parse(history[historyIndex]); model.components = data.components; model.wires = data.wires; model.junctions = data.junctions || []; model.selected = null; model.selectedWire = null; model.selectedJunction = null; model.selectedWirePoint = null; model.wireStart = null; model.wireBefore = null; model.wireHover=null; model.result = null; model.revision++; inspector.classList.add('hidden');
     updateHistoryButtons(); render();
@@ -125,6 +138,7 @@
     palette.innerHTML = '';
     for (const type of Object.keys(types)) {
       const b = document.createElement('button'); b.className = 'palette-button'; b.title = `Afegeix ${types[type].label.toLowerCase()}`;
+      if(type==='voltmeter'||type==='ammeter')b.title+=`. ${learningHelp[type]}`;
       b.disabled = model.mode === 'sim';
       b.innerHTML = `${symbolSvg(type, true)}<span class="full-label">${types[type].short}</span>`;
       b.addEventListener('click', () => addComponent(type)); palette.append(b);
@@ -137,12 +151,14 @@
     const rect = workspace.getBoundingClientRect(); wiresLayer.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
     $('#empty-state').classList.toggle('hidden', model.components.length > 0);
     $('#connection-legend').classList.toggle('hidden', model.wires.length === 0);
+    const warning=$('#validation-message');warning.classList.toggle('hidden',!validationIssue);warning.textContent=validationIssue?`⚠ ${validationIssue.error}`:'';
     for (const c of model.components) {
       const el = document.createElement('div'); el.className = `component ${c.type} ${c.id === model.selected ? 'selected' : ''} ${model.mode === 'sim' ? 'drag-disabled' : ''} ${model.tool === 'wire' ? 'connect-ready' : ''}`;
       el.dataset.id = c.id; el.style.left = `${c.x}px`; el.style.top = `${c.y}px`; el.style.transform = `translate(-50%,-50%) rotate(${c.rotation}deg)`;
+      el.classList.toggle('validation-error',validationIssue?.components?.includes(c.id)||false);
       el.innerHTML = `<button class="terminal left ${model.wireStart===`${c.id}:a`?'wire-start':''}" data-terminal="${c.id}:a" aria-label="Terminal A de ${c.id}"></button><div class="component-card"><div class="symbol-wrap">${symbolSvg(c.type,c.closed)}<span class="component-id">${c.id}</span></div><span class="component-value">${componentText(c)}</span></div><button class="terminal right ${model.wireStart===`${c.id}:b`?'wire-start':''}" data-terminal="${c.id}:b" aria-label="Terminal B de ${c.id}"></button>`;
       el.addEventListener('pointerenter', e => showComponentHover(c, e)); el.addEventListener('pointermove', moveHover); el.addEventListener('pointerleave', hideHover);
-      el.querySelectorAll('.terminal').forEach(t => { t.addEventListener('pointerenter', e => showNodeHover(t.dataset.terminal, e)); t.addEventListener('pointermove', moveHover); });
+      el.querySelectorAll('.terminal').forEach(t => {t.classList.toggle('connection-error',validationIssue?.terminals?.includes(t.dataset.terminal)||false);t.addEventListener('pointerenter', e => showNodeHover(t.dataset.terminal, e)); t.addEventListener('pointermove', moveHover); });
       if (model.tool === 'wire' && model.mode === 'edit') el.querySelectorAll('.terminal').forEach(t => t.addEventListener('click', terminalClick));
       el.addEventListener('click', e => { if (e.target.closest('.terminal')) return; e.stopPropagation(); model.selected = c.id; model.selectedWire = null; model.selectedJunction = null; model.selectedWirePoint = null; render(); openInspector(c.id); });
       if (model.mode === 'edit') enableDrag(el, c);
@@ -151,6 +167,7 @@
     for (const j of model.junctions) {
       const degree = model.wires.filter(w => w.a === j.id || w.b === j.id).length;
       const el = document.createElement('button'); el.className = `junction ${degree > 1 ? 'joined' : ''} ${degree > 2 ? 'branched' : ''} ${model.wireStart === j.id ? 'wire-start' : ''} ${model.selectedJunction === j.id ? 'selected' : ''}`;
+      el.classList.toggle('validation-error',validationIssue?.junctions?.includes(j.id)||false);
       el.style.left = `${j.x}px`; el.style.top = `${j.y}px`; el.title = degree > 1 ? 'Node de connexió' : 'Extrem lliure'; el.setAttribute('aria-label', el.title);
       el.addEventListener('pointerenter', e => showJunctionHover(j, e)); el.addEventListener('pointermove', moveHover); el.addEventListener('pointerleave', hideHover);
       if (model.tool === 'wire' && model.mode === 'edit') el.addEventListener('click', e => endpointClick(e, j.id));
@@ -167,6 +184,7 @@
     ['new-btn','open-btn','undo-btn','redo-btn'].forEach(id => $(`#${id}`).disabled = model.mode === 'sim');
     renderPalette(); updateHistoryButtons();
     $('#tool-hint').textContent = model.mode === 'sim' ? 'Animació AC alentida · velocitat segons I RMS · sentit segons la fase' : model.tool === 'wire' ? (model.wireStart ? 'Tria un terminal, node, cable o espai buit per crear una branca' : 'Tria terminals o clica un cable per crear un node') : model.tool === 'pan' ? 'Arrossega l’espai de treball per desplaçar el circuit' : 'Clica un component, cable o node · Supr elimina · Arrossega nodes per allargar cables';
+    $('#tool-hint').title='Amb un component seleccionat, R gira 90°. Supr o Backspace elimina l’element seleccionat. Desfer recupera el canvi. Les accions estructurals requereixen EDITAR.';
     if (model.result) renderAnalysis(); else renderEmptyAnalysis();
     if (!inspector.classList.contains('hidden')) {
       if (model.selected) openInspector(model.selected);
@@ -302,6 +320,7 @@
     for (const drawing of wireDrawings()) {
       const w=drawing.wire,d=drawing.d;
       const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', d); p.setAttribute('class',`wire-line ${model.wireHover?.wireId===w.id?'connection-target':''} ${model.selectedWire===w.id?'selected':''}`);p.dataset.wireId=w.id;wiresLayer.append(p);
+      p.classList.toggle('validation-error',validationIssue?.wires?.includes(w.id)||false);
       const current = wireResults[w.id];
       if (current && abs(current) > threshold) {
         p.classList.add('energized');
@@ -433,14 +452,15 @@
     const before=model.wireBefore||circuitSnapshot(),p=eventWorldPoint(e),id=nextJunctionId(); model.junctions.push({id,x:p.x,y:p.y}); model.wires.push({id:crypto.randomUUID(),a:model.wireStart,b:id});
     model.wireStart=null;model.wireBefore=null;model.wireHover=null;commitHistory(before);invalidate();render();
   }
-  function invalidate() { model.revision++; model.result = null; }
-  function positionHover(e) { const tip=$('#hover-info'),r=workspace.getBoundingClientRect(); tip.style.left=`${Math.max(4,Math.min(e.clientX-r.left+12,r.width-240))}px`;tip.style.top=`${Math.max(4,Math.min(e.clientY-r.top+12,r.height-75))}px`; }
+  function clearValidation(){validationIssue=null;hideHover();$('#validation-message').classList.add('hidden');$$('.connection-error,.validation-error').forEach(el=>el.classList.remove('connection-error','validation-error'));}
+  function invalidate() { clearValidation();model.revision++; model.result = null; }
+  function positionHover(e) { const tip=$('#hover-info'),r=workspace.getBoundingClientRect();tip.style.left=`${Math.max(4,Math.min(e.clientX-r.left+12,r.width-tip.offsetWidth-4))}px`;tip.style.top=`${Math.max(4,Math.min(e.clientY-r.top+12,r.height-tip.offsetHeight-4))}px`; }
   function showHover(title, rows, e) { const tip=$('#hover-info');tip.innerHTML=`<strong>${title}</strong>${rows.map(x=>`<span>${x}</span>`).join('')}`;tip.classList.remove('hidden');positionHover(e); }
   function moveHover(e){if(!$('#hover-info').classList.contains('hidden'))positionHover(e);}
   function hideHover(){ $('#hover-info').classList.add('hidden'); }
-  function showComponentHover(comp,e){const result=model.result?.components[comp.id];const rows=[componentText(comp)];if(result)rows.push(`V = ${fmt(abs(result.voltage))} V RMS`,`I = ${fmt(abs(result.current))} A RMS`);showHover(componentName(comp),rows,e);}
-  function showNodeHover(terminal,e){const n=model.result?.terminalNodes?.[terminal],v=n&&model.result?.nodeValues[n];showHover(n||'Terminal',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Simula per consultar la tensió'],e);}
-  function showJunctionHover(j,e){const n=model.result?.terminalNodes?.[j.id],v=n&&model.result?.nodeValues[n];showHover(n||'Node',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Punt d’unió de cables'],e);}
+  function showComponentHover(comp,e){const result=model.result?.components[comp.id];const rows=[componentText(comp)];if(comp.type==='voltmeter'||comp.type==='ammeter')rows.push(learningHelp[comp.type]);if(result)rows.push(`V = ${fmt(abs(result.voltage))} V RMS`,`I = ${fmt(abs(result.current))} A RMS`);showHover(componentName(comp),rows,e);}
+  function showNodeHover(terminal,e){const n=model.result?.terminalNodes?.[terminal],v=n&&model.result?.nodeValues[n];showHover(validationIssue?.terminals?.includes(terminal)?'Terminal pendent de connectar':n||'Terminal',validationIssue?.terminals?.includes(terminal)?['Connecta aquest terminal a un altre component.']:v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Simula per consultar la tensió'],e);}
+  function showJunctionHover(j,e){const n=model.result?.terminalNodes?.[j.id],v=n&&model.result?.nodeValues[n];showHover(validationIssue?.junctions?.includes(j.id)?'Revisa aquest node':n||'Node',validationIssue?.junctions?.includes(j.id)?[validationIssue.error]:v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Punt d’unió de cables'],e);}
   function showWireHover(w,e){
     const point=eventWorldPoint(e),crossing=displayedWireRoutes.get(w.id)?.crossings.some(p=>Math.hypot(p.x-point.x,p.y-point.y)*model.zoom<12);
     if(model.tool==='wire'){
@@ -472,7 +492,7 @@
     positionInspector();
     inspector.innerHTML=`<div class="panel-head"><span>Cable</span><button id="close-inspector" aria-label="Tanca">×</button></div><div class="panel-row">Connexió seleccionada</div><div class="analysis-note">Punt ple: unió de cables. Salt: encreuament sense unió.</div><div class="analysis-note">Afegeix un node al cable i arrossega’l per allargar o ajustar-ne el traçat.</div><div class="panel-actions">${model.mode==='edit'?'<button id="edit-wire-node">Afegeix node</button><button id="delete-selected" class="danger">Elimina cable</button>':''}</div>`;
     inspector.classList.remove('hidden'); $('#close-inspector').onclick=()=>inspector.classList.add('hidden'); makePanelDraggable();
-    if($('#delete-selected'))$('#delete-selected').onclick=deleteSelectedElement;
+    if($('#delete-selected')){$('#delete-selected').title='Elimina el cable seleccionat (Supr o Backspace)';$('#delete-selected').onclick=deleteSelectedElement;}
     if($('#edit-wire-node'))$('#edit-wire-node').onclick=addNodeToSelectedWire;
   }
   function openJunctionInspector(id) {
@@ -481,7 +501,7 @@
     positionInspector();
     inspector.innerHTML=`<div class="panel-head"><span>Node ${id}</span><button id="close-inspector" aria-label="Tanca">×</button></div><div class="panel-row">${degree} ${degree===1?'connexió':'connexions'}</div><div class="analysis-note">Arrossega el punt per allargar o redistribuir els cables connectats.</div><div class="panel-actions">${model.mode==='edit'?'<button id="delete-selected" class="danger">Elimina node i connexions</button>':''}</div>`;
     inspector.classList.remove('hidden'); $('#close-inspector').onclick=()=>inspector.classList.add('hidden'); makePanelDraggable();
-    if($('#delete-selected'))$('#delete-selected').onclick=deleteSelectedElement;
+    if($('#delete-selected')){$('#delete-selected').title='Elimina el node i els seus cables (Supr o Backspace)';$('#delete-selected').onclick=deleteSelectedElement;}
   }
   function addNodeToSelectedWire() {
     const w=model.wires.find(x=>x.id===model.selectedWire),point=model.selectedWirePoint; if(!w||!point)return;
@@ -522,7 +542,7 @@
     if (componentUnits[c.type]) bindComponentValue(c);
     if (c.type === 'switch') $('#switch-toggle').onclick = () => { const before=circuitSnapshot();c.closed = !c.closed;commitHistory(before);changedElectrical();openInspector(id); };
     if ($('#rotate-component')) $('#rotate-component').onclick = () => rotateComponent(id);
-    if ($('#delete-component')) $('#delete-component').onclick = deleteSelectedElement;
+    if ($('#delete-component')) {$('#delete-component').title='Elimina el component i els seus cables (Supr o Backspace)';$('#delete-component').onclick = deleteSelectedElement;}
   }
   function rotateComponent(id=model.selected) {
     if(model.mode!=='edit')return;
@@ -576,7 +596,7 @@
   }
   function changedElectrical() {
     invalidate();
-    if (model.mode === 'sim') { const out = solveCircuit(); if (out.ok) model.result = out; else { model.mode = 'edit'; toast(out.error); } }
+    if (model.mode === 'sim') { const out = solveCircuit(); if (out.ok) model.result = out; else { model.mode = 'edit';validationIssue=out; } }
     render();
   }
 
@@ -674,14 +694,18 @@
   }
   function solveCircuit() {
     const sources=model.components.filter(x=>x.type==='source');
-    if(sources.length!==1)return {ok:false,error:'Afegeix exactament una font AC abans de simular.'};
+    if(sources.length!==1)return {ok:false,error:sources.length?'El circuit ha de tenir una sola font AC.':'Afegeix una font AC amb el botó Font abans de simular.',components:sources.map(x=>x.id)};
     const source=sources[0];
-    if(!(source.voltage>0&&source.frequency>0&&Number.isFinite(source.voltage)&&Number.isFinite(source.frequency)))return {ok:false,error:'La font ha de tenir valors positius i finits.'};
-    for(const x of model.components) if(['resistor','inductor','capacitor'].includes(x.type)&&(!(x.value>0)||!Number.isFinite(x.value)))return {ok:false,error:`El valor de ${x.id} ha de ser positiu i finit.`};
-    if(model.wires.length===0)return {ok:false,error:'El circuit és incomplet: connecta els terminals dels components.'};
+    if(!(source.voltage>0&&source.frequency>0&&Number.isFinite(source.voltage)&&Number.isFinite(source.frequency)))return {ok:false,error:'La font ha de tenir tensió i freqüència positives i finites.',components:[source.id]};
+    for(const x of model.components) if(['resistor','inductor','capacitor'].includes(x.type)&&(!(x.value>0)||!Number.isFinite(x.value)))return {ok:false,error:`El valor de ${x.id} ha de ser positiu i finit.`,components:[x.id]};
+    if(model.wires.length===0)return {ok:false,error:'Connecta els terminals marcats abans de simular.',terminals:model.components.flatMap(comp=>[`${comp.id}:a`,`${comp.id}:b`])};
+    const freeJunctions=model.junctions.filter(j=>model.wires.filter(w=>w.a===j.id||w.b===j.id).length<2).map(j=>j.id);
+    if(freeJunctions.length)return {ok:false,error:'Hi ha extrems de cable lliures: connecta o elimina els punts marcats.',junctions:freeJunctions,wires:model.wires.filter(w=>freeJunctions.includes(w.a)||freeJunctions.includes(w.b)).map(w=>w.id)};
     const nodeFor=buildNodes(); const nodes=new Set(); model.components.forEach(x=>{nodes.add(nodeFor(`${x.id}:a`));nodes.add(nodeFor(`${x.id}:b`));});
     const terminalCount={}; for(const comp of model.components)for(const side of ['a','b']){const n=nodeFor(`${comp.id}:${side}`);terminalCount[n]=(terminalCount[n]||0)+1;}
-    const loose=Object.entries(terminalCount).find(([,count])=>count<2); if(loose)return {ok:false,error:`El circuit és incomplet: el node ${loose[0]} només té un terminal connectat.`};
+    const loose=new Set(Object.entries(terminalCount).filter(([,count])=>count<2).map(([id])=>id));
+    if(loose.size)return {ok:false,error:'Els terminals marcats no arriben a cap altre component. Completa’n les connexions.',terminals:model.components.flatMap(comp=>['a','b'].map(side=>`${comp.id}:${side}`)).filter(id=>loose.has(nodeFor(id))),junctions:model.junctions.filter(j=>loose.has(nodeFor(j.id))).map(j=>j.id),wires:model.wires.filter(w=>loose.has(nodeFor(w.a))).map(w=>w.id)};
+    const short=idealShortPath(source);if(short)return {ok:false,error:'La font està curtcircuitada per cables o elements d’impedància zero. Revisa el camí marcat.',components:[source.id,...short.components],wires:short.wires,junctions:short.junctions};
     const branches=[]; const voltageBranches=[]; const omega=2*Math.PI*source.frequency;
     for(const comp of model.components){const p=nodeFor(`${comp.id}:a`),n=nodeFor(`${comp.id}:b`); if(comp.type==='source'){voltageBranches.push({comp,p,n,value:c(comp.voltage,0),kind:'source'});continue;}
       if(comp.type==='switch'){if(comp.closed)voltageBranches.push({comp,p,n,value:c(0),kind:'short'});else branches.push({comp,p,n,y:c(0),open:true});continue;}
@@ -719,6 +743,17 @@
     const wireCurrents = deriveWireCurrents(componentResults);
     return {ok:true,revision:model.revision,frequency:source.frequency,voltage:c(source.voltage,0),current:totalI,impedance:zEq,nodeValues,terminalNodes,components:componentResults,wireCurrents,meterValues,power:c(totalS.re,0),reactive:c(0,totalS.im),apparent:abs(c(totalS.re,totalS.im)),pf:abs(totalS.re)/Math.max(abs(c(totalS.re,totalS.im)),1e-15),phase:-arg(totalI),omega};
   }
+  function idealShortPath(source){
+    const graph=new Map(),link=(a,b,edge)=>{if(!graph.has(a))graph.set(a,[]);graph.get(a).push({to:b,...edge});};
+    for(const w of model.wires){link(w.a,w.b,{wire:w.id});link(w.b,w.a,{wire:w.id});}
+    for(const comp of model.components)if(comp.type==='ammeter'||(comp.type==='switch'&&comp.closed)){const a=`${comp.id}:a`,b=`${comp.id}:b`;link(a,b,{component:comp.id});link(b,a,{component:comp.id});}
+    const start=`${source.id}:a`,target=`${source.id}:b`,previous=new Map([[start,null]]),queue=[start];
+    for(let i=0;i<queue.length&&!previous.has(target);i++)for(const edge of graph.get(queue[i])||[])if(!previous.has(edge.to)){previous.set(edge.to,{from:queue[i],edge});queue.push(edge.to);}
+    if(!previous.has(target))return null;
+    const path={components:[],wires:[],junctions:[]};
+    for(let id=target;id!==start;){const step=previous.get(id);if(!id.includes(':'))path.junctions.push(id);if(step.edge.component)path.components.push(step.edge.component);if(step.edge.wire)path.wires.push(step.edge.wire);id=step.from;}
+    return path;
+  }
   function deriveWireCurrents(componentResults) {
     const graph = new Map(), supply = new Map(), result = {};
     const ensure = id => { if (!graph.has(id)) graph.set(id, []); };
@@ -750,7 +785,11 @@
   }
   function fmt(n, digits=2){if(!Number.isFinite(n))return '—';if(Math.abs(n)>0&&Math.abs(n)<.001||Math.abs(n)>=10000)return n.toExponential(2);return Number(n.toFixed(digits)).toLocaleString('ca-ES',{maximumFractionDigits:digits});}
   function polarText(z, unit='') {return `${fmt(abs(z))} ${unit} ∠ ${fmt(arg(z)*180/Math.PI)}°`;}
-  function metric(label,value){return `<div class="metric"><label>${label}</label><strong>${value}</strong></div>`;}
+  function helpLabel(label,explanation){return explanation?`<abbr class="didactic-help" title="${explanation}">${label}</abbr>`:label;}
+  function metric(label,value){
+    const help=label.includes('RMS')?learningHelp.rms:label.startsWith('Fase')?learningHelp.phase:label==='P activa'?learningHelp.active:label==='Q reactiva'?learningHelp.reactive:label==='S aparent'?learningHelp.apparent:label==='cos φ'?learningHelp.factor:null;
+    return `<div class="metric"><label>${helpLabel(label,help)}</label><strong>${value}</strong></div>`;
+  }
   function renderEmptyAnalysis(){ endCardDrag();scopeResizeObserver.disconnect();scopeDrawing=null;phasorResizeObserver.disconnect();phasorDrawing=null;$('#analysis-area').classList.add('hidden'); }
   function renderAnalysis(){
     const r=model.result;if(!r)return renderEmptyAnalysis();
@@ -768,6 +807,9 @@
     const phaseLabel=phaseInfo.angle===null?'φ no definit':`φ ${fmt(phaseInfo.angle*180/Math.PI)}°`;
     phasorBody.innerHTML=`<div class="card-context">${context}</div><div class="phasor-visual-row"><canvas class="phasor-chart" id="phasors-card-canvas" role="img" aria-label="Fasors de tensió i corrent amb escales pròpies; ${phaseLabel}; ${phaseInfo.description}"></canvas><div class="phasor-details"><strong class="phasor-phase">${phaseLabel}</strong><div class="phasor-relation">${phaseInfo.description}</div>${expanded==='phasors'?`<div class="phasor-list">${phasors.map(([name,z,color])=>`<span class="phasor-chip"><span style="color:${color}">${name}</span>: ${polarText(z,name.startsWith('I')?'A RMS':'V RMS')}</span>`).join('')}</div>`:`<div class="phasor-values"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span><span class="scope-current">I ${fmt(abs(pair.current))} A</span><span>Valors RMS</span></div>`}</div></div><div class="phasor-scale-note">Escales pròpies: tensions en V · corrents en A</div>`;
     analysisBody.innerHTML=circuitAnalysis(r,selected,selectedResult,expanded==='analysis');
+    $('.card-summary',scopeBody).title=learningHelp.rms;$('.card-summary',scopeBody).classList.add('didactic-help');
+    $('.phasor-phase',phasorBody).title=learningHelp.phase;$('.phasor-phase',phasorBody).classList.add('didactic-help');
+    const rmsValues=$('.phasor-values',phasorBody);if(rmsValues){rmsValues.title=learningHelp.rms;rmsValues.classList.add('didactic-help');}
     scopeResizeObserver.disconnect();scopeDrawing=[$('#scope-card-canvas'),pair,r.omega];
     drawScope(...scopeDrawing);scopeResizeObserver.observe(scopeDrawing[0]);
     phasorResizeObserver.disconnect();phasorDrawing=[$('#phasors-card-canvas'),phasors,pair];
@@ -797,6 +839,8 @@
     const rows=Math.ceil(cards.length/columns);
     cards.forEach((card,index)=>{
       card.style.width=`${width}px`;
+      const maxHeight=card.classList.contains('expanded')?Math.min(260,window.innerHeight*.48):144;
+      card.style.maxHeight=`${Math.min(maxHeight,Math.max(29,area.clientHeight-2*margin-38))}px`;
       const saved=cardPositions[card.dataset.card];
       const x=saved?saved.x:margin+(index%columns)*(width+gap);
       const y=saved?saved.y:area.clientHeight-38-card.offsetHeight-(rows-1-Math.floor(index/columns))*(144+gap);
@@ -898,7 +942,7 @@
     if(!rect.width||!rect.height)return;
     canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
     const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
-    const w=rect.width,h=rect.height,labels=h>=80;
+    const w=rect.width,h=rect.height,labels=h>=80&&w>=180;
     const left=5,right=w-5,top=5,bottom=h-(labels?18:5);
     if(right<=left||bottom<=top)return;
     const center=(top+bottom)/2,amplitude=(bottom-top)*.43;
@@ -985,7 +1029,7 @@
       ctx.fillStyle=label.color;ctx.textAlign='left';ctx.fillText(label.name,label.x,label.y);
     });
   }
-  function simulate(){cancelWireGesture();model.tool='select';const r=solveCircuit();if(!r.ok){model.mode='edit';model.result=null;toast(r.error);render();return;}model.result=r;model.mode='sim';currentAnimationEpoch=performance.now();model.revision++;render();}
+  function simulate(){cancelWireGesture();clearValidation();hideHover();model.tool='select';const r=solveCircuit();if(!r.ok){model.mode='edit';model.result=null;validationIssue=r;render();return;}model.result=r;model.mode='sim';currentAnimationEpoch=performance.now();model.revision++;render();}
   function stop(){model.mode='edit';model.result=null;model.tool='select';render();}
   $('#simulate-btn').addEventListener('click',simulate);$('#stop-btn').addEventListener('click',stop);
   $('#wire-btn').addEventListener('click',()=>{if(model.mode!=='edit')return;if(model.tool==='wire'){cancelWireGesture();model.tool='select';}else{model.tool='wire';model.wireStart=null;model.wireBefore=null;model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');}render();});
@@ -1004,6 +1048,7 @@
   workspace.addEventListener('click',e=>{if(panMoved){panMoved=false;return;}if(model.tool==='pan')return;const blank=e.target===workspace||e.target.classList.contains('workspace-grid')||e.target===wiresLayer||e.target===layer;if(!blank)return;if(model.tool==='wire'&&model.wireStart){model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');addFreeJunction(e);return;}if(model.tool==='wire'){cancelWireGesture();model.tool='select';}model.selected=null;model.selectedWire=null;model.selectedJunction=null;model.selectedWirePoint=null;inspector.classList.add('hidden');render();});
   window.addEventListener('keydown',e=>{
     if(e.target instanceof HTMLElement&&e.target.closest('input,textarea,select,[contenteditable="true"]'))return;
+    if(model.mode==='sim'&&(e.ctrlKey||e.metaKey)&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();return;}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey){if(historyIndex<history.length-1)restoreHistory(historyIndex+1);}else if(historyIndex>0)restoreHistory(historyIndex-1);}
     else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();if(historyIndex<history.length-1)restoreHistory(historyIndex+1);}
     else if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&e.key.toLowerCase()==='r'&&model.selected){e.preventDefault();rotateComponent();}
