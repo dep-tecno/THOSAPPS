@@ -25,6 +25,7 @@
     capacitor: [{label:'F',exponent:0},{label:'µF',exponent:-6}]
   };
   const componentUnitChoices = new WeakMap();
+  let displayedWireRoutes = new Map();
   let toastTimer;
   let panDrag = null;
   let panMoved = false;
@@ -131,9 +132,11 @@
   }
   function render() {
     stopCurrentAnimation();
+    displayedWireRoutes.clear();
     layer.innerHTML = ''; wiresLayer.innerHTML = '';
     const rect = workspace.getBoundingClientRect(); wiresLayer.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
     $('#empty-state').classList.toggle('hidden', model.components.length > 0);
+    $('#connection-legend').classList.toggle('hidden', model.wires.length === 0);
     for (const c of model.components) {
       const el = document.createElement('div'); el.className = `component ${c.type} ${c.id === model.selected ? 'selected' : ''} ${model.mode === 'sim' ? 'drag-disabled' : ''} ${model.tool === 'wire' ? 'connect-ready' : ''}`;
       el.dataset.id = c.id; el.style.left = `${c.x}px`; el.style.top = `${c.y}px`; el.style.transform = `translate(-50%,-50%) rotate(${c.rotation}deg)`;
@@ -147,8 +150,8 @@
     }
     for (const j of model.junctions) {
       const degree = model.wires.filter(w => w.a === j.id || w.b === j.id).length;
-      const el = document.createElement('button'); el.className = `junction ${degree > 2 ? 'branched' : ''} ${model.wireStart === j.id ? 'wire-start' : ''} ${model.selectedJunction === j.id ? 'selected' : ''}`;
-      el.style.left = `${j.x}px`; el.style.top = `${j.y}px`; el.title = degree > 2 ? 'Node de connexió' : 'Punt de connexió'; el.setAttribute('aria-label', el.title);
+      const el = document.createElement('button'); el.className = `junction ${degree > 1 ? 'joined' : ''} ${degree > 2 ? 'branched' : ''} ${model.wireStart === j.id ? 'wire-start' : ''} ${model.selectedJunction === j.id ? 'selected' : ''}`;
+      el.style.left = `${j.x}px`; el.style.top = `${j.y}px`; el.title = degree > 1 ? 'Node de connexió' : 'Extrem lliure'; el.setAttribute('aria-label', el.title);
       el.addEventListener('pointerenter', e => showJunctionHover(j, e)); el.addEventListener('pointermove', moveHover); el.addEventListener('pointerleave', hideHover);
       if (model.tool === 'wire' && model.mode === 'edit') el.addEventListener('click', e => endpointClick(e, j.id));
       else if (model.mode === 'edit' && model.tool !== 'pan') { el.addEventListener('click', e => { e.stopPropagation(); selectJunction(j.id); }); enableJunctionDrag(el, j); }
@@ -177,7 +180,7 @@
     if (junction) return { point:{x:junction.x,y:junction.y}, normal:null, componentId:null };
     const [id, side] = endpointId.split(':'); const comp = model.components.find(x => x.id === id); if (!comp) return null;
     const angle = comp.rotation * Math.PI / 180, direction = side === 'a' ? -1 : 1;
-    const normal = { x:direction*Math.cos(angle), y:direction*Math.sin(angle) };
+    const normal = { x:direction*Math.round(Math.cos(angle)), y:direction*Math.round(Math.sin(angle)) };
     return { point:{x:comp.x+TERMINAL_OFFSET*normal.x,y:comp.y+TERMINAL_OFFSET*normal.y}, normal, componentId:id };
   }
   function terminalPoint(terminalId) { return endpointGeometry(terminalId)?.point || null; }
@@ -192,7 +195,7 @@
     if(Math.abs(a.x-b.x)<1e-7)return a.x>left&&a.x<right&&Math.max(Math.min(a.y,b.y),top)<Math.min(Math.max(a.y,b.y),bottom);
     return true;
   }
-  function wireRoute(aId,bId) {
+  function wireRoute(aId,bId,priorRoutes=[]) {
     const a=endpointGeometry(aId),b=endpointGeometry(bId);if(!a||!b)return [];
     const lead=22,start=a.normal?{x:a.point.x+a.normal.x*lead,y:a.point.y+a.normal.y*lead}:a.point;
     const finish=b.normal?{x:b.point.x+b.normal.x*lead,y:b.point.y+b.normal.y*lead}:b.point;
@@ -200,18 +203,90 @@
     const bounds=model.components.map(comp=>{const vertical=Math.abs(((comp.rotation%180)+180)%180-90)<1e-7;return{x0:comp.x-(vertical?28:57),x1:comp.x+(vertical?28:57),y0:comp.y-(vertical?57:28),y1:comp.y+(vertical?57:28)};});
     const sceneTop=Math.min(start.y,finish.y,...bounds.map(r=>r.y0))-36,sceneBottom=Math.max(start.y,finish.y,...bounds.map(r=>r.y1))+36;
     const sceneLeft=Math.min(start.x,finish.x,...bounds.map(r=>r.x0))-36,sceneRight=Math.max(start.x,finish.x,...bounds.map(r=>r.x1))+36;
+    const otherAnchors=[...model.junctions.map(j=>({id:j.id,point:{x:j.x,y:j.y}})),...model.components.flatMap(comp=>['a','b'].map(side=>{const id=`${comp.id}:${side}`;return{id,point:endpointPoint(id)};}))].filter(anchor=>anchor.id!==aId&&anchor.id!==bId);
     const candidates=[
       [start,{x:finish.x,y:start.y},finish], [start,{x:start.x,y:finish.y},finish],
       [start,{x:midX,y:start.y},{x:midX,y:finish.y},finish], [start,{x:start.x,y:midY},{x:finish.x,y:midY},finish],
+      ...[midX-16,midX+16,start.x-16,start.x+16,finish.x-16,finish.x+16].map(x=>[start,{x,y:start.y},{x,y:finish.y},finish]),
+      ...[midY-16,midY+16,start.y-16,start.y+16,finish.y-16,finish.y+16].map(y=>[start,{x:start.x,y},{x:finish.x,y},finish]),
       ...[...new Set([Math.min(start.y,finish.y)-36,Math.max(start.y,finish.y)+36,sceneTop,sceneBottom])].map(y=>[start,{x:start.x,y},{x:finish.x,y},finish]),
       ...[...new Set([Math.min(start.x,finish.x)-36,Math.max(start.x,finish.x)+36,sceneLeft,sceneRight])].map(x=>[start,{x,y:start.y},{x,y:finish.y},finish])
     ].map(simplifyPoints);
     let best=candidates[0],bestScore=Infinity;
     for(const route of candidates){let length=0,collisions=0;for(let i=1;i<route.length;i++){const p=route[i-1],q=route[i];length+=Math.abs(q.x-p.x)+Math.abs(q.y-p.y);for(const comp of model.components)if(segmentHitsComponent(p,q,comp))collisions++;}
-      const score=collisions*100000+length;if(score<bestScore){bestScore=score;best=route;}}
+      const points=simplifyPoints([a.point,...(a.normal?[start]:[]),...route.slice(1,-1),...(b.normal?[finish]:[]),b.point]);
+      let overlap=0;
+      for(const previous of priorRoutes)overlap+=routeOverlap(points,previous.points,[aId,bId].filter(id=>id===previous.wire.a||id===previous.wire.b));
+      let anchorHits=0;
+      for(const anchor of otherAnchors)if(points.some((p,i)=>i>0&&pointSegmentDistance(anchor.point,points[i-1],p)<7))anchorHits++;
+      const score=collisions*1000000+anchorHits*100000+overlap*1000+length;if(score<bestScore){bestScore=score;best=route;}}
     return simplifyPoints([a.point,...(a.normal?[start]:[]),...best.slice(1,-1),...(b.normal?[finish]:[]),b.point]);
   }
   function pathData(points) { return points.map((p,i)=>`${i?'L':'M'} ${p.x} ${p.y}`).join(' '); }
+  function pointSegmentDistance(point,a,b) {
+    const dx=b.x-a.x,dy=b.y-a.y,length=dx*dx+dy*dy;
+    const t=length?Math.max(0,Math.min(1,((point.x-a.x)*dx+(point.y-a.y)*dy)/length)):0;
+    return Math.hypot(point.x-a.x-t*dx,point.y-a.y-t*dy);
+  }
+  function routeOverlap(points,other,sharedEndpoints) {
+    let overlap=0;
+    for(let i=1;i<points.length;i++)for(let j=1;j<other.length;j++){
+      const a=points[i-1],b=points[i],p=other[j-1],q=other[j];
+      const horizontal=Math.abs(a.y-b.y)<1e-7,otherHorizontal=Math.abs(p.y-q.y)<1e-7;
+      if(horizontal!==otherHorizontal)continue;
+      const axis=horizontal?'x':'y',fixed=horizontal?'y':'x';if(Math.abs(a[fixed]-p[fixed])>1e-7)continue;
+      const lo=Math.max(Math.min(a[axis],b[axis]),Math.min(p[axis],q[axis])),hi=Math.min(Math.max(a[axis],b[axis]),Math.max(p[axis],q[axis]));
+      if(hi<=lo)continue;
+      let common=0;
+      for(const id of sharedEndpoints){const point=endpointPoint(id);if(point&&Math.abs(point[fixed]-a[fixed])<1e-7)common+=Math.max(0,Math.min(hi,point[axis]+22)-Math.max(lo,point[axis]-22));}
+      overlap+=Math.max(0,hi-lo-common);
+    }
+    return overlap;
+  }
+  // A jump is a drawing convention only: electrical unions still use endpoint IDs.
+  function wireDrawings() {
+    const routes=[];
+    for(const wire of model.wires){const points=wireRoute(wire.a,wire.b,routes);if(points.length>1)routes.push({wire,points,marks:points.map(()=>[]),crossings:[]});}
+    for(let i=0;i<routes.length;i++)for(let j=i+1;j<routes.length;j++){
+      const first=routes[i],second=routes[j];
+      for(let a=1;a<first.points.length;a++)for(let b=1;b<second.points.length;b++){
+        const p=first.points[a-1],q=first.points[a],u=second.points[b-1],v=second.points[b];
+        const horizontal=Math.abs(p.y-q.y)<1e-7,otherHorizontal=Math.abs(u.y-v.y)<1e-7;if(horizontal===otherHorizontal)continue;
+        const point=horizontal?{x:u.x,y:p.y}:{x:p.x,y:u.y};
+        const distance=(from,to)=>Math.abs(from.x-to.x)+Math.abs(from.y-to.y);
+        const inside=(from,to)=>point.x>=Math.min(from.x,to.x)-1e-7&&point.x<=Math.max(from.x,to.x)+1e-7&&point.y>=Math.min(from.y,to.y)-1e-7&&point.y<=Math.max(from.y,to.y)+1e-7;
+        if(!inside(p,q)||!inside(u,v))continue;
+        const joined=[first.wire.a,first.wire.b].some(id=>(id===second.wire.a||id===second.wire.b)&&distance(endpointPoint(id),point)<1e-7);
+        if(joined)continue;
+        const firstRoom=Math.min(distance(p,point),distance(q,point)),secondRoom=Math.min(distance(u,point),distance(v,point));
+        const overFirst=horizontal?firstRoom>=2:secondRoom<2&&firstRoom>=2;
+        const over=overFirst?first:second,under=overFirst?second:first,overIndex=overFirst?a:b,underIndex=overFirst?b:a;
+        const room=overFirst?firstRoom:secondRoom;if(room<2)continue;
+        const radius=Math.min(6,room),overStart=over.points[overIndex-1],underStart=under.points[underIndex-1];
+        over.marks[overIndex].push({at:distance(overStart,point),radius,kind:'jump'});
+        under.marks[underIndex].push({at:distance(underStart,point),radius:9,kind:'gap'});
+        first.crossings.push(point);second.crossings.push(point);
+      }
+    }
+    for(const route of routes){
+      const commands=[{op:'M',...route.points[0]}];
+      for(let i=1;i<route.points.length;i++){
+        const start=route.points[i-1],end=route.points[i],dx=end.x-start.x,dy=end.y-start.y,length=Math.abs(dx)+Math.abs(dy);if(length<1e-7)continue;
+        const at=t=>({x:start.x+dx*t/length,y:start.y+dy*t/length});
+        const marks=route.marks[i].map(mark=>({lo:Math.max(0,mark.at-mark.radius),hi:Math.min(length,mark.at+mark.radius),kind:mark.kind})).sort((a,b)=>a.lo-b.lo);
+        const merged=[];
+        for(const mark of marks){const last=merged.at(-1);if(last&&mark.lo<=last.hi+1){last.hi=Math.max(last.hi,mark.hi);if(mark.kind==='jump')last.kind='jump';}else merged.push({...mark});}
+        for(const mark of merged){
+          commands.push({op:'L',...at(mark.lo)});
+          if(mark.kind==='gap')commands.push({op:'M',...at(mark.hi)});
+          else {const mid=at((mark.lo+mark.hi)/2);commands.push({op:'Q',cx:mid.x+(dy?12:0),cy:mid.y-(dx?12:0),...at(mark.hi)});}
+        }
+        commands.push({op:'L',...end});
+      }
+      route.commands=commands;route.d=commands.map(cmd=>`${cmd.op} ${cmd.op==='Q'?`${cmd.cx} ${cmd.cy} `:''}${cmd.x} ${cmd.y}`).join(' ');
+    }
+    displayedWireRoutes=new Map(routes.map(route=>[route.wire.id,route]));return routes;
+  }
   function nextJunctionId() { let i=1; while(model.junctions.some(j=>j.id===`J${i}`))i++; return `J${i}`; }
   function pruneJunctions() { model.junctions=model.junctions.filter(j=>model.wires.some(w=>w.a===j.id||w.b===j.id)); }
   function cancelWireGesture() {
@@ -224,8 +299,8 @@
     const flows = [];
     const wireResults = model.mode === 'sim' ? model.result?.wireCurrents || {} : {};
     const threshold = Math.max(1e-12, ...Object.values(wireResults).filter(Boolean).map(i => abs(i) * 1e-10));
-    for (const w of model.wires) {
-      const points=wireRoute(w.a,w.b);if(points.length<2)continue;const d=pathData(points);
+    for (const drawing of wireDrawings()) {
+      const w=drawing.wire,d=drawing.d;
       const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', d); p.setAttribute('class',`wire-line ${model.wireHover?.wireId===w.id?'connection-target':''} ${model.selectedWire===w.id?'selected':''}`);p.dataset.wireId=w.id;wiresLayer.append(p);
       const current = wireResults[w.id];
       if (current && abs(current) > threshold) {
@@ -244,7 +319,7 @@
         }
       }
       const hit = document.createElementNS('http://www.w3.org/2000/svg','path'); hit.setAttribute('d',d); hit.setAttribute('class','wire-hit');
-      hit.addEventListener('pointerenter', e => {showWireHover(w,e);updateWireHover(w,e);}); hit.addEventListener('pointermove', e => {moveHover(e);updateWireHover(w,e);}); hit.addEventListener('pointerleave', () => {hideHover();if(model.wireHover?.wireId===w.id){model.wireHover=null;clearWirePreview();}});
+      hit.addEventListener('pointerenter', e => {showWireHover(w,e);updateWireHover(w,e);}); hit.addEventListener('pointermove', e => {showWireHover(w,e);updateWireHover(w,e);}); hit.addEventListener('pointerleave', () => {hideHover();if(model.wireHover?.wireId===w.id){model.wireHover=null;clearWirePreview();}});
       if (model.mode === 'edit') hit.addEventListener('click', e => { e.stopPropagation(); if (model.tool === 'pan') return; if(model.tool==='wire'){if(model.wireStart===w.a||model.wireStart===w.b){toast('Aquest cable ja pertany al node d’inici. Tria un altre cable.');return;}splitWireAt(w,e);return;} selectWire(w,e); }); wiresLayer.append(hit);
     }
     if (flows.length && !document.hidden) animateWireCurrents(flows);
@@ -321,7 +396,7 @@
   function eventWorldPoint(e) { const r=workspace.getBoundingClientRect(); return {x:(e.clientX-r.left-model.panX)/model.zoom,y:(e.clientY-r.top-model.panY)/model.zoom}; }
   function orthogonalPoints(a,b) { const mx=(a.x+b.x)/2; return [{x:a.x,y:a.y},{x:mx,y:a.y},{x:mx,y:b.y},{x:b.x,y:b.y}]; }
   function nearestOnWire(w,e) {
-    const pts=wireRoute(w.a,w.b),p=eventWorldPoint(e); let best=null;
+    const pts=displayedWireRoutes.get(w.id)?.points||wireRoute(w.a,w.b),p=eventWorldPoint(e); let best=null;
     for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=dx*dx+dy*dy;if(!len)continue;const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/len));const q={x:a.x+t*dx,y:a.y+t*dy};const d=(q.x-p.x)**2+(q.y-p.y)**2;if(!best||d<best.d)best={...q,d};}
     return best;
   }
@@ -366,7 +441,20 @@
   function showComponentHover(comp,e){const result=model.result?.components[comp.id];const rows=[componentText(comp)];if(result)rows.push(`V = ${fmt(abs(result.voltage))} V RMS`,`I = ${fmt(abs(result.current))} A RMS`);showHover(componentName(comp),rows,e);}
   function showNodeHover(terminal,e){const n=model.result?.terminalNodes?.[terminal],v=n&&model.result?.nodeValues[n];showHover(n||'Terminal',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Simula per consultar la tensió'],e);}
   function showJunctionHover(j,e){const n=model.result?.terminalNodes?.[j.id],v=n&&model.result?.nodeValues[n];showHover(n||'Node',v?[`V = ${fmt(abs(v))} V RMS`,`∠ ${fmt(arg(v)*180/Math.PI)}°`]:['Punt d’unió de cables'],e);}
-  function showWireHover(w,e){if(model.tool==='wire'){const same=model.wireStart===w.a||model.wireStart===w.b;showHover(same?'Aquest cable ja està connectat':'Crear un node en aquest cable',[same?'Tria un altre cable per afegir una branca':model.wireStart?'Clica per connectar la branca al punt marcat':'Clica per iniciar una derivació'],e);return;}const n=model.result?.terminalNodes?.[w.a],v=n&&model.result?.nodeValues[n];const rows=[v?`V = ${fmt(abs(v))} V RMS`:'Clica per seleccionar, afegir un node o eliminar el cable'];if(model.result){const current=model.result.wireCurrents[w.id];rows.push(current?`I = ${polarText(current,'A RMS')}`:'Corrent no únic en aquest bucle de cables ideals');}showHover('Connexió',rows,e);}
+  function showWireHover(w,e){
+    const point=eventWorldPoint(e),crossing=displayedWireRoutes.get(w.id)?.crossings.some(p=>Math.hypot(p.x-point.x,p.y-point.y)*model.zoom<12);
+    if(model.tool==='wire'){
+      const same=model.wireStart===w.a||model.wireStart===w.b;
+      showHover(same?'Aquest cable ja està connectat':crossing?'Encreuament sense unió':'Crear un node en aquest cable',[
+        ...(crossing?['El salt indica que els cables no s’uneixen aquí.']:[]),
+        same?'Tria un altre cable per afegir una branca':model.wireStart?'Clica per connectar només al cable ressaltat':'Clica per iniciar una derivació en aquest cable'
+      ],e);return;
+    }
+    const n=model.result?.terminalNodes?.[w.a],v=n&&model.result?.nodeValues[n];
+    const rows=[...(crossing?['Els cables no s’uneixen en aquest punt.']:[]),v?`V = ${fmt(abs(v))} V RMS`:'Clica per seleccionar, afegir un node o eliminar el cable'];
+    if(model.result){const current=model.result.wireCurrents[w.id];rows.push(current?`I = ${polarText(current,'A RMS')}`:'Corrent no únic en aquest bucle de cables ideals');}
+    showHover(crossing?'Encreuament sense unió':'Connexió',rows,e);
+  }
   function positionInspector() {
     if (model.panel.x === null) model.panel.x = Math.max(12, workspace.clientWidth - 246);
     inspector.style.left = `${model.panel.x}px`; inspector.style.right = 'auto'; inspector.style.top = `${model.panel.y}px`;
@@ -382,7 +470,7 @@
   function openWireInspector(id) {
     const w=model.wires.find(x=>x.id===id); if(!w)return;
     positionInspector();
-    inspector.innerHTML=`<div class="panel-head"><span>Cable</span><button id="close-inspector" aria-label="Tanca">×</button></div><div class="panel-row">Connexió seleccionada</div><div class="analysis-note">Afegeix un node al cable i arrossega’l per allargar o ajustar-ne el traçat.</div><div class="panel-actions">${model.mode==='edit'?'<button id="edit-wire-node">Afegeix node</button><button id="delete-selected" class="danger">Elimina cable</button>':''}</div>`;
+    inspector.innerHTML=`<div class="panel-head"><span>Cable</span><button id="close-inspector" aria-label="Tanca">×</button></div><div class="panel-row">Connexió seleccionada</div><div class="analysis-note">Punt ple: unió de cables. Salt: encreuament sense unió.</div><div class="analysis-note">Afegeix un node al cable i arrossega’l per allargar o ajustar-ne el traçat.</div><div class="panel-actions">${model.mode==='edit'?'<button id="edit-wire-node">Afegeix node</button><button id="delete-selected" class="danger">Elimina cable</button>':''}</div>`;
     inspector.classList.remove('hidden'); $('#close-inspector').onclick=()=>inspector.classList.add('hidden'); makePanelDraggable();
     if($('#delete-selected'))$('#delete-selected').onclick=deleteSelectedElement;
     if($('#edit-wire-node'))$('#edit-wire-node').onclick=addNodeToSelectedWire;
@@ -541,9 +629,12 @@
     const width=workspace.clientWidth,height=workspace.clientHeight,ratio=2,canvas=document.createElement('canvas');canvas.width=width*ratio;canvas.height=height*ratio;
     const ctx=canvas.getContext('2d');ctx.scale(ratio,ratio);ctx.fillStyle='#0b1523';ctx.fillRect(0,0,width,height);ctx.fillStyle='#304057';for(let x=12;x<width;x+=24)for(let y=12;y<height;y+=24)ctx.fillRect(x,y,1.5,1.5);
     ctx.save();ctx.translate(model.panX,model.panY);ctx.scale(model.zoom,model.zoom);
-    for(const w of model.wires){const pts=wireRoute(w.a,w.b);if(pts.length<2)continue;ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const p of pts.slice(1))ctx.lineTo(p.x,p.y);ctx.strokeStyle='#91aec8';ctx.lineWidth=2.5;ctx.stroke();}
+    for(const drawing of wireDrawings()){
+      ctx.beginPath();for(const cmd of drawing.commands){if(cmd.op==='M')ctx.moveTo(cmd.x,cmd.y);else if(cmd.op==='Q')ctx.quadraticCurveTo(cmd.cx,cmd.cy,cmd.x,cmd.y);else ctx.lineTo(cmd.x,cmd.y);}
+      ctx.strokeStyle='#91aec8';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+    }
     for(const c of model.components)drawPngComponent(ctx,c);
-    for(const j of model.junctions){ctx.beginPath();ctx.arc(j.x,j.y,model.wires.filter(w=>w.a===j.id||w.b===j.id).length>2?4:2.5,0,Math.PI*2);ctx.fillStyle='#b9d4e9';ctx.fill();}
+    for(const j of model.junctions){const degree=model.wires.filter(w=>w.a===j.id||w.b===j.id).length;ctx.beginPath();ctx.arc(j.x,j.y,degree>2?4:3,0,Math.PI*2);ctx.fillStyle=degree>1?'#c3e5f5':'#0b1523';ctx.fill();ctx.strokeStyle='#d4e9f5';ctx.lineWidth=1;ctx.stroke();}
     ctx.restore();ctx.fillStyle='#a9bdcf';ctx.font='600 11px system-ui';ctx.fillText('THOSLAB AC',12,height-12);
     canvas.toBlob(blob=>{if(blob)downloadBlob(blob,'THOSLAB_AC_circuit.png');else toast('No s’ha pogut crear la imatge PNG.');},'image/png');
   }
@@ -556,6 +647,7 @@
     else if(c.type==='capacitor'){line(-TERMINAL_OFFSET,0,-8,0);line(8,0,TERMINAL_OFFSET,0);line(-8,-13,-8,13);line(8,-13,8,13);}
     else if(c.type==='switch'){line(-TERMINAL_OFFSET,0,-23,0);line(23,0,TERMINAL_OFFSET,0);ctx.beginPath();ctx.arc(-23,0,2,0,Math.PI*2);ctx.arc(23,0,2,0,Math.PI*2);ctx.fill();line(-21,-1,c.closed?21:16,c.closed?0:-12);}
     else {line(-TERMINAL_OFFSET,0,-20,0);line(20,0,TERMINAL_OFFSET,0);ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#d0dfed';ctx.font='700 15px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(c.type==='voltmeter'?'V':'A',0,1);}
+    for(const x of [-TERMINAL_OFFSET,TERMINAL_OFFSET]){ctx.beginPath();ctx.arc(x,0,2.5,0,Math.PI*2);ctx.fillStyle='#ff4058';ctx.fill();ctx.strokeStyle='#fff0f2';ctx.lineWidth=1;ctx.stroke();}
     ctx.fillStyle='#d6e3ef';ctx.font='10px monospace';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(c.id,0,24);ctx.fillStyle='#b6c8da';ctx.font='10px monospace';ctx.fillText(componentText(c),0,37);ctx.restore();
   }
 

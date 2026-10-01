@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101b2d">
   <title>THOSLAB AC</title>
-  <link rel="stylesheet" href="styles.css?v=units-20261001">
+  <link rel="stylesheet" href="styles.css?v=connections-20261001">
 </head>
 <body>
   <header class="topbar">
@@ -13,7 +13,7 @@
     <div class="topbar-tools">
       <div class="palette" id="palette" aria-label="Components"></div>
       <div class="toolbar-separator"></div>
-      <button class="tool-button" id="wire-btn" title="Connecta dos terminals">⌁ <span>Connectar</span></button>
+      <button class="tool-button" id="wire-btn" title="Connecta terminals, nodes i cables">⌁ <span>Connectar</span></button>
       <div class="toolbar-separator"></div>
       <div class="toolbar-group file-tools" aria-label="Fitxer">
         <button class="tool-button command-button" id="new-btn" title="Crea un circuit nou"><span class="button-icon">＋</span><span class="command-label">Nou</span></button>
@@ -48,6 +48,7 @@
         <div class="workspace-grid"></div>
         <svg id="wires-layer" class="wires-layer" aria-hidden="true"></svg>
         <div id="components-layer" class="components-layer"></div>
+        <div id="connection-legend" class="connection-legend hidden" aria-label="Punt ple: unió. Salt de cable: encreuament sense unió."><span><svg viewBox="0 0 26 24" aria-hidden="true"><path d="M1 12H25 M13 2V22"/><circle cx="13" cy="12" r="3"/></svg>Unió</span><span><svg viewBox="0 0 26 24" aria-hidden="true"><path d="M13 1V3 M13 21V23 M1 12H7 Q13 0 19 12H25"/></svg>Sense unió</span></div>
         <div class="hover-info hidden" id="hover-info" role="status"></div>
         <div class="workspace-empty" id="empty-state"><div class="empty-symbol">~</div><strong>Comença a construir el circuit</strong><span>Afegeix una font i components; després connecta’n els terminals.</span></div>
         <div class="floating-panel hidden" id="inspector" aria-label="Propietats del component"></div>
@@ -64,6 +65,6 @@
       </section>
     </section>
   </main>
-  <script src="app.js?v=units-20261001"></script>
+  <script src="app.js?v=connections-20261001"></script>
 </body>
 </html>

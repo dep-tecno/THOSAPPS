@@ -64,6 +64,10 @@
 .junction{position:absolute;width:16px;height:16px;padding:0;transform:translate(-50%,-50%);border:0;border-radius:50%;background:transparent;z-index:4;cursor:crosshair}
 .junction::after{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border:1.5px solid #d4e9f5;border-radius:50%;background:#102034;opacity:.78}
 .junction.branched::after{width:7px;height:7px;background:#c3e5f5;border-color:#e8f8ff;opacity:1}
+.junction.joined::after{background:#c3e5f5;border-color:#e8f8ff;opacity:1}
+.connection-legend{position:absolute;top:10px;left:12px;z-index:3;display:flex;gap:12px;align-items:center;padding:4px 7px;border-radius:5px;background:#0b1523e6;color:#a9bdcf;font:10px var(--sans);pointer-events:none}
+.connection-legend span{display:flex;align-items:center;gap:4px}.connection-legend svg{width:26px;height:18px;fill:none;stroke:#b9d4e9;stroke-width:2;stroke-linecap:round}.connection-legend circle{fill:#c3e5f5;stroke:none}
+.wire-line{stroke-linecap:round;stroke-linejoin:round}
 .junction:hover::after,.junction.wire-start::after{width:9px;height:9px;background:var(--cyan);border-color:#e3ffff;box-shadow:0 0 0 4px #48d7d233;opacity:1}
 .components-layer{pointer-events:none}.component,.junction{pointer-events:auto}
 .components-layer,.wires-layer{transform-origin:0 0}.wires-layer{transform-box:view-box}
