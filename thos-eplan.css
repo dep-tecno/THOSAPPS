@@ -20,3 +20,13 @@ body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}header{fle
 #electricalBar .electricTools #connectIgnition:disabled{background:#22263a;color:#94a3b8;border-color:#475569}
 
 .editTools{display:flex;align-items:center;gap:7px;flex-shrink:0;border-left:1px solid #475569;padding-left:10px}.editTools button{display:inline-flex;align-items:center;justify-content:center;width:34px;height:36px;padding:3px!important;font-size:21px!important}
+
+/* Capçalera comuna de Tecno-Apps. */
+    .suiteNav { position: relative; z-index: 100; background: rgba(15,17,23,.97); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 72px; flex-shrink: 0; overflow-x: auto; }
+    .suiteNav::-webkit-scrollbar { display: none; }
+    .suiteNav .nav-brand { font-size: .8rem; font-weight: 700; color: var(--green); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; margin-right: 1.5rem; text-decoration: none; flex-shrink: 0; display: flex; align-items: center; gap: .6rem; }
+    .suiteNav .nav-links { display: flex; list-style: none; flex-shrink: 0; }
+    .suiteNav .nav-links a { display: block; padding: 0 .9rem; height: 72px; line-height: 72px; font-size: .82rem; font-weight: 500; color: var(--muted); text-decoration: none; white-space: nowrap; transition: color .2s, border-bottom .2s; border-bottom: 2px solid transparent; }
+    .suiteNav .nav-links a:hover, .suiteNav .nav-links a.active { color: var(--green); border-bottom-color: var(--green); }
+
+header{height:48px;gap:16px}header h1{display:flex;align-items:center;gap:9px;font-size:20px;margin:0;white-space:nowrap}header h1 img{flex-shrink:0}header span{font-size:12px}.suiteNav ul{margin:0;padding:0}.suiteNav .nav-brand img{height:40px;width:auto;object-fit:contain;border-radius:6px}
