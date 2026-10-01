@@ -30,3 +30,6 @@ Vista de tots els circuits o només de l’actiu. El filtre afecta el dibuix, la
 
 ## Pulsador, timbre i CGP
 Afegits a la barra amb símbols compartits amb el plànol. Pulsador i timbre disponibles en circuits d’il·luminació; CGP independent dels circuits interiors i visible amb el filtre de circuit actiu. Representació gràfica, sense simulació de proteccions. Verificats assignació, independència, filtre, desfer/refés i JSON.
+
+## Gestió dels circuits
+Selectors identificats com Circuit actiu i Circuit nou, amb botó + Afegeix. Paperera per eliminar el circuit actiu; si té elements requereix confirmació. Elimina només els elements assignats, preserva caixes i CGP, i permet desfer/refés. Permet eliminar l’últim circuit i desar/reobrir un projecte sense circuits. No recrea circuits eliminats en obrir projectes moderns. Verificat cancel·lació, confirmació, desfer/refés, JSON buit i recreació.
