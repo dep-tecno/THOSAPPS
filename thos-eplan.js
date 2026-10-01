@@ -43,6 +43,7 @@ $('togglePanel').onclick=()=>setPanel(document.body.classList.contains('panel-cl
 canvas.addEventListener('dblclick',e=>{if(tool!=='select')return;const target=hit(point(e,false));if(target?.kind==='opening'&&project.openings.find(o=>o.id===target.id)?.type==='door'){selected=target;$('flip').click();}});
 
 initializeElectrical();
+initializeSchematics();
 
 initializeIgnition();
 
