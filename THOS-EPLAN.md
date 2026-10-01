@@ -41,3 +41,6 @@ Les connexions segueixen els elements, respecten el filtre, es poden seleccionar
 
 ## Flux FI ENCESA
 L’eina inicia una encesa en esborrany i passa a FI ENCESA. Els clics connecten successivament els elements del mateix circuit. FI ENCESA desa totes les connexions del grup amb identificador i número d’encesa; cal almenys una llum i un mecanisme. Després torna a l’estat inicial. Esc no cancel·la l’encesa. Desfer durant l’esborrany retira l’última connexió. Per canviar de circuit, d’eina o desar el JSON cal acabar primer l’encesa. Esborrany sense connexions: FI ENCESA torna a l’estat inicial sense desar. Comprovacions a càrrec de l’usuari.
+
+## Selecció de maniobra sense ordre de clics
+L’encesa es defineix seleccionant membres, ressaltats en verd. Un segon clic desmarca. FI ENCESA accepta un interruptor amb una o més llums, dos commutadors amb una o més llums, o dos commutadors amb un o més creuaments i una o més llums. Combinacions incompletes o barrejades mostren el motiu i mantenen el grup obert. Les connexions lògiques es generen en tancar; les llums deriven del mateix comandament. Eliminar una connexió agrupada elimina l’encesa completa per poder-la redefinir. Les comprovacions les fa l’usuari.
