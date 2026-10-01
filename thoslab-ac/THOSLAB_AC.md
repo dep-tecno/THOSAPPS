@@ -69,6 +69,8 @@ La freqüència ha de ser positiva i comuna a tot el circuit, fixada per l’ún
 - **Informació contextual hover:** en passar sobre node, cable o component es mostra informació relacionada amb l’element i, quan hi ha una simulació vàlida, les magnituds pertinents del resultat actual.
 - **Targetes de simulació:** Scope, Fasors i Anàlisi es presenten com tres targetes compactes superposades a la part inferior del workspace. No divideixen la pantalla ni reserven una franja fixa. Cada targeta es pot ampliar temporalment i el conjunt es pot plegar per recuperar tot l’espai de treball.
 
+Cada targeta es pot desplaçar independentment mitjançant una nansa **⠿** al costat del títol. La nansa separa el moviment de l’acció Ampliar/Plegar; també admet les fletxes del teclat (10 px, o 1 px amb Majúscules). Les targetes queden limitades a l’àrea de treball, fora de la barra superior i del peu, i la targeta amb què s’interactua passa al davant. Les posicions es conserven durant la sessió, en recalcular, canviar la selecció, ampliar/plegar i aturar/reprendre; el canvi de mida les reajusta perquè continuïn accessibles. **↺ Posició inicial** retorna les tres targetes a la disposició inferior, adaptada a l’amplada disponible. Les posicions són estat de visualització: no modifiquen el circuit, l’historial, els resultats ni el JSON de circuit. Es reinicien en recarregar l’app.
+
 No cal fer desaparèixer les eines durant SIMULAR. Les accions estructurals continuen visibles però desactivades, perquè es vegi què existeix i que cal aturar la simulació per modificar l’estructura.
 
 ### 6.2 Selecció i consulta
@@ -319,6 +321,7 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 27. El Scope mostra els pics sencers tant a la targeta compacta com ampliada. El zoom temporal − / + / Auto canvia la durada visible sense afectar el circuit, indica la finestra en ms i Auto restaura dos períodes; tensió i corrent es distingeixen també en fase i les seves escales verticals pròpies queden identificades.
 28. Fasors mostra fletxes i etiquetes, escala comuna per a les tensions i escala pròpia per als corrents, arc φ i la relació avançat/endarrerit/en fase. Els casos amb V o I nul no mostren un angle fictici. Els colors coincideixen amb el Scope, els valors es deriven del mateix resultat i el gràfic s’ajusta a la targeta compacta o ampliada.
 29. Anàlisi presenta dades essencials i comportament a la vista compacta, i blocs Circuit/Component, Fase i Potències a la vista ampliada. La selecció contextualitza les dades, les magnituds no definides queden identificades, el circuit obert es diferencia de la compensació de corrents, i la potència de la font respecta el conveni d’absorció.
+30. Scope, Fasors i Anàlisi es poden moure independentment amb la nansa, també amb teclat. El moviment no amplia la targeta ni desplaça el circuit. Els controls interiors continuen operatius; els límits mantenen les targetes accessibles, els recalculs conserven la disposició i Posició inicial restaura la ubicació de les tres.
 
 ## 13. Regla d’interpretació per al desenvolupament
 

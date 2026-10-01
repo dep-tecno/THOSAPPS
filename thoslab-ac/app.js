@@ -35,6 +35,10 @@
   const phasorResizeObserver = new ResizeObserver(() => {
     if (phasorDrawing && model.mode === 'sim') drawPhasors(...phasorDrawing);
   });
+  const cardPositions = {};
+  let cardDrag = null;
+  let cardFront = 0;
+  const cardResizeObserver = new ResizeObserver(() => positionAnalysisCards());
   let history = [circuitSnapshot()];
   let historyIndex = 0;
 
@@ -617,7 +621,7 @@
   function fmt(n, digits=2){if(!Number.isFinite(n))return '—';if(Math.abs(n)>0&&Math.abs(n)<.001||Math.abs(n)>=10000)return n.toExponential(2);return Number(n.toFixed(digits)).toLocaleString('ca-ES',{maximumFractionDigits:digits});}
   function polarText(z, unit='') {return `${fmt(abs(z))} ${unit} ∠ ${fmt(arg(z)*180/Math.PI)}°`;}
   function metric(label,value){return `<div class="metric"><label>${label}</label><strong>${value}</strong></div>`;}
-  function renderEmptyAnalysis(){ scopeResizeObserver.disconnect();scopeDrawing=null;phasorResizeObserver.disconnect();phasorDrawing=null;$('#analysis-area').classList.add('hidden'); }
+  function renderEmptyAnalysis(){ endCardDrag();scopeResizeObserver.disconnect();scopeDrawing=null;phasorResizeObserver.disconnect();phasorDrawing=null;$('#analysis-area').classList.add('hidden'); }
   function renderAnalysis(){
     const r=model.result;if(!r)return renderEmptyAnalysis();
     const selected=model.components.find(x=>x.id===model.selected),selectedResult=selected?r.components[selected.id]:null;
@@ -646,6 +650,70 @@
       (control.disabled?$('[data-scope-zoom="auto"]',scopeBody):control).focus({preventScroll:true});
     });
     $$('.analysis-card-head').forEach(button=>button.onclick=()=>{model.expandedCard=model.expandedCard===button.dataset.expand?null:button.dataset.expand;renderAnalysis();});
+    positionAnalysisCards();
+  }
+  function boundedCardPosition(card,x,y){
+    const area=$('#analysis-area'),margin=8;
+    const minX=Math.min(margin,Math.max(0,area.clientWidth-card.offsetWidth));
+    const minY=Math.min(margin,Math.max(0,area.clientHeight-card.offsetHeight));
+    return {x:Math.max(minX,Math.min(Math.max(minX,area.clientWidth-card.offsetWidth-margin),x)),y:Math.max(minY,Math.min(Math.max(minY,area.clientHeight-card.offsetHeight-margin),y))};
+  }
+  function positionAnalysisCards(){
+    const area=$('#analysis-area');
+    if(model.mode!=='sim'||model.collapsed||!area.clientWidth||!area.clientHeight)return;
+    const cards=$$('.analysis-card'),margin=8,gap=8;
+    const columns=Math.min(3,Math.max(1,Math.floor((area.clientWidth-2*margin+gap)/(155+gap))));
+    const width=Math.max(0,Math.min(420,(area.clientWidth-2*margin-gap*(columns-1))/columns));
+    const rows=Math.ceil(cards.length/columns);
+    cards.forEach((card,index)=>{
+      card.style.width=`${width}px`;
+      const saved=cardPositions[card.dataset.card];
+      const x=saved?saved.x:margin+(index%columns)*(width+gap);
+      const y=saved?saved.y:area.clientHeight-38-card.offsetHeight-(rows-1-Math.floor(index/columns))*(144+gap);
+      const position=boundedCardPosition(card,x,y);
+      card.style.left=`${position.x}px`;card.style.top=`${position.y}px`;
+      if(saved)cardPositions[card.dataset.card]=position;
+    });
+  }
+  function moveAnalysisCard(card,x,y){
+    const position=boundedCardPosition(card,x,y);
+    cardPositions[card.dataset.card]=position;card.style.left=`${position.x}px`;card.style.top=`${position.y}px`;
+  }
+  function endCardDrag(){
+    if(!cardDrag)return;
+    const {handle,card,pointerId}=cardDrag;cardDrag=null;card.classList.remove('dragging');
+    if(handle.hasPointerCapture(pointerId))handle.releasePointerCapture(pointerId);
+  }
+  function initializeCardMovement(){
+    const area=$('#analysis-area');cardResizeObserver.observe(area);
+    $$('.analysis-card').forEach(card=>{
+      cardResizeObserver.observe(card);
+      card.addEventListener('pointerdown',()=>{card.style.zIndex=String(++cardFront);});
+      card.addEventListener('focusin',()=>{card.style.zIndex=String(++cardFront);});
+      const handle=$('.card-drag-handle',card);
+      handle.addEventListener('pointerdown',e=>{
+        if(e.button!==0||!e.isPrimary||model.mode!=='sim')return;
+        e.preventDefault();e.stopPropagation();endCardDrag();positionAnalysisCards();hideHover();
+        handle.focus({preventScroll:true});card.style.zIndex=String(++cardFront);card.classList.add('dragging');
+        cardDrag={handle,card,pointerId:e.pointerId,x:e.clientX,y:e.clientY,left:parseFloat(card.style.left),top:parseFloat(card.style.top)};
+        handle.setPointerCapture(e.pointerId);
+      });
+      handle.addEventListener('pointermove',e=>{
+        if(!cardDrag||cardDrag.handle!==handle||e.pointerId!==cardDrag.pointerId)return;
+        e.preventDefault();moveAnalysisCard(card,cardDrag.left+e.clientX-cardDrag.x,cardDrag.top+e.clientY-cardDrag.y);
+      });
+      for(const event of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(event,e=>{if(cardDrag?.handle===handle&&cardDrag.pointerId===e.pointerId)endCardDrag();});
+      handle.addEventListener('keydown',e=>{
+        const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]},direction=directions[e.key];
+        if(!direction||e.ctrlKey||e.metaKey||e.altKey||model.mode!=='sim')return;
+        e.preventDefault();e.stopPropagation();positionAnalysisCards();card.style.zIndex=String(++cardFront);
+        const step=e.shiftKey?1:10;moveAnalysisCard(card,parseFloat(card.style.left)+direction[0]*step,parseFloat(card.style.top)+direction[1]*step);
+      });
+    });
+    $('#reset-card-positions').addEventListener('click',()=>{
+      endCardDrag();for(const key of Object.keys(cardPositions))delete cardPositions[key];
+      cardFront=0;$$('.analysis-card').forEach(card=>card.style.removeProperty('z-index'));positionAnalysisCards();
+    });
   }
   function hasConductingPath(result){
     const source=model.components.find(comp=>comp.type==='source');
@@ -811,8 +879,8 @@
     else if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&e.key.toLowerCase()==='r'&&model.selected){e.preventDefault();rotateComponent();}
     else if(model.mode==='edit'&&(e.key==='Delete'||e.key==='Backspace')&&(model.selected||model.selectedWire||model.selectedJunction)){e.preventDefault();deleteSelectedElement();}
   });
-  $('#collapse-analysis').addEventListener('click',()=>{model.collapsed=!model.collapsed;$('#analysis-area').classList.toggle('collapsed',model.collapsed);$('#collapse-analysis').textContent=model.collapsed?'⌃':'⌄';$('#collapse-analysis').title=model.collapsed?'Mostra les targetes':'Plega les targetes';if(!model.collapsed&&model.result)renderAnalysis();});
+  $('#collapse-analysis').addEventListener('click',()=>{endCardDrag();model.collapsed=!model.collapsed;$('#analysis-area').classList.toggle('collapsed',model.collapsed);$('#collapse-analysis').textContent=model.collapsed?'⌃':'⌄';$('#collapse-analysis').title=model.collapsed?'Mostra les targetes':'Plega les targetes';$('#collapse-analysis').setAttribute('aria-label',model.collapsed?'Mostra les targetes':'Plega les targetes');if(!model.collapsed&&model.result)renderAnalysis();});
   window.addEventListener('resize',()=>render());
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCurrentAnimation();else if(model.mode==='sim')renderWires();});
-  renderPalette(); render();
+  initializeCardMovement();renderPalette(); render();
 })();

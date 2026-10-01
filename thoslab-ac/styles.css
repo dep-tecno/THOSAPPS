@@ -75,3 +75,19 @@
 .wire-line.selected{stroke:#ffc36c;stroke-width:4;filter:drop-shadow(0 0 5px #ffc36caa)}
 .junction{cursor:grab;touch-action:none}.junction:active{cursor:grabbing}
 .junction.selected::after{width:9px;height:9px;background:#ff4058;border-color:#fff;box-shadow:0 0 0 4px #ff405880,0 0 13px #ff263f;opacity:1}
+.analysis-area,.analysis-area.collapsed{inset:0 0 29px;width:auto;display:block;overflow:hidden;pointer-events:none}
+.analysis-card-row{position:absolute;inset:0;display:block;overflow:visible;pointer-events:none}
+.analysis-card-row .analysis-card{position:absolute;margin:0}
+.cards-dock-head{position:absolute;right:8px;bottom:8px;height:22px;z-index:100000;pointer-events:none}
+.cards-dock-head strong{pointer-events:none;text-shadow:0 1px 3px #000}
+.cards-dock-head button{pointer-events:auto}
+#reset-card-positions{width:auto;height:22px;padding:0 7px;font:9px var(--sans)}
+.analysis-area.collapsed .cards-dock-head button{position:static;height:22px}
+.analysis-area.collapsed #reset-card-positions{display:none}
+.analysis-card-bar{display:flex;height:29px;background:#16263a;border-bottom:1px solid #273b52}
+.analysis-card-bar .analysis-card-head{flex:1;min-width:0;height:28px;border-bottom:0}
+.card-drag-handle{flex:0 0 24px;padding:0;border:0;border-right:1px solid #2d435b;background:transparent;color:#96b2cb;font-size:17px;cursor:grab;touch-action:none;user-select:none}
+.card-drag-handle:hover{color:var(--cyan);background:#1c344a}
+.card-drag-handle:focus-visible,#reset-card-positions:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+.analysis-card.dragging{transition:none;border-color:var(--cyan);box-shadow:0 12px 30px #000a}
+.analysis-card.dragging .card-drag-handle{cursor:grabbing;color:var(--cyan)}
