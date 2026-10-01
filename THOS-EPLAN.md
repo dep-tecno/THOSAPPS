@@ -27,3 +27,6 @@ Migració de circuits antics per ús, conservant els identificadors i les assign
 Zoom +/−, centrat i PAN traslladats a la barra superior. PAN arrossega la vista sense modificar el projecte. Nou creuament (commutador doble) per a circuits d’il·luminació. Símbols elèctrics aproximadament un 30% més petits; dimensions constructives intactes.
 
 Vista de tots els circuits o només de l’actiu. El filtre afecta el dibuix, la selecció i l’exportació PNG, però no elimina dades del JSON. Caixes d’empalmes i arquitectura sempre visibles. En canviar de circuit o de filtre es neteja la selecció. Verificat amb Edge: eines superiors, creuament, filtre de dibuix i selecció, PAN, zoom, mida, circuits, projectes antics i portes.
+
+## Pulsador, timbre i CGP
+Afegits a la barra amb símbols compartits amb el plànol. Pulsador i timbre disponibles en circuits d’il·luminació; CGP independent dels circuits interiors i visible amb el filtre de circuit actiu. Representació gràfica, sense simulació de proteccions. Verificats assignació, independència, filtre, desfer/refés i JSON.
