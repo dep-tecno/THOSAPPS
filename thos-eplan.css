@@ -30,3 +30,5 @@ body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}header{fle
     .suiteNav .nav-links a:hover, .suiteNav .nav-links a.active { color: var(--green); border-bottom-color: var(--green); }
 
 header{height:48px;gap:16px}header h1{display:flex;align-items:center;gap:9px;font-size:20px;margin:0;white-space:nowrap}header h1 img{flex-shrink:0}header span{font-size:12px}.suiteNav ul{margin:0;padding:0}.suiteNav .nav-brand img{height:40px;width:auto;object-fit:contain;border-radius:6px}
+
+#electricalBar .appIdentity{flex-shrink:0;padding-right:10px;border-right:1px solid #475569}.appIdentity h1{display:flex;align-items:center;gap:8px;margin:0;font-size:18px;white-space:nowrap}.appIdentity img{width:28px;height:28px;flex-shrink:0}#electricalBar #togglePanel{flex-shrink:0;white-space:nowrap}
