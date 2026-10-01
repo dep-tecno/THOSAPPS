@@ -71,6 +71,7 @@ L’elecció d’unitat és estat de visualització del component durant la sess
 - **Terminals visibles:** els dos punts de connexió de cada component es mantenen visibles com a marques petites vermelles; s’intensifiquen en mode Connectar, en passar-hi el cursor i en seleccionar l’inici d’un cable.
 - **Fitxers locals:** Obrir llegeix un circuit JSON seleccionat per l’usuari; Desar baixa el circuit actual com a JSON. No s’envien circuits a cap servidor.
 - **Vista del workspace:** zoom i desplaçament Pan canvien només la vista, no la geometria relativa ni la topologia del circuit. Baixar PNG exporta la vista actual del workspace.
+- La roda del ratolí sobre el circuit apropa o allunya la vista entre el 40% i el 250%, mantenint fix el punt sota el cursor. Funciona en EDITAR i SIMULAR, també després d’utilitzar Pan. La roda sobre propietats i targetes manté el seu comportament propi; el zoom no modifica valors, resultats ni historial.
 - **Historial:** Desfer i Refer recuperen canvis de circuit; no alteren zoom, desplaçament ni selecció de vista.
 - **Informació contextual hover:** en passar sobre node, cable o component es mostra informació relacionada amb l’element i, quan hi ha una simulació vàlida, les magnituds pertinents del resultat actual.
 - **Targetes de simulació:** Scope, Fasors i Anàlisi es presenten com tres targetes compactes superposades a la part inferior del workspace. No divideixen la pantalla ni reserven una franja fixa. Cada targeta es pot ampliar temporalment i el conjunt es pot plegar per recuperar tot l’espai de treball.
@@ -335,6 +336,7 @@ La implementació compleix aquesta especificació quan es pot verificar que:
 33. La validació identifica visualment terminals incomplets, extrems lliures, valors incorrectes i un camí de curtcircuit ideal de la font. L’avís no desapareix per temps, els elements continuen editables i cap resultat anterior queda mostrat com a vàlid. Un interruptor obert ben connectat no es marca com a connexió incompleta; modificar el circuit elimina els avisos antics.
 34. Les targetes s’ajusten a l’alçada disponible sense envair els controls del peu. Els textos i valors poden ocupar més d’una línia; si el contingut no hi cap, es desplaça dins la targeta. Scope i Fasors conserven una alçada mínima útil de gràfic i el Scope omet les etiquetes temporals del canvas quan l’amplada és insuficient, mantenint el temps visible als controls.
 35. RMS, fase, P, Q i S ofereixen explicacions breus contextuals al passar-hi el ratolí. Els instruments expliquen connexió en sèrie/paral·lel i el seu model ideal, i les accions contextuals indiquen R i Supr/Backspace. Les ajudes no introdueixen cap pantalla nova ni alteren el càlcul; les dreceres d’historial respecten el bloqueig estructural de SIMULAR.
+36. La roda del ratolí controla el zoom del circuit al voltant del cursor, respecta els límits i actualitza el percentatge de la barra superior. No desplaça la pàgina mentre fa zoom ni interfereix amb el desplaçament de les targetes o les propietats. Els botons de zoom i el restabliment de vista continuen disponibles.
 
 ## 13. Regla d’interpretació per al desenvolupament
 

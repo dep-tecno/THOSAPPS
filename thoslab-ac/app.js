@@ -79,7 +79,12 @@
     const transform = `translate(${model.panX}px, ${model.panY}px) scale(${model.zoom})`;
     layer.style.transform = transform; wiresLayer.style.transform = transform; $('#zoom-level').textContent = `${Math.round(model.zoom * 100)}%`;
   }
-  function changeZoom(delta) { model.zoom = Math.max(.4, Math.min(2.5, Math.round((model.zoom + delta) * 100) / 100)); setViewport(); }
+  function setZoom(value,anchor=null) {
+    const next=Math.max(.4,Math.min(2.5,value));if(next===model.zoom)return;
+    if(anchor){const ratio=next/model.zoom;model.panX=anchor.x-(anchor.x-model.panX)*ratio;model.panY=anchor.y-(anchor.y-model.panY)*ratio;}
+    model.zoom=next;model.wireHover=null;clearWirePreview();hideHover();setViewport();
+  }
+  function changeZoom(delta) { setZoom(Math.round((model.zoom + delta) * 100) / 100); }
   function resetView() { model.zoom = 1; model.panX = 0; model.panY = 0; setViewport(); }
 
   function toast(message) {
@@ -1042,6 +1047,13 @@
   $('#zoom-out-btn').addEventListener('click',()=>changeZoom(-.1));$('#zoom-in-btn').addEventListener('click',()=>changeZoom(.1));$('#zoom-level').addEventListener('click',resetView);
   $('#pan-btn').addEventListener('click',()=>{cancelWireGesture();model.tool=model.tool==='pan'?'select':'pan';render();});
   $('#png-btn').addEventListener('click',exportPng);
+  workspace.addEventListener('wheel',e=>{
+    if(e.target.closest('#inspector,input,textarea,select')||panDrag||e.buttons||!e.deltaY)return;
+    e.preventDefault();
+    const unit=e.deltaMode===1?16:e.deltaMode===2?workspace.clientHeight:1;
+    const delta=Math.max(-160,Math.min(160,e.deltaY*unit)),rect=workspace.getBoundingClientRect();
+    setZoom(model.zoom*Math.exp(-delta*.001),{x:e.clientX-rect.left,y:e.clientY-rect.top});
+  },{passive:false});
   workspace.addEventListener('pointerdown', e => { if(model.tool!=='pan'||e.target.closest('.component')||e.target.closest('#inspector'))return; panDrag={x:e.clientX,y:e.clientY,px:model.panX,py:model.panY};panMoved=false;workspace.setPointerCapture(e.pointerId); });
   workspace.addEventListener('pointermove', e => { if(!panDrag)return;const dx=e.clientX-panDrag.x,dy=e.clientY-panDrag.y;if(Math.abs(dx)+Math.abs(dy)>2)panMoved=true;model.panX=panDrag.px+dx;model.panY=panDrag.py+dy;setViewport(); });
   workspace.addEventListener('pointerup', () => { panDrag=null; }); workspace.addEventListener('pointercancel',()=>{panDrag=null;});
