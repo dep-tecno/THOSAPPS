@@ -33,3 +33,8 @@ Afegits a la barra amb símbols compartits amb el plànol. Pulsador i timbre dis
 
 ## Gestió dels circuits
 Selectors identificats com Circuit actiu i Circuit nou, amb botó + Afegeix. Paperera per eliminar el circuit actiu; si té elements requereix confirmació. Elimina només els elements assignats, preserva caixes i CGP, i permet desfer/refés. Permet eliminar l’últim circuit i desar/reobrir un projecte sense circuits. No recrea circuits eliminats en obrir projectes moderns. Verificat cancel·lació, confirmació, desfer/refés, JSON buit i recreació.
+
+## Connexió d’encesa
+Nova eina a la barra: seleccionar dos elements del circuit de llums actiu. Admet llums, interruptors, commutadors i creuaments; connectant successivament es poden representar maniobres i grups de llums. No admet caixes, CGP, altres circuits ni connexions duplicades. Esc cancel·la el primer punt. Línies discontínues de comandament, sense recorregut físic ni conductors.
+
+Les connexions segueixen els elements, respecten el filtre, es poden seleccionar i eliminar, i s’inclouen en JSON amb validació de referències. Eliminar elements o circuits elimina també les connexions afectades; desfer/refés conserva el conjunt. Els projectes anteriors s’obren amb la llista de connexions buida. Encara no genera esquemes ni valida configuracions de maniobra. Comprovació funcional reservada a l’usuari segons la seva petició.
