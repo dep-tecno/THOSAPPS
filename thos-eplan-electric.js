@@ -12,8 +12,8 @@ const electricalSymbols={
  light:['M25 16A9 9 0 1 1 7 16A9 9 0 1 1 25 16','M10 10L22 22M22 10L10 22'],
  switch:['M11 20A3 3 0 1 1 5 20A3 3 0 1 1 11 20','M2 20H5M11 19L26 12L28 16'],
  changeover:['M18 18A3 3 0 1 1 12 18A3 3 0 1 1 18 18','M12 18L5 22L2 18M18 17L27 12L30 16'],
- socket:['M7 25A9 9 0 0 1 25 25','M13 7V16M19 7V16M16 15V25'],
- power:['M7 25A9 9 0 0 1 25 25','M13 7V16M19 7V16M16 15V25'],
+ socket:['M7 25A9 9 0 0 1 25 25','M16 5V16M12 16H20'],
+ power:['M7 25A9 9 0 0 1 25 25','M16 10V16M13 16L16 12L19 16Z'],
  box:['M25 16A9 9 0 1 1 7 16A9 9 0 1 1 25 16','M16 1V7M16 25V31M1 16H7M25 16H31']
 };
 function updateSymbolButtons(){for(const button of document.querySelectorAll('[data-electric]')){const type=button.dataset.electric,svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 32 32');svg.setAttribute('width','26');svg.setAttribute('height','26');svg.setAttribute('aria-hidden','true');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.6');svg.setAttribute('stroke-linecap','round');for(const geometry of electricalSymbols[type]){const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',geometry);svg.append(path)}if(type==='power'){const label=document.createElementNS(svg.namespaceURI,'text');label.setAttribute('x','27');label.setAttribute('y','8');label.setAttribute('font-size','8');label.setAttribute('font-family','sans-serif');label.setAttribute('fill','currentColor');label.setAttribute('stroke','none');label.textContent='P';svg.append(label)}button.replaceChildren(svg)}}
