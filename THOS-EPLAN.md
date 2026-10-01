@@ -12,3 +12,6 @@ Barra superior amb circuits numerats de llums, endolls normals i endolls de pot�
 La pertinença a un circuit no dibuixa connexions ni simula el cablejat. Els símbols són representacions educatives d’aquesta primera versió.
 
 Verificat amb Edge: assignacions, múltiples circuits, caixes independents, moviment, desfer/refés, JSON, projectes antics, referències invàlides, mides petites i regressió de portes/finestres i mesures.
+
+## Simbologia de referència
+Interruptors, commutadors, preses 2P+T i caixes de registre redibuixats segons la columna unifilar de la captura aportada per l’usuari. Botons i plànol comparteixen la mateixa geometria. La P és una etiqueta del circuit de potència, no una indicació del nombre de pols. El punt de llum conserva el cercle amb creu; no s’ha verificat conformitat amb una norma IEC/UNE específica.
