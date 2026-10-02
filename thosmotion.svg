@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">THOSMOTION, simulador de mecanismes</title>
+  <desc id="desc">Un motor transmet moviment a un parell d'engranatges i dues politges.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="70%"><stop stop-color="#263147"/><stop offset="1" stop-color="#171b27"/></radialGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity=".35"/></filter>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)"/>
+  <g opacity=".15" fill="#00e676">
+    <circle cx="40" cy="40" r="2"/><circle cx="100" cy="40" r="2"/><circle cx="160" cy="40" r="2"/><circle cx="220" cy="40" r="2"/><circle cx="280" cy="40" r="2"/><circle cx="340" cy="40" r="2"/><circle cx="400" cy="40" r="2"/><circle cx="460" cy="40" r="2"/><circle cx="520" cy="40" r="2"/><circle cx="580" cy="40" r="2"/><circle cx="640" cy="40" r="2"/><circle cx="700" cy="40" r="2"/><circle cx="760" cy="40" r="2"/><circle cx="820" cy="40" r="2"/><circle cx="880" cy="40" r="2"/>
+  </g>
+  <g filter="url(#shadow)">
+    <circle cx="180" cy="265" r="58" fill="#008d91" stroke="#00e6d2" stroke-width="7"/><text x="180" y="278" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="34" font-weight="700" fill="#fff">M</text>
+    <path d="M238 265H302" stroke="#00e676" stroke-width="10" stroke-dasharray="12 10"/>
+    <g transform="translate(370 265)" fill="#dce6eb" stroke="#71889a" stroke-width="7">
+      <path d="M-16-82 3-82 9-67 28-61 41-72 57-61 53-44 67-30 84-34 89-15 74-5 74 15 89 25 83 43 65 40 52 54 56 72 39 82 26 69 7 75 0 92-19 91-25 74-44 68-57 80-73 69-69 51-83 38-100 42-106 23-91 13-91-7-106-17-100-36-82-32-69-46-73-64-56-74-43-61-24-67Z"/>
+      <circle r="18" fill="#1a2434"/>
+    </g>
+    <g transform="translate(558 265) scale(1.38)" fill="#e5edf0" stroke="#71889a" stroke-width="5">
+      <path d="M-16-82 3-82 9-67 28-61 41-72 57-61 53-44 67-30 84-34 89-15 74-5 74 15 89 25 83 43 65 40 52 54 56 72 39 82 26 69 7 75 0 92-19 91-25 74-44 68-57 80-73 69-69 51-83 38-100 42-106 23-91 13-91-7-106-17-100-36-82-32-69-46-73-64-56-74-43-61-24-67Z"/>
+      <circle r="14" fill="#1a2434"/>
+    </g>
+    <g fill="none" stroke="#00e676" stroke-width="8">
+      <circle cx="760" cy="225" r="60"/><circle cx="855" cy="330" r="35"/>
+      <path d="M716 184 831 304M803 267 879 345" stroke-linecap="round"/>
+    </g>
+  </g>
+  <text x="48" y="482" font-family="Segoe UI,sans-serif" font-size="44" font-weight="800" fill="#fff"><tspan fill="#00e676">THOS</tspan>MOTION</text>
+  <text x="912" y="478" text-anchor="end" font-family="Segoe UI,sans-serif" font-size="20" fill="#a8b3c2">Mecanismes · Transmissió · Moviment</text>
+</svg>
