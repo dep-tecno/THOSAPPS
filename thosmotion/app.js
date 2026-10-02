@@ -1,7 +1,7 @@
 /* Local-only project state; animation and view state are never serialized. */
 (()=>{
  'use strict';const T=ThosMotion,M=T.model,C=T.connections,$=id=>document.getElementById(id),canvas=$('canvas'),world=$('world'),renderer=new T.renderer.Renderer(world),KEY='thosmotion:last-project:v1';
- let project=M.empty(),selected=null,solution,angles=new Map(),running=false,panMode=false,drag=null,hover=null,pendingBelt=null,last=0,view={x:0,y:0,scale:2},past=[],future=[];
+ let project=M.empty(),selected=null,solution,angles=new Map(),running=false,panMode=false,drag=null,hover=null,pendingBelt=null,panelCollapsed=false,last=0,view={x:0,y:0,scale:2},past=[],future=[];
  const status=s=>$('status').textContent=s;
  const clone=p=>structuredClone(p);
  const serialize=()=>JSON.stringify(project,null,2);
@@ -15,7 +15,8 @@
  function point(e){const box=canvas.getBoundingClientRect();return {x:(e.clientX-box.left-view.x)/view.scale,y:(e.clientY-box.top-view.y)/view.scale};}
  const current=()=>project.components.find(c=>c.id===selected);
  function info(c){const s=solution.states.get(c.id),n=s.rpm,detail=c.type==='gear'?` · Z = ${c.properties.teeth}`:c.type==='pulley'?` · D = ${c.properties.diameter} mm`:'';return `${M.library[c.type].label}${detail}\nn = ${n.toLocaleString('ca',{maximumFractionDigits:3})} rpm\nω = ${M.rpmToRad(n).toLocaleString('ca',{maximumFractionDigits:3})} rad/s\n${s.conflict?'Bloquejat':n>0?'Antihorari':n<0?'Horari':'Aturat'}${s.ratio?`\ni acumulada = ${Math.abs(1/s.ratio).toLocaleString('ca',{maximumFractionDigits:3})}`:''}`;}
- function inspect(){const c=current();$('inspector').hidden=!c;if(!c)return;$('name').textContent=M.library[c.type].label;$('fields').replaceChildren();
+ function syncPanel(){ $('sidePanel').hidden=panelCollapsed;$('togglePanel').setAttribute('aria-expanded',String(!panelCollapsed));$('togglePanel').textContent=panelCollapsed?'Mostra components':'Amaga panell'; }
+ function inspect(){const c=current();if(c)panelCollapsed=false;syncPanel();$('componentLibrary').hidden=!!c;$('inspector').hidden=!c;if(!c)return;$('name').textContent=M.library[c.type].label;$('fields').replaceChildren();
   function field(label,key,min,max,step){const row=document.createElement('label');row.append(document.createTextNode(label));const input=document.createElement('input');input.type='number';Object.assign(input,{min,max,step,value:c.properties[key]});input.onchange=()=>{const v=Number(input.value);if(!input.checkValidity()||!Number.isFinite(v)){input.value=c.properties[key];return;}const count=project.connections.length;edit(()=>c.properties[key]=v);if(project.connections.length<count)status('El canvi ha trencat una connexió: torna a apropar els components per connectar-los.');};row.append(input);$('fields').append(row);}
   if(c.type==='gear'){field('Dents','teeth',8,120,1);field('Mòdul (mm)','module',.5,5,.5);}else if(c.type==='pulley')field('Diàmetre (mm)','diameter',10,240,1);else if(c.type==='motor'){field('Velocitat (rpm)','rpm',-600,600,1);const row=document.createElement('label');row.textContent='Motor actiu';const check=document.createElement('input');check.type='checkbox';check.checked=c.properties.active;check.onchange=()=>edit(()=>c.properties.active=check.checked);row.append(check);$('fields').append(row);}
   $('values').textContent=info(c);$('values').style.whiteSpace='pre-line';$('disconnect').disabled=!project.connections.some(e=>e.a===c.id||e.b===c.id);
@@ -26,7 +27,7 @@
  $('new').onclick=()=>{edit(()=>{project=M.empty();selected=null;pendingBelt=null;});fit();};$('undo').onclick=()=>history(past,future);$('redo').onclick=()=>history(future,past);
  $('delete').onclick=()=>{if(!current())return;edit(()=>{project.components=project.components.filter(c=>c.id!==selected);project.connections=project.connections.filter(e=>e.a!==selected&&e.b!==selected);selected=null;});};
  $('duplicate').onclick=()=>{const c=current();if(!c||project.components.length>=M.MAX_COMPONENTS)return;edit(()=>{const copy=clone(c);copy.id=crypto.randomUUID();copy.position.x+=M.radius(c)*2+15;project.components.push(copy);selected=copy.id;});};
- $('disconnect').onclick=()=>edit(()=>project.connections=project.connections.filter(e=>e.a!==selected&&e.b!==selected));$('close').onclick=()=>{selected=null;refresh(false);};
+ $('disconnect').onclick=()=>edit(()=>project.connections=project.connections.filter(e=>e.a!==selected&&e.b!==selected));$('close').onclick=()=>{selected=null;refresh(false);};$('collapsePanel').onclick=()=>{panelCollapsed=true;syncPanel();};$('togglePanel').onclick=()=>{panelCollapsed=!panelCollapsed;syncPanel();};
  $('play').onclick=()=>{running=!running;$('play').textContent=running?'Ⅱ Pausa':'▶ Simula';status(running?'Simulació en marxa':'En pausa');};$('reset').onclick=()=>{pause();refresh();};
  function advance(dt){for(const [id,s]of solution.states)angles.set(id,(angles.get(id)||0)+M.rpmToRad(s.rpm)*dt);renderer.animate(angles);}
  $('step').onclick=()=>{pause();advance(1/60);};$('fit').onclick=fit;$('pan').onclick=()=>{panMode=!panMode;$('pan').setAttribute('aria-pressed',panMode);};$('help').onclick=()=>$('helpBox').hidden=!$('helpBox').hidden;
