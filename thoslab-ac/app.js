@@ -8,7 +8,7 @@
   const wiresLayer = $('#wires-layer');
   const inspector = $('#inspector');
   const palette = $('#palette');
-  const model = { components: [], wires: [], junctions: [], mode: 'edit', selected: null, selectedWire: null, selectedJunction: null, selectedWirePoint: null, tool: 'select', wireStart: null, wireBefore: null, wireHover: null, collapsed: false, expandedCard: null, result: null, revision: 0, zoom: 1, panX: 0, panY: 0, panel: { x: null, y: 16 } };
+  const model = { components: [], wires: [], junctions: [], mode: 'edit', selected: null, selectedWire: null, selectedJunction: null, selectedWirePoint: null, tool: 'select', wireStart: null, wireBefore: null, wireHover: null, collapsed: false, expandedCards: new Set(), result: null, revision: 0, zoom: 1, panX: 0, panY: 0, panel: { x: null, y: 16 } };
   const types = {
     source: { label: 'Font AC', short: 'Font', glyph: '∿', prefix: 'V' },
     resistor: { label: 'Resistència', short: 'R', glyph: 'R', prefix: 'R' },
@@ -54,7 +54,9 @@
     if (phasorDrawing && model.mode === 'sim') drawPhasors(...phasorDrawing);
   });
   const cardPositions = {};
+  const cardSizes = {};
   let cardDrag = null;
+  let cardResize = null;
   let cardFront = 0;
   const cardResizeObserver = new ResizeObserver(() => positionAnalysisCards());
   let history = [circuitSnapshot()];
@@ -795,7 +797,7 @@
     const help=label.includes('RMS')?learningHelp.rms:label.startsWith('Fase')?learningHelp.phase:label==='P activa'?learningHelp.active:label==='Q reactiva'?learningHelp.reactive:label==='S aparent'?learningHelp.apparent:label==='cos φ'?learningHelp.factor:null;
     return `<div class="metric"><label>${helpLabel(label,help)}</label><strong>${value}</strong></div>`;
   }
-  function renderEmptyAnalysis(){ endCardDrag();scopeResizeObserver.disconnect();scopeDrawing=null;phasorResizeObserver.disconnect();phasorDrawing=null;$('#analysis-area').classList.add('hidden'); }
+  function renderEmptyAnalysis(){ endCardDrag();endCardResize();scopeResizeObserver.disconnect();scopeDrawing=null;phasorResizeObserver.disconnect();phasorDrawing=null;$('#analysis-area').classList.add('hidden'); }
   function renderAnalysis(){
     const r=model.result;if(!r)return renderEmptyAnalysis();
     const selected=model.components.find(x=>x.id===model.selected),selectedResult=selected?r.components[selected.id]:null;
@@ -803,15 +805,15 @@
     const context=selected?componentName(selected):'Circuit global';
     const area=$('#analysis-area');area.classList.remove('hidden');area.classList.toggle('collapsed',model.collapsed);
     const scopeBody=$('#scope-card-content'),phasorBody=$('#phasors-card-content'),analysisBody=$('#analysis-card-content');
-    const expanded=model.expandedCard;
-    $$('.analysis-card').forEach(card=>{const open=card.dataset.card===expanded;card.classList.toggle('expanded',open);const control=$('[data-expand]',card);control.querySelector('span').textContent=open?'Plega':'Ampliar';});
+    const expanded=model.expandedCards;
+    $$('.analysis-card').forEach(card=>{const open=expanded.has(card.dataset.card);card.classList.toggle('expanded',open);const control=$('[data-expand]',card);control.querySelector('span').textContent=open?'Plega':'Ampliar';control.setAttribute('aria-expanded',String(open));});
     const scopeSpan = 2 / scopeZoom / r.frequency;
-    scopeBody.innerHTML=`<div class="card-context">${context}</div><div class="scope-controls" role="group" aria-label="Zoom temporal del Scope"><button data-scope-zoom="out" title="Allunya el Scope: més temps" aria-label="Allunya el Scope" ${scopeZoom===scopeZoomLevels[0]?'disabled':''}>−</button><span class="scope-window">${fmt(scopeZoom)}× · ${fmt(scopeSpan*1000)} ms</span><button data-scope-zoom="in" title="Apropa el Scope: menys temps" aria-label="Apropa el Scope" ${scopeZoom===scopeZoomLevels.at(-1)?'disabled':''}>+</button><button data-scope-zoom="auto" title="Restableix el Scope a dos períodes">Auto</button></div><canvas class="scope-chart ${expanded==='scope'?'scope-large':''}" id="scope-card-canvas" role="img" aria-label="Sinusoides de tensió i corrent; escales verticals independents"></canvas><div class="card-summary"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span> · <span class="scope-current">I ${fmt(abs(pair.current))} A</span> RMS${expanded==='scope'?` · f ${fmt(r.frequency)} Hz · φ ${fmt((arg(pair.voltage)-arg(pair.current))*180/Math.PI)}°`:''}</div><div class="scope-scale-note">V i I amb escala pròpia · pics ajustats</div>`;
+    scopeBody.innerHTML=`<div class="card-context">${context}</div><div class="scope-controls" role="group" aria-label="Zoom temporal del Scope"><button data-scope-zoom="out" title="Allunya el Scope: més temps" aria-label="Allunya el Scope" ${scopeZoom===scopeZoomLevels[0]?'disabled':''}>−</button><span class="scope-window">${fmt(scopeZoom)}× · ${fmt(scopeSpan*1000)} ms</span><button data-scope-zoom="in" title="Apropa el Scope: menys temps" aria-label="Apropa el Scope" ${scopeZoom===scopeZoomLevels.at(-1)?'disabled':''}>+</button><button data-scope-zoom="auto" title="Restableix el Scope a dos períodes">Auto</button></div><canvas class="scope-chart ${expanded.has('scope')?'scope-large':''}" id="scope-card-canvas" role="img" aria-label="Sinusoides de tensió i corrent; escales verticals independents"></canvas><div class="card-summary"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span> · <span class="scope-current">I ${fmt(abs(pair.current))} A</span> RMS${expanded.has('scope')?` · f ${fmt(r.frequency)} Hz · φ ${fmt((arg(pair.voltage)-arg(pair.current))*180/Math.PI)}°`:''}</div><div class="scope-scale-note">V i I amb escala pròpia · pics ajustats</div>`;
     const phasors=[];if(selectedResult){phasors.push([`V ${selected.id}`,selectedResult.voltage,'#48d7d2'],[`I ${selected.id}`,selectedResult.current,'#ffb86b']);}else{phasors.push(['V font',r.voltage,'#48d7d2'],['I total',r.current,'#ffb86b']);const series=model.components.filter(x=>['resistor','inductor','capacitor'].includes(x.type));if(series.length&&series.every(x=>r.components[x.id])&&isSeriesRlc(series))for(const x of series)phasors.push([`V ${x.id}`,r.components[x.id].voltage,['#9ee7b5','#ff8f8f','#b69aff'][['resistor','inductor','capacitor'].indexOf(x.type)]]);}
     const phaseInfo=phasorPhase(pair);
     const phaseLabel=phaseInfo.angle===null?'φ no definit':`φ ${fmt(phaseInfo.angle*180/Math.PI)}°`;
-    phasorBody.innerHTML=`<div class="card-context">${context}</div><div class="phasor-visual-row"><canvas class="phasor-chart" id="phasors-card-canvas" role="img" aria-label="Fasors de tensió i corrent amb escales pròpies; ${phaseLabel}; ${phaseInfo.description}"></canvas><div class="phasor-details"><strong class="phasor-phase">${phaseLabel}</strong><div class="phasor-relation">${phaseInfo.description}</div>${expanded==='phasors'?`<div class="phasor-list">${phasors.map(([name,z,color])=>`<span class="phasor-chip"><span style="color:${color}">${name}</span>: ${polarText(z,name.startsWith('I')?'A RMS':'V RMS')}</span>`).join('')}</div>`:`<div class="phasor-values"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span><span class="scope-current">I ${fmt(abs(pair.current))} A</span><span>Valors RMS</span></div>`}</div></div><div class="phasor-scale-note">Escales pròpies: tensions en V · corrents en A</div>`;
-    analysisBody.innerHTML=circuitAnalysis(r,selected,selectedResult,expanded==='analysis');
+    phasorBody.innerHTML=`<div class="card-context">${context}</div><div class="phasor-visual-row"><canvas class="phasor-chart" id="phasors-card-canvas" role="img" aria-label="Fasors de tensió i corrent amb escales pròpies; ${phaseLabel}; ${phaseInfo.description}"></canvas><div class="phasor-details"><strong class="phasor-phase">${phaseLabel}</strong><div class="phasor-relation">${phaseInfo.description}</div>${expanded.has('phasors')?`<div class="phasor-list">${phasors.map(([name,z,color])=>`<span class="phasor-chip"><span style="color:${color}">${name}</span>: ${polarText(z,name.startsWith('I')?'A RMS':'V RMS')}</span>`).join('')}</div>`:`<div class="phasor-values"><span class="scope-voltage">V ${fmt(abs(pair.voltage))} V</span><span class="scope-current">I ${fmt(abs(pair.current))} A</span><span>Valors RMS</span></div>`}</div></div><div class="phasor-scale-note">Escales pròpies: tensions en V · corrents en A</div>`;
+    analysisBody.innerHTML=circuitAnalysis(r,selected,selectedResult,expanded.has('analysis'));
     $('.card-summary',scopeBody).title=learningHelp.rms;$('.card-summary',scopeBody).classList.add('didactic-help');
     $('.phasor-phase',phasorBody).title=learningHelp.phase;$('.phasor-phase',phasorBody).classList.add('didactic-help');
     const rmsValues=$('.phasor-values',phasorBody);if(rmsValues){rmsValues.title=learningHelp.rms;rmsValues.classList.add('didactic-help');}
@@ -826,14 +828,21 @@
       const control=$(`[data-scope-zoom="${action}"]`,scopeBody);
       (control.disabled?$('[data-scope-zoom="auto"]',scopeBody):control).focus({preventScroll:true});
     });
-    $$('.analysis-card-head').forEach(button=>button.onclick=()=>{model.expandedCard=model.expandedCard===button.dataset.expand?null:button.dataset.expand;renderAnalysis();});
+    $$('.analysis-card-head').forEach(button=>button.onclick=()=>toggleAnalysisCard(button.dataset.expand));
     positionAnalysisCards();
+  }
+  function toggleAnalysisCard(id){
+    const card=$(`.analysis-card[data-card="${id}"]`);if(!card)return;
+    endCardDrag();endCardResize();positionAnalysisCards();
+    cardPositions[id]={x:parseFloat(card.style.left),y:parseFloat(card.style.top)};
+    if(model.expandedCards.has(id))model.expandedCards.delete(id);else model.expandedCards.add(id);
+    card.style.zIndex=String(++cardFront);renderAnalysis();
   }
   function boundedCardPosition(card,x,y){
     const area=$('#analysis-area'),margin=8;
     const minX=Math.min(margin,Math.max(0,area.clientWidth-card.offsetWidth));
     const minY=Math.min(margin,Math.max(0,area.clientHeight-card.offsetHeight));
-    return {x:Math.max(minX,Math.min(Math.max(minX,area.clientWidth-card.offsetWidth-margin),x)),y:Math.max(minY,Math.min(Math.max(minY,area.clientHeight-card.offsetHeight-margin),y))};
+    return {x:Math.max(minX,Math.min(Math.max(minX,area.clientWidth-card.offsetWidth-margin),x)),y:Math.max(minY,Math.min(Math.max(minY,area.clientHeight-card.offsetHeight-38),y))};
   }
   function positionAnalysisCards(){
     const area=$('#analysis-area');
@@ -843,15 +852,19 @@
     const width=Math.max(0,Math.min(420,(area.clientWidth-2*margin-gap*(columns-1))/columns));
     const rows=Math.ceil(cards.length/columns);
     cards.forEach((card,index)=>{
-      card.style.width=`${width}px`;
-      const maxHeight=card.classList.contains('expanded')?Math.min(260,window.innerHeight*.48):144;
-      card.style.maxHeight=`${Math.min(maxHeight,Math.max(29,area.clientHeight-2*margin-38))}px`;
-      const saved=cardPositions[card.dataset.card];
+      const id=card.dataset.card,open=model.expandedCards.has(id);
+      const maxWidth=Math.max(0,area.clientWidth-2*margin),maxHeight=Math.max(29,area.clientHeight-2*margin-38);
+      if(open&&!cardSizes[id])cardSizes[id]={width:Math.max(width,600),height:360};
+      const requested=open?cardSizes[id]:{width,height:144};
+      card.style.width=`${Math.min(maxWidth,Math.max(Math.min(155,maxWidth),requested.width))}px`;
+      card.style.height=`${Math.min(maxHeight,Math.max(Math.min(112,maxHeight),requested.height))}px`;
+      card.style.maxHeight=`${maxHeight}px`;
+      const saved=cardPositions[id];
       const x=saved?saved.x:margin+(index%columns)*(width+gap);
       const y=saved?saved.y:area.clientHeight-38-card.offsetHeight-(rows-1-Math.floor(index/columns))*(144+gap);
       const position=boundedCardPosition(card,x,y);
       card.style.left=`${position.x}px`;card.style.top=`${position.y}px`;
-      if(saved)cardPositions[card.dataset.card]=position;
+      if(saved)cardPositions[id]=position;
     });
   }
   function moveAnalysisCard(card,x,y){
@@ -863,6 +876,18 @@
     const {handle,card,pointerId}=cardDrag;cardDrag=null;card.classList.remove('dragging');
     if(handle.hasPointerCapture(pointerId))handle.releasePointerCapture(pointerId);
   }
+  function endCardResize(){
+    if(!cardResize)return;
+    const {handle,card,pointerId}=cardResize;cardResize=null;card.classList.remove('resizing');
+    if(handle.hasPointerCapture(pointerId))handle.releasePointerCapture(pointerId);
+  }
+  function resizeAnalysisCard(card,width,height){
+    const id=card.dataset.card,opening=!model.expandedCards.has(id),area=$('#analysis-area');
+    const maxWidth=Math.max(0,area.clientWidth-16),maxHeight=Math.max(29,area.clientHeight-54);
+    cardSizes[id]={width:Math.max(Math.min(155,maxWidth),Math.min(maxWidth,width)),height:Math.max(Math.min(112,maxHeight),Math.min(maxHeight,height))};
+    model.expandedCards.add(id);
+    if(opening)renderAnalysis();else positionAnalysisCards();
+  }
   function initializeCardMovement(){
     const area=$('#analysis-area');cardResizeObserver.observe(area);
     $$('.analysis-card').forEach(card=>{
@@ -872,7 +897,7 @@
       const handle=$('.card-drag-handle',card);
       handle.addEventListener('pointerdown',e=>{
         if(e.button!==0||!e.isPrimary||model.mode!=='sim')return;
-        e.preventDefault();e.stopPropagation();endCardDrag();positionAnalysisCards();hideHover();
+        e.preventDefault();e.stopPropagation();endCardDrag();endCardResize();positionAnalysisCards();hideHover();
         handle.focus({preventScroll:true});card.style.zIndex=String(++cardFront);card.classList.add('dragging');
         cardDrag={handle,card,pointerId:e.pointerId,x:e.clientX,y:e.clientY,left:parseFloat(card.style.left),top:parseFloat(card.style.top)};
         handle.setPointerCapture(e.pointerId);
@@ -888,9 +913,31 @@
         e.preventDefault();e.stopPropagation();positionAnalysisCards();card.style.zIndex=String(++cardFront);
         const step=e.shiftKey?1:10;moveAnalysisCard(card,parseFloat(card.style.left)+direction[0]*step,parseFloat(card.style.top)+direction[1]*step);
       });
+      const resize=$('.card-resize-handle',card);
+      resize.addEventListener('pointerdown',e=>{
+        if(e.button!==0||!e.isPrimary||model.mode!=='sim')return;
+        e.preventDefault();e.stopPropagation();endCardDrag();endCardResize();positionAnalysisCards();hideHover();
+        resize.focus({preventScroll:true});card.style.zIndex=String(++cardFront);card.classList.add('resizing');
+        cardPositions[card.dataset.card]={x:parseFloat(card.style.left),y:parseFloat(card.style.top)};
+        cardResize={handle:resize,card,pointerId:e.pointerId,x:e.clientX,y:e.clientY,width:card.offsetWidth,height:card.offsetHeight};
+        resize.setPointerCapture(e.pointerId);
+      });
+      resize.addEventListener('pointermove',e=>{
+        if(!cardResize||cardResize.handle!==resize||e.pointerId!==cardResize.pointerId)return;
+        const dx=e.clientX-cardResize.x,dy=e.clientY-cardResize.y;if(Math.abs(dx)+Math.abs(dy)<2)return;
+        e.preventDefault();resizeAnalysisCard(card,cardResize.width+dx,cardResize.height+dy);
+      });
+      for(const event of ['pointerup','pointercancel','lostpointercapture'])resize.addEventListener(event,e=>{if(cardResize?.handle===resize&&cardResize.pointerId===e.pointerId)endCardResize();});
+      resize.addEventListener('keydown',e=>{
+        const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]},direction=directions[e.key];
+        if(!direction||e.ctrlKey||e.metaKey||e.altKey||model.mode!=='sim')return;
+        e.preventDefault();e.stopPropagation();endCardDrag();endCardResize();positionAnalysisCards();card.style.zIndex=String(++cardFront);
+        cardPositions[card.dataset.card]={x:parseFloat(card.style.left),y:parseFloat(card.style.top)};
+        const step=e.shiftKey?1:10;resizeAnalysisCard(card,card.offsetWidth+direction[0]*step,card.offsetHeight+direction[1]*step);
+      });
     });
     $('#reset-card-positions').addEventListener('click',()=>{
-      endCardDrag();for(const key of Object.keys(cardPositions))delete cardPositions[key];
+      endCardDrag();endCardResize();for(const key of Object.keys(cardPositions))delete cardPositions[key];
       cardFront=0;$$('.analysis-card').forEach(card=>card.style.removeProperty('z-index'));positionAnalysisCards();
     });
   }
@@ -991,7 +1038,7 @@
     if(!rect.width||!rect.height)return;
     canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
     const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
-    const w=rect.width,h=rect.height,cx=w/2,cy=h/2,font=h>100?10:8;
+    const w=rect.width,h=rect.height,cx=w/2,cy=h/2,font=h>220?14:h>100?10:8;
     ctx.font=`${font}px monospace`;ctx.textBaseline='middle';
     const labelWidth=Math.max(...list.map(([name])=>ctx.measureText(name).width),0);
     const radius=Math.max(0,Math.min(w/2-labelWidth/2-7,h/2-font-6));
@@ -1066,8 +1113,8 @@
     else if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&e.key.toLowerCase()==='r'&&model.selected){e.preventDefault();rotateComponent();}
     else if(model.mode==='edit'&&(e.key==='Delete'||e.key==='Backspace')&&(model.selected||model.selectedWire||model.selectedJunction)){e.preventDefault();deleteSelectedElement();}
   });
-  $('#collapse-analysis').addEventListener('click',()=>{endCardDrag();model.collapsed=!model.collapsed;$('#analysis-area').classList.toggle('collapsed',model.collapsed);$('#collapse-analysis').textContent=model.collapsed?'⌃':'⌄';$('#collapse-analysis').title=model.collapsed?'Mostra les targetes':'Plega les targetes';$('#collapse-analysis').setAttribute('aria-label',model.collapsed?'Mostra les targetes':'Plega les targetes');if(!model.collapsed&&model.result)renderAnalysis();});
-  window.addEventListener('resize',()=>render());
+  $('#collapse-analysis').addEventListener('click',()=>{endCardDrag();endCardResize();model.collapsed=!model.collapsed;$('#analysis-area').classList.toggle('collapsed',model.collapsed);$('#collapse-analysis').textContent=model.collapsed?'⌃':'⌄';$('#collapse-analysis').title=model.collapsed?'Mostra les targetes':'Plega les targetes';$('#collapse-analysis').setAttribute('aria-label',model.collapsed?'Mostra les targetes':'Plega les targetes');if(!model.collapsed&&model.result)renderAnalysis();});
+  window.addEventListener('resize',()=>{endCardDrag();endCardResize();render();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCurrentAnimation();else if(model.mode==='sim')renderWires();});
   initializeCardMovement();renderPalette(); render();
 })();

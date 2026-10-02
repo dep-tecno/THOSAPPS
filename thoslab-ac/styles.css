@@ -118,3 +118,23 @@
 #analysis-card-content{scrollbar-width:thin}
 .didactic-help{text-decoration:none;border-bottom:1px dotted #72899f;cursor:help}
 .hover-info{max-height:calc(100% - 8px);overflow:auto;overflow-wrap:anywhere}
+.card-resize-handle{position:absolute;right:2px;bottom:2px;z-index:2;width:21px;height:21px;padding:0;border:0;border-radius:4px;background:#16263a;color:#a9bdcf;font:17px var(--sans);cursor:nwse-resize;touch-action:none;user-select:none}
+.card-resize-handle:hover{background:#24445b;color:var(--cyan)}
+.card-resize-handle:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+.analysis-card.resizing{transition:none;border-color:var(--cyan);box-shadow:0 12px 30px #000a}
+.analysis-card.resizing .card-resize-handle{color:var(--cyan)}
+.scope-scale-note,.phasor-scale-note{padding-right:18px}
+.analysis-card.expanded .card-context{font-size:11px}
+.analysis-card.expanded .card-summary{font-size:12px}
+.analysis-card.expanded .scope-window{font-size:11px}
+.analysis-card.expanded .scope-controls button{height:24px;font-size:12px}
+.analysis-card.expanded .scope-scale-note,.analysis-card.expanded .phasor-scale-note{font-size:10px}
+.analysis-card.expanded .phasor-phase{font-size:15px}
+.analysis-card.expanded .phasor-relation{font-size:12px}
+.analysis-card.expanded #phasors-card-content .phasor-chip{font-size:11px}
+.analysis-card.expanded #analysis-card-content .metric strong{font-size:15px}
+.analysis-card.expanded #analysis-card-content .metric label{font-size:10px}
+.analysis-card.expanded #analysis-card-content .metric{padding:7px 8px}
+.analysis-card.expanded .analysis-behavior,.analysis-card.expanded .analysis-section h3{font-size:12px}
+.analysis-card.expanded .analysis-explanation{font-size:12px}
+#analysis-card-content{padding-bottom:23px}

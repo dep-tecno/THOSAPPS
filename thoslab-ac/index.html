@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101b2d">
   <title>THOSLAB AC</title>
-  <link rel="stylesheet" href="styles.css?v=wheel-20261001">
+  <link rel="stylesheet" href="styles.css?v=resizable-cards-20261002">
 </head>
 <body>
   <header class="topbar">
@@ -59,13 +59,13 @@
       <section class="analysis-area hidden" id="analysis-area" aria-label="Targetes d’anàlisi">
         <div class="cards-dock-head"><strong>Resultats de la simulació</strong><button id="reset-card-positions" title="Torna les tres targetes a la posició inicial">↺ Posició inicial</button><button id="collapse-analysis" title="Plega les targetes" aria-label="Plega les targetes">⌄</button></div>
         <div class="analysis-card-row">
-          <article class="analysis-card" data-card="scope"><div class="analysis-card-bar"><button class="card-drag-handle" aria-label="Mou Scope" title="Mou Scope: arrossega o usa les fletxes">⠿</button><button class="analysis-card-head" data-expand="scope">〰 Scope <span>Ampliar</span></button></div><div class="analysis-card-body" id="scope-card-content"></div></article>
-          <article class="analysis-card" data-card="phasors"><div class="analysis-card-bar"><button class="card-drag-handle" aria-label="Mou Fasors" title="Mou Fasors: arrossega o usa les fletxes">⠿</button><button class="analysis-card-head" data-expand="phasors">↗ Fasors <span>Ampliar</span></button></div><div class="analysis-card-body" id="phasors-card-content"></div></article>
-          <article class="analysis-card" data-card="analysis"><div class="analysis-card-bar"><button class="card-drag-handle" aria-label="Mou Anàlisi" title="Mou Anàlisi: arrossega o usa les fletxes">⠿</button><button class="analysis-card-head" data-expand="analysis">Σ Anàlisi <span>Ampliar</span></button></div><div class="analysis-card-body" id="analysis-card-content"></div></article>
+          <article class="analysis-card" data-card="scope"><div class="analysis-card-bar"><button class="card-drag-handle" aria-label="Mou Scope" title="Mou Scope: arrossega o usa les fletxes">⠿</button><button class="analysis-card-head" data-expand="scope" aria-expanded="false">〰 Scope <span>Ampliar</span></button></div><div class="analysis-card-body" id="scope-card-content"></div><button class="card-resize-handle" aria-label="Canvia la mida de Scope" title="Canvia la mida: arrossega la cantonada o usa les fletxes">↘</button></article>
+          <article class="analysis-card" data-card="phasors"><div class="analysis-card-bar"><button class="card-drag-handle" aria-label="Mou Fasors" title="Mou Fasors: arrossega o usa les fletxes">⠿</button><button class="analysis-card-head" data-expand="phasors" aria-expanded="false">↗ Fasors <span>Ampliar</span></button></div><div class="analysis-card-body" id="phasors-card-content"></div><button class="card-resize-handle" aria-label="Canvia la mida de Fasors" title="Canvia la mida: arrossega la cantonada o usa les fletxes">↘</button></article>
+          <article class="analysis-card" data-card="analysis"><div class="analysis-card-bar"><button class="card-drag-handle" aria-label="Mou Anàlisi" title="Mou Anàlisi: arrossega o usa les fletxes">⠿</button><button class="analysis-card-head" data-expand="analysis" aria-expanded="false">Σ Anàlisi <span>Ampliar</span></button></div><div class="analysis-card-body" id="analysis-card-content"></div><button class="card-resize-handle" aria-label="Canvia la mida d’Anàlisi" title="Canvia la mida: arrossega la cantonada o usa les fletxes">↘</button></article>
         </div>
       </section>
     </section>
   </main>
-  <script src="app.js?v=wheel-20261001"></script>
+  <script src="app.js?v=resizable-cards-20261002"></script>
 </body>
 </html>
