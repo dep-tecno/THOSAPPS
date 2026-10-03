@@ -49,6 +49,8 @@ header{height:48px;gap:16px}header h1{display:flex;align-items:center;gap:9px;fo
 
 .projectTools{display:flex;align-items:center;gap:7px;flex-shrink:0;border-left:1px solid #475569;padding-left:10px}.projectTools button{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:4px!important}.projectTools #new{color:#00e676}
 
+.furnitureTools{display:grid;grid-template-columns:1fr 1fr;gap:6px}.furnitureTools button{min-width:0;padding:7px 4px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.furnitureTools button.active{background:#d97706;color:#fff;border-color:#f59e0b}
+
 .schematicActions{display:flex;gap:8px;align-items:center}
 @media(max-width:650px){.schematicActions{flex-wrap:wrap;justify-content:flex-end}.schematicActions button{font-size:11px;padding:6px}}
 @media print{body{display:block!important;overflow:visible!important;background:#fff!important}body>*:not(#schematicsView){display:none!important}#schematicsView{position:static!important;display:block!important;overflow:visible!important;background:#fff!important}#schematicsView>header,.schematicTabs,.schematicCircuitPicker{display:none!important}.schematicContent{max-width:none!important;padding:0!important}.schematicSheet{border:0!important;box-shadow:none!important;padding:0!important}.panelDiagramWrap{overflow:visible!important;border:0!important}}
