@@ -894,7 +894,8 @@
             return React.createElement("div", { className: `flex flex-col h-screen bg-gray-900 text-gray-100 font-sans overflow-hidden select-none relative ${tool === 'pan' ? (draggingState ? 'cursor-grabbing' : 'cursor-grab') : ''}` }, [
                 // TOOLBAR
                 React.createElement("div", { className: "h-14 bg-gray-800 border-b border-gray-700 flex items-center px-4 space-x-2 shadow-md z-10 shrink-0 overflow-x-auto" }, [
-                    React.createElement("a", { href: "https://tecno-apps.cat/", title: "Torna a tecno-apps", "aria-label": "Torna a tecno-apps", className: "font-bold text-xl tracking-wider text-blue-400 mr-4 hidden md:block no-underline hover:opacity-80 focus-visible:outline focus-visible:outline-2" }, ["THOS", React.createElement("span", { className: "text-white" }, "CAD")]),
+                    React.createElement("a", { href: "https://tecno-apps.cat/", title: "Torna a tecno-apps", "aria-label": "Torna a tecno-apps",
+                target: "_top", className: "font-bold text-xl tracking-wider text-blue-400 mr-4 hidden md:block no-underline hover:opacity-80 focus-visible:outline focus-visible:outline-2" }, ["THOS", React.createElement("span", { className: "text-white" }, "CAD")]),
                     React.createElement(ToolbarDivider),
                     React.createElement(IconButton, { icon: Save, title: "Guardar Projecte", onClick: saveProject }),
                     React.createElement(IconButton, { icon: FolderOpen, title: "Obrir Projecte", onClick: triggerLoad }),
