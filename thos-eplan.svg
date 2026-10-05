@@ -13,6 +13,9 @@
     <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
       <path d="M32 0H0V32" fill="none" stroke="#94a3b8" stroke-opacity=".07"/>
     </pattern>
+    <pattern id="planGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#334155" stroke-opacity=".09"/>
+    </pattern>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#020617" flood-opacity=".48"/>
     </filter>
@@ -40,8 +43,9 @@
 
   <!-- Plànol -->
   <g filter="url(#shadow)">
-    <rect x="30" y="96" width="670" height="394" rx="18" fill="#f8fafc"/>
-    <rect x="30.75" y="96.75" width="668.5" height="392.5" rx="17.25" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+    <rect x="30" y="96" width="670" height="394" rx="18" fill="#aebdca"/>
+    <rect x="30" y="96" width="670" height="394" rx="18" fill="url(#planGrid)"/>
+    <rect x="30.75" y="96.75" width="668.5" height="392.5" rx="17.25" fill="none" stroke="#64748b" stroke-width="1.5"/>
   </g>
 
   <!-- Estances -->
