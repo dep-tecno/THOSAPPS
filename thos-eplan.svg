@@ -1,1 +1,163 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420"><rect width="720" height="420" fill="#182235"/><g stroke="#334155" stroke-width="1"><path d="M0 70H720M0 140H720M0 210H720M0 280H720M0 350H720M90 0V420M180 0V420M270 0V420M360 0V420M450 0V420M540 0V420M630 0V420"/></g><g fill="none" stroke="#e2e8f0" stroke-width="12"><path d="M150 80H570V330H150ZM360 80V190M360 270V330M150 210H270M340 210H570"/></g><g stroke="#00e676" stroke-width="4" fill="none"><path d="M360 190H440A80 80 0 0 1 360 270M270 210V280A70 70 0 0 0 340 210"/><path d="M210 80H290M450 330H520" stroke-width="15"/></g><text x="360" y="388" text-anchor="middle" fill="#00e676" font-family="sans-serif" font-size="24">THOSePLANT · Plànols d'habitatges</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">THOSePLANT, plànols i instal·lacions elèctriques</title>
+  <desc id="desc">Planta d'un habitatge amb circuits elèctrics de colors, símbols normalitzats i un resum automàtic del projecte.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e2b41"/>
+      <stop offset="1" stop-color="#0d131d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="24%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#00e676" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#00e676" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#94a3b8" stroke-opacity=".07"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#020617" flood-opacity=".48"/>
+    </filter>
+    <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="960" height="540" rx="22" fill="url(#bg)"/>
+  <rect width="960" height="540" rx="22" fill="url(#grid)"/>
+  <rect width="960" height="540" rx="22" fill="url(#glow)"/>
+
+  <!-- Marca -->
+  <g transform="translate(30 24)">
+    <rect width="204" height="52" rx="15" fill="#111b2a" stroke="#334155"/>
+    <g transform="translate(15 11)" fill="none" stroke="#00e676" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 4h30v25H1zM16 4v10M1 18h9M22 18h9"/>
+      <path d="M11 18v6m10-10v6"/>
+      <circle cx="11" cy="27" r="2.2" fill="#00e676" stroke="none"/>
+      <circle cx="21" cy="22" r="2.2" fill="#00e676" stroke="none"/>
+    </g>
+    <text x="58" y="34" fill="#f8fafc" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="23" font-weight="800">THOS<tspan fill="#00e676">ePLANT</tspan></text>
+  </g>
+
+  <!-- Plànol -->
+  <g filter="url(#shadow)">
+    <rect x="30" y="96" width="670" height="394" rx="18" fill="#f8fafc"/>
+    <rect x="30.75" y="96.75" width="668.5" height="392.5" rx="17.25" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+  </g>
+
+  <!-- Estances -->
+  <g fill="#64748b" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".8">
+    <text x="75" y="135">SALA</text>
+    <text x="426" y="135">CUINA</text>
+    <text x="75" y="335">HABITACIÓ</text>
+    <text x="426" y="335">BANY</text>
+  </g>
+
+  <!-- Parets -->
+  <g fill="none" stroke="#27364a" stroke-width="13" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M57 119H673V467H57Z"/>
+    <path d="M382 119V244M382 302V467"/>
+    <path d="M57 282H230M286 282H532M588 282H673"/>
+  </g>
+
+  <!-- Finestres -->
+  <g stroke="#0ea5e9" stroke-width="5">
+    <path d="M142 119h92" />
+    <path d="M483 119h88" />
+    <path d="M137 467h92" />
+  </g>
+
+  <!-- Portes -->
+  <g fill="none" stroke="#00b85c" stroke-width="3.4">
+    <path d="M382 244h58a58 58 0 0 1-58 58"/>
+    <path d="M230 282v56a56 56 0 0 0 56-56"/>
+    <path d="M532 282v56a56 56 0 0 0 56-56"/>
+  </g>
+
+  <!-- Circuits -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M106 207H196L270 206H333" stroke="#f59e0b" stroke-width="4" stroke-dasharray="7 7"/>
+    <path d="M106 387H210L309 386" stroke="#0284c7" stroke-width="4" stroke-dasharray="7 7"/>
+    <path d="M443 194H528L615 194V238" stroke="#9333ea" stroke-width="4" stroke-dasharray="7 7"/>
+  </g>
+
+  <!-- Etiquetes de circuit -->
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="800" text-anchor="middle">
+    <g transform="translate(91 207)"><circle r="17" fill="#fff7ed" stroke="#f59e0b" stroke-width="2"/><text y="4" fill="#b45309">C1</text></g>
+    <g transform="translate(91 387)"><circle r="17" fill="#eff6ff" stroke="#0284c7" stroke-width="2"/><text y="4" fill="#0369a1">C2</text></g>
+    <g transform="translate(443 194)"><circle r="17" fill="#faf5ff" stroke="#9333ea" stroke-width="2"/><text y="4" fill="#7e22ce">C3</text></g>
+  </g>
+
+  <!-- Llums -->
+  <g fill="#fff" stroke="#f59e0b" stroke-width="3">
+    <g transform="translate(196 207)"><circle r="15"/><path d="M-10-10L10 10M10-10L-10 10"/></g>
+    <g transform="translate(302 207)"><circle r="15"/><path d="M-10-10L10 10M10-10L-10 10"/></g>
+  </g>
+  <!-- Interruptor -->
+  <g transform="translate(333 207)" fill="#fff" stroke="#334155" stroke-width="3" stroke-linecap="round">
+    <circle r="12"/><path d="M-5 5L6-6"/>
+  </g>
+
+  <!-- Endolls -->
+  <g fill="#fff" stroke="#0284c7" stroke-width="3">
+    <g transform="translate(210 387)"><circle r="15"/><circle cx="-5" r="2.2" fill="#0284c7"/><circle cx="5" r="2.2" fill="#0284c7"/></g>
+    <g transform="translate(309 387)"><circle r="15"/><circle cx="-5" r="2.2" fill="#0284c7"/><circle cx="5" r="2.2" fill="#0284c7"/></g>
+  </g>
+
+  <!-- Receptors cuina -->
+  <g transform="translate(528 194)" fill="#fff" stroke="#9333ea" stroke-width="3">
+    <rect x="-20" y="-18" width="40" height="36" rx="5"/>
+    <circle cx="-9" cy="-7" r="5"/><circle cx="9" cy="-7" r="5"/>
+    <circle cx="-9" cy="8" r="5"/><circle cx="9" cy="8" r="5"/>
+  </g>
+  <g transform="translate(615 238)">
+    <rect x="-22" y="-25" width="44" height="50" rx="6" fill="#fff" stroke="#9333ea" stroke-width="3"/>
+    <rect x="-13" y="-16" width="26" height="24" rx="3" fill="none" stroke="#9333ea" stroke-width="2"/>
+    <circle cy="16" r="3" fill="#9333ea"/>
+  </g>
+
+  <!-- QGMP -->
+  <g transform="translate(621 405)">
+    <rect x="-35" y="-38" width="70" height="76" rx="8" fill="#e2e8f0" stroke="#334155" stroke-width="3"/>
+    <rect x="-24" y="-25" width="48" height="15" rx="3" fill="#fff"/>
+    <g fill="#00b85c"><rect x="-22" y="-22" width="7" height="9" rx="1"/><rect x="-11" y="-22" width="7" height="9" rx="1"/><rect y="-22" width="7" height="9" rx="1"/><rect x="11" y="-22" width="7" height="9" rx="1"/></g>
+    <path d="M-22 3h44M-22 14h44M-22 25h29" stroke="#94a3b8" stroke-width="3"/>
+    <text x="0" y="57" text-anchor="middle" fill="#334155" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="800">QGMP</text>
+  </g>
+
+  <!-- Panell resum -->
+  <g filter="url(#shadow)">
+    <rect x="724" y="96" width="206" height="394" rx="18" fill="#111b2a" stroke="#334155"/>
+  </g>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="746" y="130" fill="#f8fafc" font-size="16" font-weight="800">Resum del projecte</text>
+    <text x="746" y="151" fill="#94a3b8" font-size="11">Instal·lació d'habitatge</text>
+
+    <g transform="translate(746 170)">
+      <rect width="73" height="58" rx="10" fill="#18263a" stroke="#2d4059"/>
+      <text x="12" y="22" fill="#94a3b8" font-size="10" font-weight="700">CIRCUITS</text>
+      <text x="12" y="45" fill="#00e676" font-size="22" font-weight="800">5</text>
+    </g>
+    <g transform="translate(831 170)">
+      <rect width="77" height="58" rx="10" fill="#18263a" stroke="#2d4059"/>
+      <text x="12" y="22" fill="#94a3b8" font-size="10" font-weight="700">ELEMENTS</text>
+      <text x="12" y="45" fill="#f8fafc" font-size="22" font-weight="800">18</text>
+    </g>
+
+    <text x="746" y="260" fill="#94a3b8" font-size="11" font-weight="800" letter-spacing=".7">CIRCUITS ACTIUS</text>
+    <g font-size="11" font-weight="700">
+      <g transform="translate(746 277)"><rect width="162" height="34" rx="8" fill="#1d2939"/><circle cx="17" cy="17" r="6" fill="#f59e0b"/><text x="31" y="14" fill="#f8fafc">C1 · Il·luminació</text><text x="31" y="27" fill="#94a3b8" font-size="9">6 elements</text></g>
+      <g transform="translate(746 320)"><rect width="162" height="34" rx="8" fill="#1d2939"/><circle cx="17" cy="17" r="6" fill="#0284c7"/><text x="31" y="14" fill="#f8fafc">C2 · Endolls</text><text x="31" y="27" fill="#94a3b8" font-size="9">8 elements</text></g>
+      <g transform="translate(746 363)"><rect width="162" height="34" rx="8" fill="#1d2939"/><circle cx="17" cy="17" r="6" fill="#9333ea"/><text x="31" y="14" fill="#f8fafc">C3 · Cuina i forn</text><text x="31" y="27" fill="#94a3b8" font-size="9">4 elements</text></g>
+    </g>
+
+    <g transform="translate(746 418)">
+      <rect width="162" height="48" rx="10" fill="#063c2c" stroke="#00b85c"/>
+      <circle cx="21" cy="24" r="10" fill="#00e676" filter="url(#softGlow)"/>
+      <path d="m16 24 4 4 7-9" fill="none" stroke="#062719" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="40" y="21" fill="#d1fae5" font-size="11" font-weight="800">Esquemes unifilars</text>
+      <text x="40" y="35" fill="#86efac" font-size="9">Generació automàtica</text>
+    </g>
+  </g>
+
+  <text x="480" y="520" text-anchor="middle" fill="#94a3b8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2.2">PLÀNOLS · CIRCUITS · ESQUEMES UNIFILARS</text>
+</svg>
