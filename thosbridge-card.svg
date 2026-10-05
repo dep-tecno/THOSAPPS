@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title"><title id="title">Pont de barres amb suports i càrregues verticals</title><defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#1b2a3e"/><stop offset="1" stop-color="#0f1420"/></linearGradient><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#72829b" stroke-opacity=".13" stroke-width=".6"/></pattern></defs><rect width="640" height="360" fill="url(#bg)"/><rect width="640" height="360" fill="url(#grid)"/><text x="28" y="35" fill="#00e676" font-family="Segoe UI,sans-serif" font-size="21" font-weight="700">THOSBRIDGE</text><text x="28" y="55" fill="#a5b2c5" font-family="Segoe UI,sans-serif" font-size="11" letter-spacing="1.5">Estructures · Esforços</text><g fill="none" stroke-linejoin="round">
+<path d="M80 232h480" stroke="#a5b2c5" stroke-width="6"/>
+<path d="m100 230 73-85 74 85 73-85 73 85 74-85 73 85M100 230h440M173 145h294M173 145v85m147-85v85m147-85v85" stroke="#00e676" stroke-width="3"/>
+<path d="m88 261 12-23 12 23Zm440 0 12-23 12 23Z" stroke="#76d7ea" stroke-width="3"/>
+<path d="M76 272h48m404 0h48" stroke="#76d7ea" stroke-width="2"/>
+<path d="M247 99v50m-8-10 8 10 8-10M393 99v50m-8-10 8 10 8-10" stroke="#fbbf24" stroke-width="3"/>
+<path d="M80 292h480" stroke="#72829b" stroke-width="1" stroke-dasharray="4 7"/>
+</g></svg>

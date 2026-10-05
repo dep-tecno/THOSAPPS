@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title"><title id="title">Cub en perspectiva amb projeccions geomètriques</title><defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#1b2a3e"/><stop offset="1" stop-color="#0f1420"/></linearGradient><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#72829b" stroke-opacity=".13" stroke-width=".6"/></pattern></defs><rect width="640" height="360" fill="url(#bg)"/><rect width="640" height="360" fill="url(#grid)"/><text x="28" y="35" fill="#00e676" font-family="Segoe UI,sans-serif" font-size="21" font-weight="700">THOSMETRIC</text><text x="28" y="55" fill="#a5b2c5" font-family="Segoe UI,sans-serif" font-size="11" letter-spacing="1.5">Geometria · Projeccions</text><g fill="none" stroke-linejoin="round" stroke-width="3">
+<path d="m120 115 75-42 95 48-75 43Zm0 0v102l95 49V164m0 102 75-44V121" stroke="#00e676"/>
+<path d="m195 73 0 104-75 40m75-40 95 45" stroke="#00e676" opacity=".35" stroke-dasharray="6 7"/>
+<path d="M340 103h170v155H340Zm0 77h170m-85-77v155" stroke="#72829b" stroke-width="1.5"/>
+<path d="M370 125h55v55h-55Zm55 55h55v55h-55Z" stroke="#76d7ea"/>
+<path d="M370 235h55l55-55h-55Z" stroke="#00e676"/>
+<path d="M290 121h50m-50 101h50M215 266v17h210v-25" stroke="#72829b" stroke-width="1.5" stroke-dasharray="5 7"/>
+</g><g fill="#a5b2c5" font-family="Segoe UI,sans-serif" font-size="14"><text x="357" y="95">Alçat</text><text x="453" y="95">Perfil</text><text x="356" y="280">Planta</text></g></svg>
