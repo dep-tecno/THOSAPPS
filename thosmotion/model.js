@@ -2,7 +2,7 @@
  'use strict';
  const M={EPS:1e-7,CONTACT:0.6,SNAP:9,MAX_COMPONENTS:200,rpmToRad:n=>n*Math.PI/30,radius:c=>c.type==='gear'?c.properties.teeth*c.properties.module/2:c.type==='pulley'?c.properties.diameter/2:c.type==='shaft'?10:18};
  M.rackLength=c=>c.properties.teeth*c.properties.module*Math.PI;
- M.bounds=c=>c.type==='rack'?{halfWidth:M.rackLength(c)/2,halfHeight:12}:{halfWidth:M.radius(c),halfHeight:M.radius(c)};
+ M.bounds=c=>c.type==='rack'?{halfWidth:M.rackLength(c)/2,halfHeight:Math.max(4,c.properties.module*1.6)}:c.type==='gear'?{halfWidth:M.radius(c)+c.properties.module*.8,halfHeight:M.radius(c)+c.properties.module*.8}:{halfWidth:M.radius(c),halfHeight:M.radius(c)};
  M.library={motor:{label:'Motor',ports:['ROTATIONAL_SHAFT'],defaults:{rpm:120,active:true}},shaft:{label:'Eix',ports:['ROTATIONAL_SHAFT'],defaults:{}},gear:{label:'Engranatge',ports:['ROTATIONAL_SHAFT','GEAR_CONTACT','RACK_CONTACT'],defaults:{teeth:20,module:2}},pulley:{label:'Politja',ports:['ROTATIONAL_SHAFT','BELT_PULLEY'],defaults:{diameter:40}},rack:{label:'Cremallera',ports:['RACK_CONTACT','LINEAR_SLIDER'],defaults:{teeth:24,module:2}}};
  M.create=(type,x,y)=>({id:crypto.randomUUID(),type,position:{x,y},rotation:0,locked:false,properties:{...M.library[type].defaults}});
  M.empty=()=>({format:'thosmotion',version:1,metadata:{title:'Muntatge'},components:[],connections:[],settings:{}});
