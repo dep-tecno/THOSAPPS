@@ -1,18 +1,18 @@
 (function(root){
  'use strict';const M=root.ThosMotion.model;
- // Positive angular speeds are counterclockwise. Each edge imposes nB = ratio * nA.
+ // Positive angular speeds are counterclockwise; positive linear speeds point right.
  function solve(project){
   const byId=new Map(project.components.map(c=>[c.id,c]));const graph=new Map(project.components.map(c=>[c.id,[]]));const states=new Map();const diagnostics=[];
-  for(const e of project.connections){const a=byId.get(e.a),b=byId.get(e.b);if(!a||!b)continue;const r=root.ThosMotion.connections.relation(a,b),valid=e.type==='belt'?a.type==='pulley'&&b.type==='pulley'&&root.ThosMotion.connections.distance(a,b)>M.radius(a)+M.radius(b):r.state==='VALID_CONTACT'&&r.type===e.type;if(!valid)continue;const k=root.ThosMotion.connections.ratio(e,a,b);graph.get(a.id).push({id:b.id,k});graph.get(b.id).push({id:a.id,k:1/k});}
+  for(const e of project.connections){const a=byId.get(e.a),b=byId.get(e.b);if(!a||!b)continue;const r=root.ThosMotion.connections.relation(a,b),valid=e.type==='belt'?a.type==='pulley'&&b.type==='pulley'&&root.ThosMotion.connections.distance(a,b)>M.radius(a)+M.radius(b):r.state==='VALID_CONTACT'&&r.type===e.type;if(!valid)continue;if(e.type==='rack'){const gear=a.type==='gear'?a:b,rack=a.type==='rack'?a:b,k=r.side*Math.PI*M.radius(gear)/30;graph.get(gear.id).push({id:rack.id,k,motion:'linear'});graph.get(rack.id).push({id:gear.id,k:1/k,motion:'rotary'});}else{const k=root.ThosMotion.connections.ratio(e,a,b);graph.get(a.id).push({id:b.id,k,motion:'rotary'});graph.get(b.id).push({id:a.id,k:1/k,motion:'rotary'});}}
   const visited=new Set();
   for(const c of project.components){if(visited.has(c.id))continue;
    const members=[],queue=[c.id];visited.add(c.id);for(let i=0;i<queue.length;i++){const id=queue[i];members.push(id);for(const e of graph.get(id))if(!visited.has(e.id)){visited.add(e.id);queue.push(e.id);}}
    const sources=members.map(id=>byId.get(id)).filter(c=>c.type==='motor'&&c.properties.active);
-   if(!sources.length){members.forEach(id=>states.set(id,{rpm:0,ratio:null,source:null,conflict:false}));diagnostics.push({kind:'WARNING',ids:members,message:'Aquest conjunt no està connectat a cap font de moviment activa.'});continue;}
-   const origin=sources[0];states.set(origin.id,{rpm:origin.properties.rpm,ratio:1,source:origin.id,conflict:false});const pending=[origin.id];let conflict=false;
-   for(let i=0;i<pending.length;i++){const id=pending[i],s=states.get(id);for(const edge of graph.get(id)){const rpm=s.rpm*edge.k,ratio=s.ratio*edge.k;const old=states.get(edge.id);if(old){if(Math.abs(old.rpm-rpm)>M.EPS||Math.abs(old.ratio-ratio)>M.EPS)conflict=true;}else{states.set(edge.id,{rpm,ratio,source:origin.id,conflict:false});pending.push(edge.id);}}}
+   if(!sources.length){members.forEach(id=>{const linear=byId.get(id).type==='rack';states.set(id,{motion:linear?'linear':'rotary',rpm:linear?null:0,linearSpeed:linear?0:null,ratio:null,source:null,conflict:false});});diagnostics.push({kind:'WARNING',ids:members,message:'Aquest conjunt no està connectat a cap font de moviment activa.'});continue;}
+   const origin=sources[0];states.set(origin.id,{motion:'rotary',rpm:origin.properties.rpm,linearSpeed:null,ratio:1,source:origin.id,conflict:false});const pending=[origin.id];let conflict=false;
+   for(let i=0;i<pending.length;i++){const id=pending[i],s=states.get(id);for(const edge of graph.get(id)){const input=s.motion==='linear'?s.linearSpeed:s.rpm,value=input*edge.k,next={motion:edge.motion,rpm:edge.motion==='rotary'?value:null,linearSpeed:edge.motion==='linear'?value:null,ratio:edge.motion==='rotary'&&s.ratio!==null?s.ratio*edge.k:null,source:origin.id,conflict:false},old=states.get(edge.id);if(old){const oldValue=old.motion==='linear'?old.linearSpeed:old.rpm;if(old.motion!==next.motion||Math.abs(oldValue-value)>M.EPS)conflict=true;}else{states.set(edge.id,next);pending.push(edge.id);}}}
    for(const motor of sources)if(Math.abs(states.get(motor.id).rpm-motor.properties.rpm)>M.EPS)conflict=true;
-   if(conflict){members.forEach(id=>states.set(id,{...states.get(id),rpm:0,conflict:true}));diagnostics.push({kind:'CONFLICT',ids:members,message:'Mecanisme bloquejat: el cicle o els motors imposen moviments incompatibles.'});}
+   if(conflict){members.forEach(id=>{const s=states.get(id);states.set(id,{...s,rpm:s.motion==='rotary'?0:null,linearSpeed:s.motion==='linear'?0:null,conflict:true});});diagnostics.push({kind:'CONFLICT',ids:members,message:'Mecanisme bloquejat: el cicle o els motors imposen moviments incompatibles.'});}
   }
   return {states,graph,diagnostics};
  }
