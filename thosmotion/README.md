@@ -1,10 +1,12 @@
 # THOSMOTION — primera fita
 
-Prototip del document THOSMOTION.md amb motor ideal, eixos explícits, engranatges rectes, trens compostos, politges, corretges, rodes de fricció, pinyons de cadena, cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor. Obre `../thosmotion.html` en un navegador; no necessita dependències ni servidor. També es pot servir en un allotjament estàtic amb la carpeta `thosmotion/` al costat del fitxer HTML.
+Prototip del document THOSMOTION.md amb motor ideal, manovella manual, eixos explícits, engranatges rectes, trens compostos, politges, corretges, rodes de fricció, pinyons de cadena, cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor. Obre `../thosmotion.html` en un navegador; no necessita dependències ni servidor. També es pot servir en un allotjament estàtic amb la carpeta `thosmotion/` al costat del fitxer HTML.
 
 ## Model
 
 Coordenades del món en mm, X cap a la dreta i Y cap avall. Angles en radians, positius en sentit antihorari. El renderer inverteix l'angle SVG. Radi primitiu = mòdul × dents / 2. Contacte admès dins de 0,6 mm; snap dins de 9 mm. Motors i engranatges poden muntar-se coaxialment sobre un eix; tots els components del mateix eix comparteixen velocitat i sentit. Dos engranatges es connecten per contacte exterior amb mòdul igual.
+
+La manovella manual es connecta a un eix o component rotatiu pel centre. Amb la simulació pausada, arrossegar-ne la nansa modifica l'angle i el propaga pel graf cinemàtic; la posició angular es conserva al projecte.
 
 Les politges defineixen el diàmetre en mm. La corretja oberta conserva el sentit; la creuada l'inverteix. El solver ideal aplica `n1 × D1 = n2 × D2`, sense lliscament. Les corretges són connexions serialitzades explícites i es poden crear entre dues politges separades: selecciona la primera, activa el tipus de corretja i clica la segona.
 
@@ -30,7 +32,7 @@ Desa/Obre utilitza JSON versionat local. La recuperació automàtica conserva un
 
 ## Verificació
 
-Executa `node --test thosmotion/solver.test.cjs` des de la carpeta principal. Els tests cobreixen relacions, eix motor, desconnexió, propietats, mòduls, conflictes, cicles, components independents, importació, politges i corretges, rodes de fricció, pinyons i cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor.
+Executa `node --test thosmotion/solver.test.cjs` des de la carpeta principal. Els tests cobreixen relacions, eix motor, manovella manual, desconnexió, propietats, mòduls, conflictes, cicles, components independents, importació, politges i corretges, rodes de fricció, pinyons i cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor.
 
 Comprovació manual: carrega el reductor, simula, observa 120 i −60 rpm; pausa; separa Z40 (0 rpm); desfés; canvia les dents; desa i torna a obrir. Roda per fer zoom, arrossega el fons per fer pan i prem Ajusta. Navega als components amb Tab i usa fletxes o Supr.
 
@@ -38,4 +40,4 @@ Comprovació manual: carrega el reductor, simula, observa 120 i −60 rpm; pausa
 
 Les fites d'instruments i reptes encara no estan implementades. No hi ha càlcul de forces, parell ni inèrcia.
 
-Verificació tècnica actual: 35 tests del model i el solver superats, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
+Verificació tècnica actual: 37 tests del model i el solver superats, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
