@@ -1,6 +1,6 @@
 # THOSMOTION — primera fita
 
-Prototip del document THOSMOTION.md amb motor ideal, eixos explícits, engranatges rectes, trens compostos, politges, corretges, pinyons de cadena, cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor. Obre `../thosmotion.html` en un navegador; no necessita dependències ni servidor. També es pot servir en un allotjament estàtic amb la carpeta `thosmotion/` al costat del fitxer HTML.
+Prototip del document THOSMOTION.md amb motor ideal, eixos explícits, engranatges rectes, trens compostos, politges, corretges, rodes de fricció, pinyons de cadena, cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor. Obre `../thosmotion.html` en un navegador; no necessita dependències ni servidor. També es pot servir en un allotjament estàtic amb la carpeta `thosmotion/` al costat del fitxer HTML.
 
 ## Model
 
@@ -9,6 +9,8 @@ Coordenades del món en mm, X cap a la dreta i Y cap avall. Angles en radians, p
 Les politges defineixen el diàmetre en mm. La corretja oberta conserva el sentit; la creuada l'inverteix. El solver ideal aplica `n1 × D1 = n2 × D2`, sense lliscament. Les corretges són connexions serialitzades explícites i es poden crear entre dues politges separades: selecciona la primera, activa el tipus de corretja i clica la segona.
 
 Els pinyons de cadena defineixen el nombre de dents i el pas en mm. Una cadena només pot unir dos pinyons del mateix pas que no se superposin. El solver ideal conserva el sentit i aplica `n1 × Z1 = n2 × Z2`. La cadena és una connexió serialitzada explícita que es conserva quan es mouen els pinyons mentre continuïn separats i compatibles.
+
+Les rodes de fricció defineixen el diàmetre en mm i es connecten automàticament per contacte tangent. El solver ideal ignora el lliscament, inverteix el sentit i aplica `n2 = −n1 × D1 / D2`. Separar-les o fer-les interferir elimina el contacte.
 
 El cargol sense fi defineix el nombre d'entrades i el mòdul; la corona defineix les dents i el mateix mòdul. El solver ideal aplica `n_corona = n_cargol × entrades / dents`. La connexió és explícita i es manté mentre les dues peces siguin compatibles i no se superposin.
 
@@ -28,12 +30,12 @@ Desa/Obre utilitza JSON versionat local. La recuperació automàtica conserva un
 
 ## Verificació
 
-Executa `node --test thosmotion/solver.test.cjs` des de la carpeta principal. Els tests cobreixen relacions, eix motor, desconnexió, propietats, mòduls, conflictes, cicles, components independents, importació, politges i corretges, pinyons i cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor.
+Executa `node --test thosmotion/solver.test.cjs` des de la carpeta principal. Els tests cobreixen relacions, eix motor, desconnexió, propietats, mòduls, conflictes, cicles, components independents, importació, politges i corretges, rodes de fricció, pinyons i cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor.
 
 Comprovació manual: carrega el reductor, simula, observa 120 i −60 rpm; pausa; separa Z40 (0 rpm); desfés; canvia les dents; desa i torna a obrir. Roda per fer zoom, arrossega el fons per fer pan i prem Ajusta. Navega als components amb Tab i usa fletxes o Supr.
 
 ## Abast pendent
 
-Les fites de fricció, instruments i reptes encara no estan implementades. No hi ha càlcul de forces, parell ni inèrcia.
+Les fites d'instruments i reptes encara no estan implementades. No hi ha càlcul de forces, parell ni inèrcia.
 
-Verificació tècnica actual: 32 tests del model i el solver superats, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
+Verificació tècnica actual: 35 tests del model i el solver superats, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
