@@ -161,6 +161,23 @@
 
         .mode-outline .node-content { color: #e5e7eb !important; }
 
+        .node.free-text, .mode-outline .node.free-text {
+            background: transparent !important;
+            border: 1px solid transparent !important;
+            box-shadow: none !important;
+            padding: 4px 8px !important;
+            min-width: 80px;
+            justify-content: flex-start;
+            text-align: left;
+            transform: translate(-50%, -50%) !important;
+            cursor: move;
+        }
+        .node.free-text.selected, .mode-outline .node.free-text.selected {
+            border: 1px dashed #e879f9 !important;
+        }
+        .node.free-text:hover { text-decoration: none; }
+        .node.free-text .node-content { color: inherit !important; }
+
         /* --- ELEMENTS ADICIONALS --- */
         .node.linking-source {
             border: 3px dashed #f87171 !important;
@@ -297,6 +314,7 @@
         <button onclick="app.addChild()" class="tool-btn" title="Afegir Fill (TAB)"><i class="fas fa-sitemap"></i> Fill</button>
         <button onclick="app.addSibling()" class="tool-btn" title="Afegir Germà (ENTER)"><i class="fas fa-plus"></i> Germà</button>
         <button onclick="app.addRootNode()" class="tool-btn font-bold text-blue-400"><i class="fas fa-star"></i> Pare</button>
+        <button onclick="app.toggleTextMode()" id="btn-text" class="tool-btn" title="Afegir text lliure" aria-label="Afegir text lliure" aria-pressed="false"><i class="fas fa-font"></i> Text</button>
         <button onclick="app.deleteNode()" class="tool-btn text-red-400"><i class="fas fa-trash-alt"></i></button>
         <div class="tool-separator"></div>
         
@@ -370,6 +388,7 @@
                 this.currentLayout = 'mindmap'; 
                 
                 this.isConnecting = false;
+                this.isPlacingText = false;
                 this.connectionSourceId = null;
                 
                 this.panX = window.innerWidth / 2;
@@ -466,6 +485,17 @@
                     if (document.visibilityState === 'hidden') this.flushAutoSave();
                 });
                 this.workspace.addEventListener('mousedown', this.handleMouseDown);
+                this.workspace.addEventListener('mousedown', (e) => {
+                    if (!this.isPlacingText || e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const rect = this.workspace.getBoundingClientRect();
+                    const x = (e.clientX - rect.left - this.panX) / this.zoomLevel;
+                    const y = (e.clientY - rect.top - this.panY) / this.zoomLevel;
+                    this.toggleTextMode();
+                    this.addNode(null, 'Text', false, x, y, 'text');
+                    this.saveHistory();
+                }, true);
                 this.workspace.addEventListener('wheel', (e) => {
                     if (e.ctrlKey) {
                         e.preventDefault();
@@ -519,7 +549,17 @@
                 this.showToast("Pare afegit");
             }
 
-            addNode(parentId, text = "Nova Idea", isRoot = false, customX = null, customY = null) {
+            toggleTextMode() {
+                if (!this._autoSaveReady) return;
+                if (this.isConnecting) this.toggleConnectMode();
+                this.isPlacingText = !this.isPlacingText;
+                const btn = document.getElementById('btn-text');
+                btn.classList.toggle('active', this.isPlacingText);
+                btn.setAttribute('aria-pressed', String(this.isPlacingText));
+                this.workspace.style.cursor = this.isPlacingText ? 'text' : 'grab';
+            }
+
+            addNode(parentId, text = "Nova Idea", isRoot = false, customX = null, customY = null, type = 'node') {
                 const id = 'node_' + Date.now() + Math.random().toString(36).substr(2, 5);
                 let x = 0, y = 0, color = "#FFFFFF";
 
@@ -545,6 +585,11 @@
 
                 this.saveHistory();
                 const newNode = { id, parentId, text, x, y, isRoot, color, image: null, width: null, fontSize: isRoot ? 18 : 14 };
+                if (type === 'text') {
+                    newNode.type = 'text';
+                    newNode.color = '#f9fafb';
+                    newNode.fontSize = 18;
+                }
                 this.nodes.push(newNode);
 
                 this.selectNode(id);
@@ -566,6 +611,7 @@
                 }
 
                 if (!this.selectedNodeId) return;
+                const deletingText = this.nodes.find(n => n.id === this.selectedNodeId)?.type === 'text';
                 this.saveHistory();
                 const deleteRecursive = (id) => {
                     this.extraConnections = this.extraConnections.filter(c => c.from !== id && c.to !== id);
@@ -575,14 +621,18 @@
                 };
                 deleteRecursive(this.selectedNodeId);
                 this.selectedNodeId = null;
+                if (deletingText) this.saveHistory();
                 this.render();
             }
 
-            addChild() { if (!this.selectedNodeId) return this.showToast("Selecciona un node"); this.addNode(this.selectedNodeId); }
+            addChild() {
+                if (!this.selectedNodeId || this.nodes.find(n => n.id === this.selectedNodeId)?.type === 'text') return this.showToast("Selecciona un node del mapa");
+                this.addNode(this.selectedNodeId);
+            }
             addSibling() { 
                 if (!this.selectedNodeId) return; 
                 const current = this.nodes.find(n => n.id === this.selectedNodeId);
-                if (current.isRoot) return;
+                if (current.isRoot || current.type === 'text') return;
                 this.addNode(current.parentId);
             }
 
@@ -592,6 +642,7 @@
                 // 1. SAVE STATE if leaving MindMap
                 if (this.currentLayout === 'mindmap') {
                     this.nodes.forEach(n => {
+                        if (n.type === 'text') return;
                         n.mmX = n.x;
                         n.mmY = n.y;
                     });
@@ -610,7 +661,7 @@
                 } else {
                     // Switching BACK to MindMap
                     this.nodes.forEach(n => {
-                        if (n.mmX !== undefined && n.mmY !== undefined) {
+                        if (n.type !== 'text' && n.mmX !== undefined && n.mmY !== undefined) {
                             n.x = n.mmX;
                             n.y = n.mmY;
                         }
@@ -776,6 +827,7 @@
             }
 
             toggleConnectMode() {
+                if (this.isPlacingText) this.toggleTextMode();
                 this.isConnecting = !this.isConnecting;
                 this.connectionSourceId = null;
                 const btn = document.getElementById('btn-connect');
@@ -791,6 +843,7 @@
             }
 
             addExtraConnection(sourceId, targetId) {
+                if (this.nodes.some(n => (n.id === sourceId || n.id === targetId) && n.type === 'text')) return;
                 if (sourceId === targetId) return;
                 const exists = this.extraConnections.find(c => c.from === sourceId && c.to === targetId);
                 if (!exists) {
@@ -822,6 +875,7 @@
             handleNodeMouseDown(e, id) {
                 e.stopPropagation();
                 if (this.isConnecting) {
+                    if (this.nodes.find(n => n.id === id)?.type === 'text') return this.showToast("Selecciona un node del mapa");
                     if (!this.connectionSourceId) {
                         this.connectionSourceId = id;
                         this.showToast("Origen seleccionat. Ara clica el destí.");
@@ -845,6 +899,7 @@
 
             handleResizeMouseDown(e, id) {
                 e.stopPropagation();
+                if (this.nodes.find(n => n.id === id)?.type === 'text') this.saveHistory();
                 this.isResizing = true;
                 this.resizingNodeId = id;
                 this.resizeStartX = e.clientX;
@@ -896,6 +951,8 @@
                         if (this.currentLayout === 'hierarchy') this.layoutHierarchy(false);
                     }
                 }
+                if (this.draggedNodeId && this.dragMoved && this.nodes.find(n => n.id === this.draggedNodeId)?.type === 'text') this.saveHistory();
+                if (this.isResizing && this.nodes.find(n => n.id === this.resizingNodeId)?.type === 'text') this.saveHistory();
                 this.isDraggingWorkspace = false;
                 this.draggedNodeId = null;
                 this.isResizing = false;
@@ -905,6 +962,7 @@
 
             handleKeyDown(e) {
                 if (!this._autoSaveReady) return;
+                if (e.key === 'Escape' && this.isPlacingText) { this.toggleTextMode(); return; }
                 const isEditing = document.activeElement && document.activeElement.classList.contains('node-content');
                 if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
                     e.preventDefault();
@@ -938,7 +996,7 @@
 
             createNodeElement(node) {
                 const el = document.createElement('div');
-                el.className = `node ${node.id === this.selectedNodeId ? 'selected' : ''} ${node.isRoot ? 'root-node' : ''}`;
+                el.className = `node ${node.id === this.selectedNodeId ? 'selected' : ''} ${node.isRoot ? 'root-node' : ''} ${node.type === 'text' ? 'free-text' : ''}`;
                 
                 if (this.isConnecting && this.connectionSourceId === node.id) el.classList.add('linking-source');
 
@@ -952,7 +1010,9 @@
                     el.style.width = node.width + 'px'; el.style.maxWidth = 'none'; 
                 }
                 
-                if (this.currentLayout === 'outline') {
+                if (node.type === 'text') {
+                    el.style.setProperty('color', this.sanitizeColor(node.color, '#f9fafb'), 'important');
+                } else if (this.currentLayout === 'outline') {
                     el.style.backgroundColor = 'transparent';
                     el.style.color = '#e5e7eb'; 
                 } else {
@@ -1003,6 +1063,7 @@
                     if (newText !== node.text) {
                         this.saveHistory();
                         node.text = newText;
+                        if (node.type === 'text') this.saveHistory();
                         if (raw.length > 2000) e.target.innerText = node.text;
                         this.autoSave();
                     }
@@ -1019,7 +1080,7 @@
             renderConnections() {
                 this.svgGroup.innerHTML = '';
                 this.nodes.forEach(node => {
-                    if (node.parentId) {
+                    if (node.parentId && node.type !== 'text') {
                         const parent = this.nodes.find(n => n.id === node.parentId);
                         if (parent) this.drawTreeConnection(parent, node);
                     }
@@ -1027,7 +1088,7 @@
                 this.extraConnections.forEach(conn => {
                     const from = this.nodes.find(n => n.id === conn.from);
                     const to = this.nodes.find(n => n.id === conn.to);
-                    if (from && to) this.drawArrowConnection(conn.id, from, to);
+                    if (from && to && from.type !== 'text' && to.type !== 'text') this.drawArrowConnection(conn.id, from, to);
                 });
             }
 
@@ -1143,13 +1204,14 @@
                         // SECURITY: cada camp del node es valida i saniteja abans d'acceptar-lo
                         this.nodes = (data.nodes || []).map(n => ({
                             id:       safeId(n.id),
-                            parentId: n.parentId ? safeId(n.parentId) : null,
+                            type:     n.type === 'text' ? 'text' : 'node',
+                            parentId: n.type !== 'text' && n.parentId ? safeId(n.parentId) : null,
                             text:     String(n.text || '').substring(0, 2000),
                             x:        Number(n.x) || 0,
                             y:        Number(n.y) || 0,
-                            isRoot:   Boolean(n.isRoot),
-                            color:    this.sanitizeColor(n.color),
-                            image:    n.image && allowedImg.some(t => String(n.image).startsWith(t)) ? n.image : null,
+                            isRoot:   n.type !== 'text' && Boolean(n.isRoot),
+                            color:    this.sanitizeColor(n.color, n.type === 'text' ? '#f9fafb' : '#374151'),
+                            image:    n.type !== 'text' && n.image && allowedImg.some(t => String(n.image).startsWith(t)) ? n.image : null,
                             width:    n.width ? Math.min(Math.max(Number(n.width) || 200, 50), 1200) : null,
                             fontSize: n.fontSize ? Math.min(Math.max(Number(n.fontSize) || 14, 10), 64) : 14
                         }));
@@ -1178,9 +1240,13 @@
                 
                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                 this.nodes.forEach(n => {
-                    const w = n.width || 200;
-                    minX = Math.min(minX, n.x - w/2); maxX = Math.max(maxX, n.x + w/2);
-                    minY = Math.min(minY, n.y - 40); maxY = Math.max(maxY, n.y + 40);
+                    const el = document.querySelector(`.node[data-id="${n.id}"]`);
+                    const w = el ? el.offsetWidth : n.width || 200;
+                    const h = el ? el.offsetHeight : 80;
+                    const leftAligned = this.currentLayout === 'outline' && n.type !== 'text';
+                    minX = Math.min(minX, n.x - (leftAligned ? 0 : w/2));
+                    maxX = Math.max(maxX, n.x + (leftAligned ? w : w/2));
+                    minY = Math.min(minY, n.y - h/2); maxY = Math.max(maxY, n.y + h/2);
                 });
                 
                 const padding = 60;
@@ -1227,12 +1293,17 @@
                     this.saveHistory();
                     const node = this.nodes.find(n => n.id === this.selectedNodeId);
                     node.color = this.sanitizeColor(color);
+                    if (node.type === 'text') this.saveHistory();
                     this.render();
                     this.colorMenu.style.display = 'none';
                 }
             }
             attachImage(input) {
                 if (!this.selectedNodeId || !input.files[0]) return;
+                if (this.nodes.find(n => n.id === this.selectedNodeId)?.type === 'text') {
+                    input.value = '';
+                    return this.showToast("Selecciona un node del mapa per afegir una imatge");
+                }
                 const file = input.files[0];
                 const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 if (!allowedTypes.includes(file.type)) {
@@ -1260,6 +1331,7 @@
                     node.fontSize += delta;
                     if (node.fontSize < 10) node.fontSize = 10;
                     if (node.fontSize > 64) node.fontSize = 64;
+                    if (node.type === 'text') this.saveHistory();
                     this.render();
                 }
             }
