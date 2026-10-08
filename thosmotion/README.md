@@ -26,7 +26,7 @@ La lleva-seguidor utilitza una lleva circular excèntrica connectable a motor o 
 
 La biblioteca de components ocupa un panell dret plegable, agrupat per famílies. En seleccionar una peça, el mateix panell mostra les propietats contextuals; «← Components» torna al catàleg. En pantalles estretes el panell se superposa al llenç.
 
-La barra superior agrupa els instruments en quatre icones amb submenús: rotació (tacòmetre i comptador de voltes), angle (mesurador angular), moviment lineal (velocitat i desplaçament) i temps (cronòmetre). Cal seleccionar un component compatible abans d’afegir una mesura, excepte el cronòmetre. Les lectures s’actualitzen en targetes compactes al panell dret i no afegeixen text al llenç. Els instruments són estat temporal de la interfície i no formen part del JSON del projecte.
+La barra superior agrupa els instruments en quatre icones amb submenús: rotació (tacòmetre i comptador de voltes), angle (mesurador angular), moviment lineal (velocitat i desplaçament) i temps (cronòmetre). Cal seleccionar un component compatible abans d’afegir una mesura, excepte el cronòmetre. Les lectures s’actualitzen en targetes compactes superposades al llenç que es poden arrossegar sense moure el mecanisme. Cada família té una forma pròpia: arrodonida per a rotació, cantonada tallada per a angle, rectangular per a moviment lineal i càpsula per a temps. Els instruments són estat temporal de la interfície i no formen part del JSON del projecte.
 
 `model.js`: biblioteca, unitats i validació; `connections.js`: geometria, snap i revalidació; `solver.js`: graf, propagació i conflictes; `renderer.js`: SVG i fases de les dents; `app.js`: interacció, historial, persistència i animació.
 
