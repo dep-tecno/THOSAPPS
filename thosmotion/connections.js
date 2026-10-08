@@ -19,6 +19,8 @@
    const state=overhang>M.CONTACT?'SEPARATED':verticalError<=M.CONTACT?'VALID_CONTACT':Math.abs(dy)<target?'INTERFERENCE':'SEPARATED';
    return {type:'rack',target,state,side,error:verticalError+overhang,gear,rack};
   }
+  const supportable=['shaft','gear','manualCrank','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower'];
+  if((a.type==='support'&&supportable.includes(b.type))||(b.type==='support'&&supportable.includes(a.type)))return {type:'support',target:0,state:d<=M.CONTACT?'VALID_CONTACT':'SEPARATED'};
   const rotary=['gear','motor','manualCrank','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower'],driven=['gear','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower'];const shaftCompatible=(a.type==='shaft'&&rotary.includes(b.type))||(b.type==='shaft'&&rotary.includes(a.type))||(['motor','manualCrank'].includes(a.type)&&driven.includes(b.type))||(['motor','manualCrank'].includes(b.type)&&driven.includes(a.type));
   if(shaftCompatible)return {type:'shaft',target:0,state:d<=M.CONTACT?'VALID_CONTACT':'SEPARATED'};
   return {state:'INCOMPATIBLE'};
