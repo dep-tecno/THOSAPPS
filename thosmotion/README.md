@@ -30,6 +30,8 @@ La barra superior agrupa els instruments en quatre icones amb submenús: rotaci�
 
 «Traça de moviment» registra fins a 800 mostres per recorregut i dibuixa una línia semitransparent darrere del mecanisme. Permet seguir el passador o la corredera de la biela-manovella, un punt de la cremallera i l’extrem del seguidor de la lleva. El menú permet aturar o reprendre el registre, canviar els colors i esborrar totes les traces. Les traces són temporals i no formen part del JSON.
 
+Els exemples `Traça · biela-manovella` i `Traça · cremallera i lleva` carreguen els mecanismes amb les traces ja activades. Només cal prémer ▶: el primer compara el recorregut circular del passador amb el lineal de la corredera; el segon compara els desplaçaments lineals de la cremallera i del seguidor de la lleva.
+
 «Exporta PNG» genera una imatge a doble resolució de la vista actual del llenç. Inclou el muntatge, les traces, les dades visibles i les formes dels instruments, però omet els botons de zero i tancament perquè la captura quedi neta.
 
 `model.js`: biblioteca, unitats i validació; `connections.js`: geometria, snap i revalidació; `solver.js`: graf, propagació i conflictes; `renderer.js`: SVG i fases de les dents; `app.js`: interacció, historial, persistència i animació.
