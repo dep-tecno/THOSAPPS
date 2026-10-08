@@ -387,6 +387,7 @@
                 this.historyIndex = -1;
                 this.maxHistory = 50;
                 this._autoSaveTimer = null;
+                this._autoSaveReady = false;
 
                 this.workspace = document.getElementById('workspace');
                 this.nodesLayer = document.getElementById('nodes-layer');
@@ -447,7 +448,9 @@
             }
 
             init() {
-                const hasSaved = !!localStorage.getItem('thosmap_autosave');
+                let hasSaved = false;
+                try { hasSaved = !!localStorage.getItem('thosmap_autosave'); } catch(e) {}
+                this._autoSaveReady = !hasSaved;
                 if (hasSaved) {
                     this.showRestoreDialog();
                 } else {
@@ -457,6 +460,11 @@
                 window.addEventListener('keydown', this.handleKeyDown);
                 window.addEventListener('mousemove', this.handleMouseMove);
                 window.addEventListener('mouseup', this.handleMouseUp);
+                window.addEventListener('beforeunload', () => this.flushAutoSave());
+                window.addEventListener('pagehide', () => this.flushAutoSave());
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'hidden') this.flushAutoSave();
+                });
                 this.workspace.addEventListener('mousedown', this.handleMouseDown);
                 this.workspace.addEventListener('wheel', (e) => {
                     if (e.ctrlKey) {
@@ -892,9 +900,11 @@
                 this.draggedNodeId = null;
                 this.isResizing = false;
                 this.workspace.classList.remove('grabbing');
+                this.autoSave();
             }
 
             handleKeyDown(e) {
+                if (!this._autoSaveReady) return;
                 const isEditing = document.activeElement && document.activeElement.classList.contains('node-content');
                 if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
                     e.preventDefault();
@@ -986,6 +996,7 @@
                 });
 
                 // SECURITY: límit de 2000 caràcters per evitar DoS via texts molt llargs
+                contentDiv.addEventListener('input', () => this.autoSave());
                 contentDiv.addEventListener('blur', (e) => {
                     const raw = e.target.innerText || '';
                     const newText = raw.length > 2000 ? raw.substring(0, 2000) : raw;
@@ -1267,15 +1278,21 @@
                     </div>`;
                 document.body.appendChild(dlg);
                 document.getElementById('restore-yes').onclick = () => {
-                    dlg.remove();
                     const ok = this.loadAutoSave();
-                    if (ok) { this.render(); this.showToast("✓ Treball recuperat"); }
-                    else { this.addRootNode(); }
+                    if (!ok) {
+                        this.showToast("No s'ha pogut recuperar la còpia desada. No s'ha esborrat.");
+                        return;
+                    }
+                    this._autoSaveReady = true;
+                    dlg.remove();
+                    this.render();
+                    this.showToast("✓ Treball recuperat");
                     this.saveHistory();
                 };
                 document.getElementById('restore-no').onclick = () => {
                     dlg.remove();
                     localStorage.removeItem('thosmap_autosave');
+                    this._autoSaveReady = true;
                     this.addRootNode();
                     this.saveHistory();
                 };
@@ -1325,16 +1342,29 @@
 
             autoSave() {
                 clearTimeout(this._autoSaveTimer);
-                this._autoSaveTimer = setTimeout(() => {
-                    try {
-                        localStorage.setItem('thosmap_autosave', JSON.stringify({
-                            nodes: this.nodes,
-                            connections: this.extraConnections,
-                            layout: this.currentLayout,
-                            panX: this.panX, panY: this.panY, zoom: this.zoomLevel
-                        }));
-                    } catch(e) {}
-                }, 1500);
+                if (!this._autoSaveReady) return;
+                this._autoSaveTimer = setTimeout(() => this.flushAutoSave(), 1500);
+            }
+
+            flushAutoSave() {
+                clearTimeout(this._autoSaveTimer);
+                this._autoSaveTimer = null;
+                // La còpia anterior es conserva fins que es resol el diàleg de recuperació.
+                if (!this._autoSaveReady) return;
+                try {
+                    const editor = document.activeElement;
+                    const editingNode = editor && editor.classList.contains('node-content')
+                        ? editor.closest('.node') : null;
+                    // Inclou el text que encara s'està editant, abans de perdre el focus.
+                    const nodes = editingNode ? this.nodes.map(node => node.id === editingNode.dataset.id
+                        ? { ...node, text: (editor.innerText || '').substring(0, 2000) } : node) : this.nodes;
+                    localStorage.setItem('thosmap_autosave', JSON.stringify({
+                        nodes,
+                        connections: this.extraConnections,
+                        layout: this.currentLayout,
+                        panX: this.panX, panY: this.panY, zoom: this.zoomLevel
+                    }));
+                } catch(e) {}
             }
 
             loadAutoSave() {
@@ -1342,7 +1372,7 @@
                     const raw = localStorage.getItem('thosmap_autosave');
                     if (!raw) return false;
                     const state = JSON.parse(raw);
-                    if (!state.nodes || state.nodes.length === 0) return false;
+                    if (!Array.isArray(state.nodes) || state.nodes.length === 0) return false;
                     this.nodes = state.nodes;
                     this.extraConnections = state.connections || [];
                     this.currentLayout = state.layout || 'mindmap';
