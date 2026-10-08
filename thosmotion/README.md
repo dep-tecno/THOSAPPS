@@ -28,6 +28,8 @@ La biblioteca de components ocupa un panell dret plegable, agrupat per famílies
 
 La barra superior agrupa els instruments en quatre icones amb submenús: rotació (tacòmetre i comptador de voltes), angle (mesurador angular), moviment lineal (velocitat i desplaçament) i temps (cronòmetre). Cal seleccionar un component compatible abans d’afegir una mesura, excepte el cronòmetre. Les lectures s’actualitzen en targetes compactes superposades al llenç que es poden arrossegar des de qualsevol zona lliure de botons sense moure el mecanisme. Cada família té una forma pròpia: circular per a rotació, falca per a angle, rectangular allargada per a moviment lineal i silueta de cronòmetre per a temps. Els instruments són estat temporal de la interfície i no formen part del JSON del projecte.
 
+«Exporta PNG» genera una imatge a doble resolució de la vista actual del llenç. Inclou el muntatge, les dades visibles i les formes dels instruments, però omet els botons de zero i tancament perquè la captura quedi neta.
+
 `model.js`: biblioteca, unitats i validació; `connections.js`: geometria, snap i revalidació; `solver.js`: graf, propagació i conflictes; `renderer.js`: SVG i fases de les dents; `app.js`: interacció, historial, persistència i animació.
 
 El solver es recalcula en editar; l'animació només integra les velocitats amb requestAnimationFrame. Cada conjunt amb conflicte queda aturat; els altres poden funcionar. Les dents tenen perfil simplificat i fase inicial de contacte coherent; no són perfils industrials.
