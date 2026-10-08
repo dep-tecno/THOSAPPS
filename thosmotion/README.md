@@ -28,7 +28,9 @@ La biblioteca de components ocupa un panell dret plegable, agrupat per famílies
 
 La barra superior agrupa els instruments en quatre icones amb submenús: rotació (tacòmetre i comptador de voltes), angle (mesurador angular), moviment lineal (velocitat i desplaçament) i temps (cronòmetre). Cal seleccionar un component compatible abans d’afegir una mesura, excepte el cronòmetre. Les lectures s’actualitzen en targetes compactes superposades al llenç que es poden arrossegar des de qualsevol zona lliure de botons sense moure el mecanisme. Cada família té una forma pròpia: circular per a rotació, falca per a angle, rectangular allargada per a moviment lineal i silueta de cronòmetre per a temps. Els instruments són estat temporal de la interfície i no formen part del JSON del projecte.
 
-«Exporta PNG» genera una imatge a doble resolució de la vista actual del llenç. Inclou el muntatge, les dades visibles i les formes dels instruments, però omet els botons de zero i tancament perquè la captura quedi neta.
+«Traça de moviment» registra fins a 800 mostres per recorregut i dibuixa una línia semitransparent darrere del mecanisme. Permet seguir el passador o la corredera de la biela-manovella, un punt de la cremallera i l’extrem del seguidor de la lleva. El menú permet aturar o reprendre el registre, canviar els colors i esborrar totes les traces. Les traces són temporals i no formen part del JSON.
+
+«Exporta PNG» genera una imatge a doble resolució de la vista actual del llenç. Inclou el muntatge, les traces, les dades visibles i les formes dels instruments, però omet els botons de zero i tancament perquè la captura quedi neta.
 
 `model.js`: biblioteca, unitats i validació; `connections.js`: geometria, snap i revalidació; `solver.js`: graf, propagació i conflictes; `renderer.js`: SVG i fases de les dents; `app.js`: interacció, historial, persistència i animació.
 
@@ -46,4 +48,4 @@ Comprovació manual: carrega el reductor, simula, observa 120 i −60 rpm; pausa
 
 La fita de reptes encara no està implementada. No hi ha càlcul de forces, parell ni inèrcia.
 
-Verificació tècnica actual: 41 tests del model i el solver superats, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
+Verificació tècnica actual: 43 tests del model i el solver superats, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
