@@ -263,6 +263,9 @@
         }
         #color-menu { width: 160px; padding: 8px; }
         #layout-menu { width: 180px; }
+        #alignment-menu { width: 160px; }
+        .alignment-choice { width: 100%; border: 0; background: transparent; text-align: left; }
+        .alignment-choice[aria-checked="true"] { background: #374151; color: #fff; }
         
         .menu-item {
             padding: 8px 15px; cursor: pointer; font-size: 14px; color: #d1d5db;
@@ -336,6 +339,7 @@
         
         <div class="tool-separator"></div>
         <button onclick="app.toggleBold()" id="btn-bold" class="tool-btn" title="Negreta" aria-label="Negreta" aria-pressed="false" disabled><i class="fas fa-bold"></i></button>
+        <button onclick="app.toggleAlignmentMenu(event)" id="btn-align" class="tool-btn" title="Alineació del text" aria-label="Alineació del text" aria-haspopup="menu" aria-controls="alignment-menu" aria-expanded="false" disabled><i class="fas fa-align-center"></i></button>
         <button onclick="app.adjustFontSize(2)" class="tool-btn" title="Augmentar mida del text" aria-label="Augmentar mida del text"><i class="fas fa-font"></i>+</button>
         <button onclick="app.adjustFontSize(-2)" class="tool-btn" title="Reduir mida del text" aria-label="Reduir mida del text"><i class="fas fa-font"></i>-</button>
         
@@ -364,6 +368,13 @@
         <div class="menu-item" onclick="app.applyLayout('mindmap')"><i class="fas fa-sitemap w-5"></i> Mapa Mental</div>
         <div class="menu-item" onclick="app.applyLayout('outline')"><i class="fas fa-list-ul w-5"></i> Esquema</div>
         <div class="menu-item" onclick="app.applyLayout('hierarchy')"><i class="fas fa-network-wired w-5"></i> Jerarquia</div>
+    </div>
+
+    <div id="alignment-menu" class="floating-menu" role="menu" aria-label="Alineació del text">
+        <button type="button" class="menu-item alignment-choice" role="menuitemradio" aria-checked="false" data-align="left" onclick="app.setTextAlignment('left')"><i class="fas fa-align-left"></i> Esquerra</button>
+        <button type="button" class="menu-item alignment-choice" role="menuitemradio" aria-checked="false" data-align="center" onclick="app.setTextAlignment('center')"><i class="fas fa-align-center"></i> Centre</button>
+        <button type="button" class="menu-item alignment-choice" role="menuitemradio" aria-checked="false" data-align="right" onclick="app.setTextAlignment('right')"><i class="fas fa-align-right"></i> Dreta</button>
+        <button type="button" class="menu-item alignment-choice" role="menuitemradio" aria-checked="false" data-align="justify" onclick="app.setTextAlignment('justify')"><i class="fas fa-align-justify"></i> Justificat</button>
     </div>
 
     <input type="file" id="fileInput" onchange="app.loadFromJSON(this)" accept=".json">
@@ -422,6 +433,7 @@
                 this.svgGroup = document.getElementById('connections-group');
                 this.colorMenu = document.getElementById('color-menu');
                 this.layoutMenu = document.getElementById('layout-menu');
+                this.alignmentMenu = document.getElementById('alignment-menu');
 
                 this.bindMethods();
             }
@@ -523,6 +535,7 @@
                     if (!e.target.closest('#layout-menu') && !e.target.closest('[onclick*="toggleLayoutMenu"]')) {
                         this.layoutMenu.style.display = 'none';
                     }
+                    if (!e.target.closest('#alignment-menu') && !e.target.closest('#btn-align')) this.closeAlignmentMenu();
                 });
                 this.render();
             }
@@ -972,6 +985,21 @@
 
             handleKeyDown(e) {
                 if (!this._autoSaveReady) return;
+                if (e.key === 'Escape' && this.alignmentMenu.style.display === 'block') {
+                    this.closeAlignmentMenu();
+                    document.getElementById('btn-align').focus();
+                    return;
+                }
+                if (e.target.closest('#alignment-menu')) {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const choices = [...this.alignmentMenu.querySelectorAll('button')];
+                        const index = choices.indexOf(document.activeElement);
+                        choices[(index + (e.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length].focus();
+                    }
+                    return;
+                }
+                if (e.target.closest('#btn-align') && ['Tab', 'Enter', ' '].includes(e.key)) return;
                 if (e.key === 'Escape' && this.isPlacingText) { this.toggleTextMode(); return; }
                 const isEditing = document.activeElement && document.activeElement.classList.contains('node-content');
                 if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -997,6 +1025,7 @@
                 });
                 this.renderConnections();
                 this.updateBoldButton();
+                this.updateAlignmentButton();
                 this.autoSave();
             }
 
@@ -1051,6 +1080,7 @@
                 `;
 
                 const contentDiv = el.querySelector('.node-content');
+                contentDiv.style.textAlign = this.getTextAlignment(node);
                 
                 // KEYDOWN SPECIFIC FOR NODE CONTENT (ENTER / ALT+ENTER)
                 contentDiv.addEventListener('keydown', (e) => {
@@ -1226,7 +1256,8 @@
                             image:    n.type !== 'text' && n.image && allowedImg.some(t => String(n.image).startsWith(t)) ? n.image : null,
                             width:    n.width ? Math.min(Math.max(Number(n.width) || 200, 50), 1200) : null,
                             fontSize: n.fontSize ? Math.min(Math.max(Number(n.fontSize) || 14, 10), 64) : 14,
-                            bold:     typeof n.bold === 'boolean' ? n.bold : n.type !== 'text' && Boolean(n.isRoot)
+                            bold:     typeof n.bold === 'boolean' ? n.bold : n.type !== 'text' && Boolean(n.isRoot),
+                            textAlign: ['left', 'center', 'right', 'justify'].includes(n.textAlign) ? n.textAlign : null
                         }));
                         this.extraConnections = (data.connections || []).map(c => ({
                             id:   safeId(c.id),
@@ -1364,6 +1395,52 @@
                 btn.disabled = !node;
                 btn.classList.toggle('active', bold);
                 btn.setAttribute('aria-pressed', String(bold));
+            }
+
+            getTextAlignment(node) {
+                if (['left', 'center', 'right', 'justify'].includes(node.textAlign)) return node.textAlign;
+                return node.type === 'text' || this.currentLayout === 'outline' ? 'left' : 'center';
+            }
+
+            toggleAlignmentMenu(e) {
+                if (!this.selectedNodeId) return;
+                if (this.alignmentMenu.style.display === 'block') { this.closeAlignmentMenu(); return; }
+                const rect = e.currentTarget.getBoundingClientRect();
+                this.alignmentMenu.style.top = (rect.bottom + 5) + 'px';
+                this.alignmentMenu.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 168)) + 'px';
+                this.colorMenu.style.display = 'none';
+                this.layoutMenu.style.display = 'none';
+                this.alignmentMenu.style.display = 'block';
+                document.getElementById('btn-align').setAttribute('aria-expanded', 'true');
+                this.alignmentMenu.querySelector('[aria-checked="true"]').focus();
+            }
+
+            closeAlignmentMenu() {
+                this.alignmentMenu.style.display = 'none';
+                document.getElementById('btn-align').setAttribute('aria-expanded', 'false');
+            }
+
+            setTextAlignment(alignment) {
+                const node = this.nodes.find(n => n.id === this.selectedNodeId);
+                if (!node || !['left', 'center', 'right', 'justify'].includes(alignment)) return;
+                this.saveHistory();
+                node.textAlign = alignment;
+                this.saveHistory();
+                this.closeAlignmentMenu();
+                this.render();
+                document.getElementById('btn-align').focus();
+            }
+
+            updateAlignmentButton() {
+                const btn = document.getElementById('btn-align');
+                const node = this.nodes.find(n => n.id === this.selectedNodeId);
+                const alignment = node ? this.getTextAlignment(node) : 'center';
+                btn.disabled = !node;
+                btn.querySelector('i').className = 'fas fa-align-' + alignment;
+                this.alignmentMenu.querySelectorAll('[data-align]').forEach(choice => {
+                    choice.setAttribute('aria-checked', String(!!node && choice.dataset.align === alignment));
+                });
+                if (!node) this.closeAlignmentMenu();
             }
 
             showRestoreDialog() {
