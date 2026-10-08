@@ -335,6 +335,7 @@
         <button onclick="document.getElementById('imgInput').click()" class="tool-btn" title="Afegir imatge" aria-label="Afegir imatge"><i class="fas fa-image"></i></button>
         
         <div class="tool-separator"></div>
+        <button onclick="app.toggleBold()" id="btn-bold" class="tool-btn" title="Negreta" aria-label="Negreta" aria-pressed="false" disabled><i class="fas fa-bold"></i></button>
         <button onclick="app.adjustFontSize(2)" class="tool-btn" title="Augmentar mida del text" aria-label="Augmentar mida del text"><i class="fas fa-font"></i>+</button>
         <button onclick="app.adjustFontSize(-2)" class="tool-btn" title="Reduir mida del text" aria-label="Reduir mida del text"><i class="fas fa-font"></i>-</button>
         
@@ -441,6 +442,7 @@
                 this.loadFromJSON = this.loadFromJSON.bind(this);
                 this.attachImage = this.attachImage.bind(this);
                 this.adjustFontSize = this.adjustFontSize.bind(this);
+                this.toggleBold = this.toggleBold.bind(this);
                 this.zoomIn = this.zoomIn.bind(this);
                 this.zoomOut = this.zoomOut.bind(this);
                 this.handleMouseDown = this.handleMouseDown.bind(this);
@@ -994,6 +996,7 @@
                     this.nodesLayer.appendChild(el);
                 });
                 this.renderConnections();
+                this.updateBoldButton();
                 this.autoSave();
             }
 
@@ -1031,6 +1034,7 @@
                 }
                 
                 if (node.fontSize) el.style.fontSize = node.fontSize + 'px';
+                el.style.fontWeight = (node.bold ?? Boolean(node.isRoot)) ? '700' : '400';
 
                 // SECURITY: valida que node.image sigui un data URI de format raster permès
                 const allowedImgTypes = ['data:image/jpeg', 'data:image/png', 'data:image/gif', 'data:image/webp'];
@@ -1221,7 +1225,8 @@
                             color:    this.sanitizeColor(n.color, n.type === 'text' ? '#f9fafb' : '#374151'),
                             image:    n.type !== 'text' && n.image && allowedImg.some(t => String(n.image).startsWith(t)) ? n.image : null,
                             width:    n.width ? Math.min(Math.max(Number(n.width) || 200, 50), 1200) : null,
-                            fontSize: n.fontSize ? Math.min(Math.max(Number(n.fontSize) || 14, 10), 64) : 14
+                            fontSize: n.fontSize ? Math.min(Math.max(Number(n.fontSize) || 14, 10), 64) : 14,
+                            bold:     typeof n.bold === 'boolean' ? n.bold : n.type !== 'text' && Boolean(n.isRoot)
                         }));
                         this.extraConnections = (data.connections || []).map(c => ({
                             id:   safeId(c.id),
@@ -1343,6 +1348,24 @@
                     this.render();
                 }
             }
+            toggleBold() {
+                const node = this.nodes.find(n => n.id === this.selectedNodeId);
+                if (!node) return;
+                this.saveHistory();
+                node.bold = !(node.bold ?? Boolean(node.isRoot));
+                this.saveHistory();
+                this.render();
+            }
+
+            updateBoldButton() {
+                const btn = document.getElementById('btn-bold');
+                const node = this.nodes.find(n => n.id === this.selectedNodeId);
+                const bold = !!node && (node.bold ?? Boolean(node.isRoot));
+                btn.disabled = !node;
+                btn.classList.toggle('active', bold);
+                btn.setAttribute('aria-pressed', String(bold));
+            }
+
             showRestoreDialog() {
                 const dlg = document.createElement('div');
                 dlg.id = 'restore-dialog';
