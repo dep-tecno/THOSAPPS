@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
+  <title>THOSBRIDGE · Estructures i ponts</title>
+  <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-v1">
+</head>
+<body>
+  <header>
+    <a class="brand" href="index.html" title="Torna a THOSAPPS"><span class="brand-icon">╱╲</span><span>THOS<b>BRIDGE</b><small>ESTRUCTURES I PONTS</small></span></a>
+    <nav aria-label="Eines de construcció">
+      <button data-tool="bar" aria-pressed="true" title="Barra estructural (B)">╱ <span>Barra</span></button>
+      <button data-tool="deck" aria-pressed="false" title="Tauler per al pas del tren (T)">═ <span>Tauler</span></button>
+      <button data-tool="select" aria-pressed="false" title="Selecciona un tram (V)" aria-label="Selecciona">↖</button>
+      <button data-tool="erase" aria-pressed="false" title="Esborra (E)" aria-label="Esborra">⌫</button>
+      <span class="divider"></span>
+      <button id="undo" title="Desfés (Ctrl+Z)" aria-label="Desfés">↶</button>
+      <button id="redo" title="Refés (Ctrl+Y)" aria-label="Refés">↷</button>
+      <button id="save" title="Descarrega el pont en JSON" aria-label="Desa el pont">↓</button>
+      <button id="open" title="Obre un pont JSON" aria-label="Obre un pont">↑</button>
+      <span class="divider"></span>
+      <button id="run" class="primary" title="Prova el pont amb el tren (Espai)">▶ Provar pont</button>
+      <button id="pause" title="Pausa o continua la prova" aria-label="Pausa" disabled>Ⅱ</button>
+      <button id="edit" title="Torna a la construcció original" disabled>✎ Editar</button>
+      <button id="stress" aria-pressed="true" title="Mostra els esforços" aria-label="Mostra els esforços">◉</button>
+      <button id="panelToggle" title="Mostra o amaga el panell" aria-label="Mostra o amaga el panell" aria-expanded="true">☰</button>
+      <button id="help" title="Ajuda i crèdits" aria-label="Ajuda i crèdits">?</button>
+    </nav>
+  </header>
+  <main>
+    <section class="stage" aria-label="Editor del pont">
+      <div class="stage-top"><span id="levelTitle">Nivell 1</span><span id="mode">CONSTRUCCIÓ</span></div>
+      <canvas id="canvas" tabindex="0" aria-label="Graella per construir el pont. Clica un punt i després un altre per crear un tram."></canvas>
+      <div class="view-tools" aria-label="Vista del pont"><button id="zoomOut" title="Allunya" aria-label="Allunya">−</button><button id="fit" title="Enquadra el pont" aria-label="Enquadra">⌖</button><button id="zoomIn" title="Apropa" aria-label="Apropa">+</button></div>
+      <div id="result" hidden><b id="resultTitle"></b><p id="resultText"></p><button id="resultEdit">✎ Millorar el pont</button><button id="next" hidden>Següent nivell →</button></div>
+      <div class="stage-bottom"><span id="hint">Clica un ancoratge groc i després un punt de la graella.</span><span id="coords"></span></div>
+    </section>
+    <aside id="panel">
+      <div class="panel-title"><small>EL REPTE</small><h1>Construeix un pont</h1><p>El tren ha d’arribar a l’altra riba dins del pressupost.</p></div>
+      <label for="pack">Paquet de nivells</label><select id="pack"><option value="new">New · 15 nivells</option><option value="old">Old · 15 nivells</option></select>
+      <label for="level">Nivell</label><select id="level"></select>
+      <div class="budget"><small>PRESSUPOST</small><strong id="budget">0 / 1.000</strong><div class="meter"><i id="budgetBar"></i></div><span id="remaining"></span></div>
+      <div class="metrics"><div><small>TRAMS</small><b id="beamCount">0</b></div><div><small>OBERTURA</small><b id="span"></b></div></div>
+      <div class="actions"><button id="autoDeck">═ Construir tauler horitzontal</button><button id="demo">△ Exemple de pont triangular</button><button id="clear">⌫ Buidar el pont</button></div>
+      <section class="simulation-options"><h2>La prova del tren</h2><label for="weight">Pes del tren <select id="weight"><option value="0.5">50%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label><label for="speed">Velocitat de la prova <select id="speed"><option value="1">Normal</option><option value="2">×2</option><option value="4">×4</option></select></label><p id="simStats">Primer construeix el tauler i reforça’l amb triangles.</p></section>
+      <section id="selection" hidden><h2>Tram seleccionat</h2><p id="selectionInfo"></p><button id="changeType">Canviar barra / tauler</button><button id="deleteSelected">Esborrar el tram</button></section>
+      <section class="legend"><h2>Llegeix l’estructura</h2><p><i class="anchor-dot"></i> Ancoratge fix</p><p><i class="deck-line"></i> Tauler: hi passa el tren</p><p><i class="bar-line"></i> Barra: reforç estructural</p><div class="stress-scale"></div><div class="scale-labels"><span>Compressió</span><span>Tracció</span></div><p class="note">El color s’intensifica quan el tram s’acosta al límit de resistència.</p></section>
+      <p class="local-note" id="storageStatus">Els ponts i el progrés es desen en aquest navegador.</p>
+    </aside>
+  </main>
+  <footer><span id="status" role="status" aria-live="polite">Preparat per construir.</span><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Inspirat en Bridge Building Game · Alex Austin / Cryptic Sea</a></footer>
+  <input id="file" type="file" accept=".json,application/json" hidden>
+  <dialog id="helpDialog"><div class="dialog-heading"><h2>THOSBRIDGE · Ajuda i crèdits</h2><button id="closeHelp" aria-label="Tanca l’ajuda">×</button></div>
+    <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria un dels 30 nivells. Els punts grocs són ancoratges fixos.</li><li>Amb <b>Tauler</b>, uneix els punts del camí del tren. Amb <b>Barra</b>, afegeix reforços. Clica dos punts o arrossega entre ells.</li><li>Cada tram costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Provar pont</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
+    <p>Al primer nivell de cada paquet pots carregar un <b>exemple triangular</b> i provar-lo directament. El tauler automàtic és horitzontal: als nivells amb desnivells, completa o adapta el camí manualment.</p>
+    <p><b>Dreceres:</b> B barra · T tauler · V seleccionar · E esborrar · Supr esborrar selecció · Esc cancel·lar tram · Ctrl+Z desfer · Ctrl+Y refer · Espai provar/pausar. Roda del ratolí: zoom. Botó central o Alt + arrossegar: moure la vista. Botó dret: esborrar un tram.</p>
+    <p><b>Desament:</b> recuperació automàtica per nivell en aquest navegador; ↓ descarrega un JSON i ↑ el torna a obrir. Els teus ponts no s’envien a cap servidor.</p>
+    <h3>Origen i autoria</h3><p>THOSBRIDGE és una adaptació web educativa independent, <b>inspirada en Bridge Building Game, creat per Alex Austin (Cryptic Sea)</b>. Els dos paquets de nivells provenen dels fitxers de la versió 1.25 aportats per l’usuari. El programa original i la seva autoria corresponen al seu creador.</p>
+    <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
+    <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
+  </dialog>
+  <script type="module" src="thosbridge/app.js?v=20261009-v1"></script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+// Independent educational simulation for THOSBRIDGE; not the BBG executable engine.
+export const RULES = Object.freeze({beamCost:100, maxLength:4.5, stiffness:1800,
+  gravity:10, strength:260, maxSag:0.7, step:1/240, damping:5, maxNodes:700, maxBeams:1500});
+export const copy = value => JSON.parse(JSON.stringify(value));
+export function terrainAt(level,x) {
+  const t=level.terrain;
+  if(x<=t[0].x) return t[0].y;
+  if(x>=t.at(-1).x) return t.at(-1).y;
+  for(let i=1;i<t.length;i++) if(x<=t[i].x) {
+    const a=t[i-1],b=t[i];return a.y+(b.y-a.y)*(x-a.x)/(b.x-a.x);
+  }
+}
+export function emptyBridge(level) {
+  return {nodes:level.anchors.map((p,i)=>({id:'a'+i,...p,fixed:true})),beams:[]};
+}
+export const cost = bridge => bridge.beams.length * RULES.beamCost;
+export function nodeAt(bridge,p) {return bridge.nodes.find(n=>Math.hypot(n.x-p.x,n.y-p.y)<0.025);}
+export function addBeam(bridge,a,b,type='bar',level) {
+  const bound=Math.max(150,level.right-level.left+50);
+  if(!['bar','deck'].includes(type)||[a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return 'Escull punts dins l’àrea de construcció.';
+  const length=Math.hypot(a.x-b.x,a.y-b.y);
+  if(length<0.1) return 'Escull dos punts diferents.';
+  if(length>RULES.maxLength+1e-6) return 'La longitud màxima és de 4,5 unitats de graella.';
+  const na=nodeAt(bridge,a),nb=nodeAt(bridge,b);
+  if(na&&nb&&bridge.beams.some(e=>(e.a===na.id&&e.b===nb.id)||(e.a===nb.id&&e.b===na.id))) return 'Aquests punts ja estan units.';
+  if(cost(bridge)+RULES.beamCost>level.budget) return 'No queda prou pressupost. Cada tram costa 100.';
+  if(bridge.nodes.length+(na?0:1)+(nb?0:1)>RULES.maxNodes||bridge.beams.length>=RULES.maxBeams) return 'Has arribat al límit d’elements.';
+  const get=p=>nodeAt(bridge,p)||(()=>{let i=0;while(bridge.nodes.some(n=>n.id==='n'+i))i++;const n={id:'n'+i,x:p.x,y:p.y,fixed:false};bridge.nodes.push(n);return n;})();
+  const n1=get(a),n2=get(b);let i=0;while(bridge.beams.some(e=>e.id==='b'+i))i++;
+  bridge.beams.push({id:'b'+i,a:n1.id,b:n2.id,type});return null;
+}
+export function removeBeam(bridge,id) {
+  bridge.beams=bridge.beams.filter(e=>e.id!==id);
+  bridge.nodes=bridge.nodes.filter(n=>n.fixed||bridge.beams.some(e=>e.a===n.id||e.b===n.id));
+}
+export function makeDeck(level,bridge) {
+  const draft=copy(bridge);
+  // Follow the level's nominal rail height. Existing solid ground forms the approaches.
+  for(let x=level.left;x<level.right-0.01;x+=2) {
+    const end=Math.min(level.right,x+2);
+    if(terrainAt(level,(x+end)/2)>=-0.02) continue;
+    const error=addBeam(draft,{x,y:0},{x:end,y:0},'deck',level);
+    if(error&&!error.includes('ja estan units')) return {error};
+  }
+  return {bridge:draft};
+}
+export function demo(level) {
+  const b=emptyBridge(level);const l=level.left,r=level.right,m=(l+r)/2;
+  // Only the first level in each pack has this illustrative triangle.
+  for(const [a,z,type] of [
+    [{x:l,y:0},{x:m,y:0},'deck'],[{x:m,y:0},{x:r,y:0},'deck'],
+    [{x:l,y:0},{x:m,y:2},'bar'],[{x:r,y:0},{x:m,y:2},'bar'],
+    [{x:m,y:0},{x:m,y:2},'bar']]) {
+    const error=addBeam(b,a,z,type,level);if(error)throw Error(error);
+  }
+  return b;
+}
+export function validateBridge(input,level) {
+  if(!input||!Array.isArray(input.nodes)||!Array.isArray(input.beams)||input.nodes.length>RULES.maxNodes||input.beams.length>RULES.maxBeams) throw Error('Format de pont incorrecte.');
+  const result=emptyBridge(level),ids=new Set(result.nodes.map(n=>n.id));
+  const bound=Math.max(150,level.right-level.left+50);
+  for(const n of input.nodes) {
+    if(!n||typeof n.id!=='string'||!/^n\d+$/.test(n.id)) {
+      const a=result.nodes.find(a=>a.id===n?.id);
+      if(!a||a.x!==n.x||a.y!==n.y||n.fixed!==true)throw Error('Els ancoratges del nivell no es poden modificar.');
+      continue;
+    }
+    if(ids.has(n.id)||!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>bound||Math.abs(n.y)>bound||n.fixed)throw Error('Hi ha un node invàlid.');
+    ids.add(n.id);result.nodes.push({id:n.id,x:n.x,y:n.y,fixed:false});
+  }
+  const edges=new Set(),beamIds=new Set();
+  for(const e of input.beams) {
+    if(!e||typeof e.id!=='string'||!/^b\d+$/.test(e.id)||beamIds.has(e.id)||!ids.has(e.a)||!ids.has(e.b)||e.a===e.b||!['bar','deck'].includes(e.type))throw Error('Hi ha un tram invàlid.');
+    const key=[e.a,e.b].sort().join(':');if(edges.has(key))throw Error('Hi ha trams duplicats.');
+    const a=result.nodes.find(n=>n.id===e.a),b=result.nodes.find(n=>n.id===e.b);
+    const length=Math.hypot(a.x-b.x,a.y-b.y);
+    if(length<0.1||length>RULES.maxLength+1e-6)throw Error('Hi ha un tram amb longitud incorrecta.');
+    edges.add(key);beamIds.add(e.id);result.beams.push({id:e.id,a:e.a,b:e.b,type:e.type});
+  }
+  if(cost(result)>level.budget)throw Error('El pont supera el pressupost del nivell.');
+  return result;
+}
+export function deckRoute(level,bridge) {
+  const nodes=bridge.nodes,graph=new Map(nodes.map(n=>[n.id,[]]));
+  const railNodes=nodes.filter(n=>bridge.beams.some(e=>e.type==='deck'&&(e.a===n.id||e.b===n.id)));
+  for(const e of bridge.beams.filter(e=>e.type==='deck')) {
+    graph.get(e.a).push({id:e.b,beam:e.id});graph.get(e.b).push({id:e.a,beam:e.id});
+  }
+  // Terrain can carry the train where it reaches the nominal track height.
+  const onGround=n=>n.y>=-0.05&&terrainAt(level,n.x)>=n.y-0.15;
+  const groundBetween=(a,b)=>{
+    for(let x=a;x<=b;x+=0.2)if(terrainAt(level,x)<-0.05)return false;return true;
+  };
+  const sorted=railNodes.filter(onGround).sort((a,b)=>a.x-b.x);
+  for(let i=1;i<sorted.length;i++)if(groundBetween(sorted[i-1].x,sorted[i].x)){
+    graph.get(sorted[i-1].id).push({id:sorted[i].id,beam:null});graph.get(sorted[i].id).push({id:sorted[i-1].id,beam:null});
+  }
+  const start=railNodes.filter(n=>n.x<=level.left+0.05||(onGround(n)&&groundBetween(level.left,n.x)));
+  const end=new Set(railNodes.filter(n=>n.x>=level.right-0.05||(onGround(n)&&groundBetween(n.x,level.right))).map(n=>n.id));
+  const queue=start.map(n=>({id:n.id,path:[]})),visited=new Set();
+  while(queue.length){const q=queue.shift();if(visited.has(q.id))continue;visited.add(q.id);
+    if(end.has(q.id))return q.path;
+    const a=nodes.find(n=>n.id===q.id);
+    for(const edge of graph.get(q.id)) {const b=nodes.find(n=>n.id===edge.id);
+      if(b.x>a.x+0.01&&Math.abs(b.y-a.y)/(b.x-a.x)<=1)queue.push({id:b.id,path:[...q.path,{a:a.id,b:b.id,beam:edge.beam}]});
+    }
+  }
+  return null;
+}
+export class Simulation {
+  constructor(level,bridge,weight=1) {
+    this.level=level;this.design=copy(bridge);this.time=0;this.weight=weight;
+    this.nodes=bridge.nodes.map(n=>({...n,x0:n.x,y0:n.y,vx:0,vy:0,mass:0.35,fx:0,fy:0}));
+    this.byId=new Map(this.nodes.map(n=>[n.id,n]));
+    this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
+      if(!a.fixed)a.mass+=length*.08;if(!b.fixed)b.mass+=length*.08;
+      return {...e,length,stress:0,broken:false};});
+    this.edgeMap=new Map(this.beams.map(e=>[e.id,e]));
+    this.route=deckRoute(level,bridge);this.trainX=level.left-5;this.trainY=0;this.status='running';this.reason='';this.peak=0;this.broken=0;
+    if(!this.route?.length){this.status='failed';this.reason='Falta un tauler continu entre les dues ribes. Marca els trams transitables amb l’eina Tauler.';}
+    this.trainMass=Math.max(4,Math.min(24,(level.source.trainWeight||40000)/5000))*weight;
+  }
+  fail(reason){if(this.status==='running'){this.status='failed';this.reason=reason;}}
+  railAt(x){
+    const s=this.route?.find(s=>{const a=this.byId.get(s.a),b=this.byId.get(s.b);return x>=a.x0-0.001&&x<=b.x0+0.001;});
+    if(!s)return {y:0,ground:true};
+    const a=this.byId.get(s.a),b=this.byId.get(s.b),e=this.edgeMap.get(s.beam);
+    if(e?.broken)return {y:-100,broken:true};
+    const t=Math.max(0,Math.min(1,(x-a.x0)/(b.x0-a.x0)));
+    return {a,b,t,y:a.y*(1-t)+b.y*t,ground:!s.beam,designY:a.y0*(1-t)+b.y0*t};
+  }
+  step(dt=RULES.step) {
+    if(this.status!=='running')return;
+    this.time+=dt;
+    for(const n of this.nodes){n.fx=0;n.fy=-RULES.gravity*n.mass;}
+    if(this.time>0.8){
+      this.trainX+=(this.level.right-this.level.left+10)/12*dt;
+      for(const offset of [0,1.3,2.6,3.9]) {
+        const x=this.trainX-offset;
+        if(x<this.level.left||x>this.level.right)continue;
+        const rail=this.railAt(x);
+        if(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag){this.fail('El tren ha perdut el suport del tauler. Reforça el pont amb triangles.');return;}
+        if(!rail.ground&&rail.a){const load=this.trainMass*RULES.gravity/4;rail.a.fy-=load*(1-rail.t);rail.b.fy-=load*rail.t;}
+      }
+      this.trainY=this.railAt(this.trainX).y;
+    }
+    for(const e of this.beams){if(e.broken)continue;const a=this.byId.get(e.a),b=this.byId.get(e.b);
+      const dx=b.x-a.x,dy=b.y-a.y,len=Math.max(.001,Math.hypot(dx,dy)),nx=dx/len,ny=dy/len;
+      const extension=len-e.length,relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+      const force=RULES.stiffness*extension+RULES.damping*relative;
+      const strength=RULES.strength/(1+e.length*e.length/30);
+      e.stress=RULES.stiffness*extension/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
+      if(Math.abs(e.stress)>1){e.broken=true;this.broken++;continue;}
+      a.fx+=force*nx;a.fy+=force*ny;b.fx-=force*nx;b.fy-=force*ny;
+    }
+    for(const n of this.nodes){if(n.fixed)continue;
+      n.vx=(n.vx+n.fx/n.mass*dt)*Math.exp(-1.5*dt);n.vy=(n.vy+n.fy/n.mass*dt)*Math.exp(-1.5*dt);
+      n.x+=n.vx*dt;n.y+=n.vy*dt;
+      const floor=terrainAt(this.level,n.x);
+      // Ground contact also makes overhang and single-anchor levels playable.
+      if(n.y<floor&&n.y0>=terrainAt(this.level,n.x0)-0.1){n.y=floor;n.vy=Math.max(0,-n.vy*.05);n.vx*=.85;}
+      if(!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>1000||Math.abs(n.y)>1000){this.fail('La construcció és inestable. Torna a editar el pont.');return;}
+    }
+    if(this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
+    if(this.time>20)this.fail('El tren no ha pogut completar el recorregut.');
+  }
+}
