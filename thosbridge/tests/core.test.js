@@ -7,11 +7,22 @@ import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
 import {assessBridge,stressHeatColor,didacticIndicators} from '../core.js';
-import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,nodeAt,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
+import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,nodeAt,connectionPreview,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
 function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
+test('connection preview agrees with actual junction creation and does not alter the bridge',()=>{
+  const level={...copy(first),budget:1000},b=emptyBridge(level);
+  addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level);const before=copy(b);
+  assert.equal(connectionPreview(b,{x:-2,y:0}).kind,'node');
+  assert.equal(connectionPreview(b,{x:0,y:1}).kind,'new');
+  const preview=connectionPreview(b,{x:0,y:0});assert.equal(preview.kind,'junction');assert.equal(preview.beams.length,1);
+  assert.deepEqual(b,before);
+  assert.equal(addBeam(b,{x:0,y:2},{x:0,y:0},'bar',level),null);
+  assert.equal(connectionPreview(b,{x:0,y:0}).kind,'node');
+  const node=nodeAt(b,{x:0,y:0});assert.equal(b.beams.filter(e=>e.a===node.id||e.b===node.id).length,3);
+});
 test('canvas annotations select at most one representative of each concept',()=>{
   const s={mode:'train',active:true,maxDeckDrop:{node:'n0',x:0,y:-.2,y0:0,amount:.2},beams:[
     {id:'b0',type:'bar',length:4,stress:-.6,broken:false},

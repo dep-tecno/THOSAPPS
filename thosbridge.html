@@ -6,7 +6,7 @@
   <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
   <title>THOSBRIDGE · Estructures i ponts</title>
   <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-fletxes-v18">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-visual-v19">
 </head>
 <body>
   <header>
@@ -87,7 +87,7 @@
       <p><b>Test d’esforços:</b> groc → taronja → vermell, de poc esforç a prop del límit, tant en tracció com en compressió.</p><div class="stress-scale heat-scale"></div><div class="scale-labels"><span>Poc esforç</span><span>Al límit</span></div>
       <p><b>Durant el pas del tren:</b> vermell indica compressió i blau indica tracció. El color s’intensifica prop del límit; al tauler es veu entre les vores turqueses.</p><div class="stress-scale"></div><div class="scale-labels"><span>Compressió</span><span>Tracció</span></div>
     </div>
-    <h3>Targetes i vista</h3>
+    <h3>Targetes i vista</h3><p><b>Connexions:</b> en construir, el cercle verd amb una marca indica un node existent o una unió real sobre un tram. El cercle gris discontinu indica un punt nou. Es destaquen els trams que es dividiran; el pressupost es comprova quan dibuixes.</p><p><b>Trams de la targeta:</b> passa el cursor per un tram, o arriba al seu botó amb Tab, per ressaltar-lo al pont. El ressaltat no modifica la construcció ni la prova.</p>
     <p><b>Targetes informatives:</b> arrossega’n la capçalera per moure-les. Les pots plegar independentment amb −, moure amb les fletxes quan la capçalera té el focus, amagar amb ▣ i recuperar la posició inicial amb ⤢. Es mantenen visibles mentre el tren corre.</p>
     <p><b>Zoom:</b> − allunya, + apropa i ⌖ enquadra el pont. També pots fer zoom amb la roda del ratolí.</p>
     <p><b>Dreceres:</b> B barra · T tauler · V seleccionar · E esborrar · Supr esborrar selecció · Esc cancel·lar tram · Ctrl+Z desfer · Ctrl+Y refer · S test d’esforços · Espai tren/pausar. Roda del ratolí: zoom. Botó central o Alt + arrossegar: moure la vista. Botó dret: esborrar un tram.</p>
@@ -98,6 +98,6 @@
     <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
     <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
   </dialog>
-  <script type="module" src="thosbridge/app.js?v=20261009-fletxes-v18"></script>
+  <script type="module" src="thosbridge/app.js?v=20261009-visual-v19"></script>
 </body>
 </html>

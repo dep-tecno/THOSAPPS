@@ -41,6 +41,15 @@ export function emptyBridge(level) {
 }
 export const cost = bridge => bridge.beams.length * RULES.beamCost;
 export function nodeAt(bridge,p) {return bridge.nodes.find(n=>Math.hypot(n.x-p.x,n.y-p.y)<0.025);}
+function insideBeam(bridge,e,p){
+  const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b),dx=b.x-a.x,dy=b.y-a.y;
+  const t=((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy);
+  return t>0&&t<1&&Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy)<=1e-6;
+}
+export function connectionPreview(bridge,p){
+  const node=nodeAt(bridge,p),beams=bridge.beams.filter(e=>e.a!==node?.id&&e.b!==node?.id&&insideBeam(bridge,e,node||p));
+  return {kind:beams.length?'junction':node?'node':'new',point:node||p,beams:beams.map(e=>e.id)};
+}
 function nextId(items,prefix){let i=0;while(items.some(item=>item.id===prefix+i))i++;return prefix+i;}
 function connectPoint(bridge,p){
   let node=nodeAt(bridge,p);
@@ -48,9 +57,7 @@ function connectPoint(bridge,p){
   // Only explicit endpoints make junctions; geometric crossings alone stay separate.
   for(const edge of [...bridge.beams]){
     if(edge.a===node.id||edge.b===node.id)continue;
-    const a=bridge.nodes.find(n=>n.id===edge.a),b=bridge.nodes.find(n=>n.id===edge.b);
-    const dx=b.x-a.x,dy=b.y-a.y,t=((node.x-a.x)*dx+(node.y-a.y)*dy)/(dx*dx+dy*dy);
-    if(t<=0||t>=1||Math.hypot(node.x-a.x-t*dx,node.y-a.y-t*dy)>1e-6)continue;
+    if(!insideBeam(bridge,edge,node))continue;
     const oldEnd=edge.b;edge.b=node.id;
     if(!bridge.beams.some(e=>(e.a===node.id&&e.b===oldEnd)||(e.a===oldEnd&&e.b===node.id)))
       bridge.beams.push({id:nextId(bridge.beams,'b'),a:node.id,b:oldEnd,type:edge.type});

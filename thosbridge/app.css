@@ -33,5 +33,6 @@ dialog{color:#d7e5ee;background:#172936;border:1px solid #395767;border-radius:1
 @keyframes effort-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(prefers-reduced-motion:reduce){.critical-fill{animation:none;transition:none}}
 #critical{max-height:220px;overflow-y:auto;scrollbar-width:thin}
+.critical-link{display:block;width:100%;padding:0;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;text-align:left;white-space:normal;line-height:1.5}.critical-link:hover{background:transparent;color:#f2d78c}#critical li:hover,#critical li:focus-within{background:#203846;border-radius:4px}
 #result.passed .card-head{background:#17603f}#result.failed .card-head{background:#8a2d33}#result.passed .card-drag-handle,#result.failed .card-drag-handle{color:#fff}
 #pack{width:100px}
