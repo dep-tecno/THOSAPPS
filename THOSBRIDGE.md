@@ -183,7 +183,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-fletxes-v17`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-fletxes-v18`.
 
 ### Ordres tècniques
 
@@ -199,7 +199,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 40 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 42 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
@@ -243,4 +243,10 @@ La fletxa màxima és una mesura vertical lila entre la cota original i el punt 
 
 El vinclament es representa amb una petita fletxa lateral discontínua groga, explícitament etiquetada com a orientatiu, sobre una barra no trencada de longitud mínima 3,375 u i compressió superior al 3,5%. És una il·lustració didàctica, no un esforç calculat ni una corba de deformació simulada. No proporciona càrrega crítica, no dóna percentatge i no altera la física. Es prioritza compressió per longitud al quadrat per escollir un sol exemple.
 
-L’animació és discreta: desplaçament curt de les fletxes axials, oscil·lació curta de l’indicador lateral i canvi suau d’opacitat a la mesura vertical, sense alterar la geometria del pont. Es respecta la preferència de reduir moviment i la pausa. El botó ◉ amaga també les fletxes. Els textos s’intenten separar per evitar solapaments. Les comprovacions visuals queden a càrrec de l’usuari.
+L’animació és discreta: desplaçament curt de les fletxes axials i oscil·lació curta de l’indicador lateral, sense alterar la geometria del pont. Es respecta la preferència de reduir moviment i la pausa. El botó ◉ amaga també les fletxes. Les comprovacions visuals queden a càrrec de l’usuari.
+
+### Fletxes sense textos i amb seguiment del tren (v18)
+
+Per petició de l’usuari, les indicacions noves del llenç només dibuixen fletxes, sense etiquetes, valors ni percentatges. S’elimina la pulsació d’opacitat. Els colors i el significat es descriuen a l’ajuda; el vinclament continua sent només orientatiu. La targeta conserva les dades numèriques.
+
+Durant el tren s’utilitza un filtratge exponencial de l’esforç actual amb constant de temps de 0,2 segons de simulació, aplicat només a les indicacions. La selecció de trams s’actualitza cada 500 ms de pantalla i conserva el representant mentre un altre no el superi en més del 20%, sempre que continuï treballant en el mateix sentit. Els trams trencats deixen de mostrar fletxes immediatament. Es mantenen els esforços i els criteris de fallada originals, sense filtrar la física. Al mapa previ i al resultat es representen els pics registrats. L’animació de les fletxes té amplitud de només 1,5 píxels i opacitat constant.

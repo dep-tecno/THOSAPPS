@@ -2,13 +2,14 @@
 export const RULES = Object.freeze({beamCost:100, maxLength:4.5, stiffness:1800,
   gravity:10, strength:260, maxSag:0.7, step:1/240, damping:5, maxNodes:700, maxBeams:1500});
 export const copy = value => JSON.parse(JSON.stringify(value));
-export function didacticIndicators(simulation){
+export function didacticIndicators(simulation,previous=[]){
   if(!simulation)return [];
   const recorded=simulation.mode==='stress'||!simulation.active;
+  const loads=e=>{const current=e.visualStress??e.stress;return recorded?{tensile:e.peakTension||0,compressive:e.peakCompression||0}:{tensile:Math.max(0,current),compressive:Math.max(0,-current)};};
   let tension=null,compression=null,buckling=null;
   for(const e of simulation.beams){
     if(e.broken&&simulation.mode!=='stress')continue;
-    const tensile=recorded?e.peakTension:Math.max(0,e.stress),compressive=recorded?e.peakCompression:Math.max(0,-e.stress);
+    const {tensile,compressive}=loads(e);
     if(tensile>.035&&tensile>(tension?.value||0))tension={kind:'tension',beam:e.id,value:tensile};
     if(compressive>.035&&compressive>(compression?.value||0))compression={kind:'compression',beam:e.id,value:compressive};
     if(e.type==='bar'&&!e.broken&&e.length>=RULES.maxLength*.75&&compressive>.035){
@@ -17,7 +18,15 @@ export function didacticIndicators(simulation){
     }
   }
   const deflection=simulation.maxDeckDrop?.amount>.025?{kind:'deflection',...simulation.maxDeckDrop}:null;
-  return [tension,compression,deflection,buckling].filter(Boolean);
+  return [tension,compression,deflection,buckling].filter(Boolean).map(candidate=>{
+    if(candidate.kind==='deflection')return candidate;
+    const old=previous.find(item=>item.kind===candidate.kind),beam=old&&simulation.beams.find(e=>e.id===old.beam);
+    if(!beam||(beam.broken&&simulation.mode!=='stress')||(candidate.kind==='buckling'&&beam.broken))return candidate;
+    const values=loads(beam),value=candidate.kind==='tension'?values.tensile:values.compressive;
+    const oldScore=candidate.kind==='buckling'?value*beam.length*beam.length:value,newScore=candidate.score||candidate.value;
+    if(value>.025&&newScore<=oldScore*1.2)return candidate.kind==='buckling'?{...old,score:oldScore}:{...old,value};
+    return candidate;
+  });
 }
 export function terrainAt(level,x) {
   const t=level.terrain;
@@ -199,7 +208,7 @@ export class Simulation {
     this.byId=new Map(this.nodes.map(n=>[n.id,n]));
     this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
       if(!a.fixed)a.mass+=length*.08;if(!b.fixed)b.mass+=length*.08;
-      return {...e,length,stress:0,peakStress:0,peakTension:0,peakCompression:0,broken:false};});
+      return {...e,length,stress:0,visualStress:0,peakStress:0,peakTension:0,peakCompression:0,broken:false};});
     this.edgeMap=new Map(this.beams.map(e=>[e.id,e]));
     this.deckNodeIds=new Set(this.beams.filter(e=>e.type==='deck').flatMap(e=>[e.a,e.b]));
     this.maxDeckDrop=null;
@@ -267,6 +276,8 @@ export class Simulation {
       const force=RULES.stiffness*extension+RULES.damping*relative;
       const strength=RULES.strength/(1+e.length*e.length/30);
       e.stress=RULES.stiffness*extension/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
+      // Smooth only the arrows; forces, breakage and numerical results use raw stress.
+      e.visualStress+=(e.stress-e.visualStress)*(1-Math.exp(-dt/.2));
       e.peakTension=Math.max(e.peakTension,e.stress);
       e.peakCompression=Math.max(e.peakCompression,-e.stress);
       if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;

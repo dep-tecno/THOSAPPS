@@ -31,6 +31,23 @@ test('canvas directions follow current axial stress during the train and recorde
   assert.equal(didacticIndicators(s).find(m=>m.kind==='compression').value,.4);
   beam.length=2;assert.equal(didacticIndicators(s).some(m=>m.kind==='buckling'),false);
 });
+test('arrow representatives stay on a bar for small load differences and switch for a significant change',()=>{
+  const s={mode:'train',active:true,beams:[{id:'b0',type:'bar',length:2,stress:.5,broken:false},{id:'b1',type:'bar',length:2,stress:.49,broken:false}]};
+  const first=didacticIndicators(s);s.beams[1].stress=.55;
+  assert.equal(didacticIndicators(s,first).find(m=>m.kind==='tension').beam,'b0');
+  s.beams[1].stress=.7;assert.equal(didacticIndicators(s,first).find(m=>m.kind==='tension').beam,'b1');
+  s.beams[0].stress=-.8;s.beams[1].stress=0;
+  const later=didacticIndicators(s,first);assert.equal(later.some(m=>m.kind==='tension'),false);assert.equal(later.find(m=>m.kind==='compression').beam,'b0');
+});
+test('arrow smoothing follows a changing load without changing raw stress or recorded peaks',()=>{
+  const b=demo(first),s=new Simulation(first,b),e=s.beams.find(e=>e.type==='bar');
+  const node=s.byId.get(e.b);node.y+=.01;s.step();
+  assert.ok(Math.abs(e.visualStress)<Math.abs(e.stress));
+  assert.equal(e.peakStress,e.stress);
+  const source={mode:'train',active:true,beams:[{id:'b0',type:'bar',length:2,stress:-.6,visualStress:.1,broken:false}]};
+  assert.equal(didacticIndicators(source)[0].kind,'tension');
+  source.beams[0].visualStress=-.2;assert.equal(didacticIndicators(source)[0].kind,'compression');
+});
 test('canvas deck drop retains its measured position and excludes collapse and non-deck nodes',()=>{
   const b=demo(first),s=new Simulation(first,b),n=s.nodes.find(n=>!n.fixed&&s.deckNodeIds.has(n.id)),other=s.nodes.find(n=>!n.fixed&&!s.deckNodeIds.has(n.id));
   n.y=n.y0-.2;other.y=other.y0-2;s.step(0);
