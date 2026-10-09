@@ -183,7 +183,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-unions-v13`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-traccio-v14`.
 
 ### Ordres tècniques
 
@@ -199,7 +199,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 35 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 36 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
@@ -224,3 +224,7 @@ Començar o acabar una barra o tauler sobre un tram existent crea o reutilitza u
 Es manté el cost de 100 per tram resultant: dividir un tram afegeix 100 al pressupost utilitzat. L’operació completa, incloent les divisions als dos extrems, es comprova abans d’aplicar-la. Si supera pressupost o límits, no modifica el pont. Repintar tauler sobre un tram més llarg reutilitza les parts dividides i evita crear un segon tauler superposat.
 
 Els fitxers desats no es transformen automàticament. Aquesta revisió s’ha comprovat amb construccions noves: transmissió real de càrrega en una unió central, reutilització de nodes, creuaments independents, pressupost atòmic i tauler sense duplicació. Les proves visuals les fa l’usuari.
+
+### Indicador de tracció (v14)
+
+La targeta Prova i esforços incorpora una barra blava animada de tracció màxima, amb percentatge respecte del límit i tram associat. Manté els cinc trams més carregats i els seus tipus d’esforç. La tracció es registra independentment del pic absolut, perquè una compressió posterior més gran a la mateixa barra no esborri la tracció anterior. El registre es reinicia a cada prova. Sense prova mostra pendent; si no hi ha tracció mostra 0% i no detectada. L’amplada es limita al 100%, però la xifra pot superar-lo. Es respecta la preferència de reduir moviment.

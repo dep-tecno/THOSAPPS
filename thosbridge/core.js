@@ -182,7 +182,7 @@ export class Simulation {
     this.byId=new Map(this.nodes.map(n=>[n.id,n]));
     this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
       if(!a.fixed)a.mass+=length*.08;if(!b.fixed)b.mass+=length*.08;
-      return {...e,length,stress:0,peakStress:0,broken:false};});
+      return {...e,length,stress:0,peakStress:0,peakTension:0,broken:false};});
     this.edgeMap=new Map(this.beams.map(e=>[e.id,e]));
     this.route=deckRoute(level,bridge);this.trainX=level.left-5;this.trainY=0;this.status='running';this.reason='';this.peak=0;this.broken=0;
     if(this.mode==='train'&&!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Tauler o fes servir Construir tauler horitzontal.';}
@@ -248,6 +248,7 @@ export class Simulation {
       const force=RULES.stiffness*extension+RULES.damping*relative;
       const strength=RULES.strength/(1+e.length*e.length/30);
       e.stress=RULES.stiffness*extension/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
+      e.peakTension=Math.max(e.peakTension,e.stress);
       if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;
       if(Math.abs(e.stress)>1){e.broken=true;this.broken++;continue;}
       a.fx+=force*nx;a.fy+=force*ny;b.fx-=force*nx;b.fy-=force*ny;

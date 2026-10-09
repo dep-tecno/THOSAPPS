@@ -6,7 +6,7 @@
   <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
   <title>THOSBRIDGE · Estructures i ponts</title>
   <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-unions-v13">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-traccio-v14">
 </head>
 <body>
   <header>
@@ -56,7 +56,9 @@
         <article class="info-card" id="simulationCard" data-info>
           <div class="card-head"><button class="card-drag-handle" title="Arrossega la targeta de prova">⠿ Prova i esforços</button><button class="card-collapse" aria-label="Plega la targeta">−</button></div>
           <div class="card-body"><label for="weight">Pes del tren <select id="weight"><option value="0.5">50%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label><label for="speed">Velocitat <select id="speed"><option value="1">Normal</option><option value="2">×2</option><option value="4">×4</option></select></label>
-            <p id="testStage">Construeix el pont i fes el test d’esforços.</p><p id="simStats">Sense prova en marxa.</p><h2>Trams més carregats</h2><ul id="critical"><li>El test indicarà on pateix l’estructura.</li></ul>
+            <p id="testStage">Construeix el pont i fes el test d’esforços.</p><p id="simStats">Sense prova en marxa.</p>
+            <div class="tension-summary"><span id="tensionLabel">Tracció màxima · pendent de prova</span><div id="tensionMeter" class="critical-meter" role="progressbar" aria-label="Tracció màxima respecte del límit" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="tensionFill" class="critical-fill"></i></div><small>Tracció: la barra s’estira. Màxim registrat durant la prova.</small></div>
+            <h2>Trams més carregats</h2><ul id="critical"><li>El test indicarà on pateix l’estructura.</li></ul>
           </div>
         </article>
         <article class="info-card" id="selection" hidden>
@@ -94,6 +96,6 @@
     <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
     <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
   </dialog>
-  <script type="module" src="thosbridge/app.js?v=20261009-unions-v13"></script>
+  <script type="module" src="thosbridge/app.js?v=20261009-traccio-v14"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261009-unions-v13';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-unions-v13';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-unions-v13';
-import {mountCards} from './cards.js?v=20261009-unions-v13';
+import {levels as originalLevels} from './levels.js?v=20261009-traccio-v14';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-traccio-v14';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-traccio-v14';
+import {mountCards} from './cards.js?v=20261009-traccio-v14';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -116,6 +116,12 @@ function criticalBeams(){return simulation?simulation.beams.filter(e=>Math.abs(e
 function updateStats(){
   $('testStage').textContent=!simulation?'Construeix → Test d’esforços → Tren':simulation.mode==='train'?'Càrrega mòbil: tren':!simulation.beams.some(e=>e.type==='deck')?'Mapa del pes propi: sense tauler per carregar':'Mapa sota càrrega repartida · pes '+fmt(simulation.weight*100)+'%';
   $('simStats').textContent=!simulation?'Primer construeix el tauler i reforça’l amb triangles.':simulation.mode==='stress'?'Esforç màxim '+fmt(simulation.peak*100)+'%'+(simulation.analysisWarning?' · Avís amb càrrega al '+fmt(simulation.loadFactor*100)+'% · Cal reforçar':' · Observa els colors del pont'):'Temps '+fmt(simulation.time)+' s · Esforç màxim '+fmt(simulation.peak*100)+'% · Trencaments '+simulation.broken;
+  const tension=simulation?.beams.reduce((best,e)=>e.peakTension>(best?.peakTension||0)?e:best,null),value=tension?.peakTension||0;
+  const tensionText=!simulation?'Tracció màxima · pendent de prova':!tension?'Tracció màxima · 0% · no detectada':'Tracció màxima · '+fmt(value*100)+'% · Tram '+(Number(tension.id.slice(1))+1);
+  $('tensionLabel').textContent=tensionText;
+  $('tensionFill').style.width=Math.min(100,value*100)+'%';
+  $('tensionMeter').setAttribute('aria-valuenow',String(Math.round(Math.min(100,value*100))));
+  $('tensionMeter').setAttribute('aria-valuetext',tensionText);
   const list=$('critical'),beams=criticalBeams();
   if(statsSimulation!==simulation){statsSimulation=simulation;criticalRows.clear();list.replaceChildren();}
   if(!beams.length){if(!list.querySelector('[data-empty]')){list.replaceChildren();const li=document.createElement('li');li.dataset.empty='true';li.textContent='Es mostraran durant la prova.';list.append(li);}return;}

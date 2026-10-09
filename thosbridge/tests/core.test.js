@@ -12,6 +12,18 @@ const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(impor
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
 function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
+test('maximum tension remains visible when the same bar later has a larger compression peak',()=>{
+  const level={...copy(first),budget:1000},b=emptyBridge(level);
+  assert.equal(addBeam(b,{x:0,y:2},{x:2,y:2},'bar',level),null);
+  const s=new Simulation(level,b,1,{mode:'stress'}),edge=s.beams[0],end=s.byId.get(edge.b);
+  end.x=2.01;s.step(0);const tension=edge.peakTension;
+  assert.ok(tension>0);assert.equal(edge.peakStress,tension);
+  end.x=1.98;s.step(0);
+  assert.ok(edge.peakStress<0);assert.ok(Math.abs(edge.peakStress)>tension);
+  assert.equal(edge.peakTension,tension);
+  const fresh=new Simulation(level,b,1,{mode:'stress'});
+  assert.equal(fresh.beams[0].peakTension,0);
+});
 test('an endpoint on a deck makes a shared joint that carries the train load',()=>{
   const level={...copy(first),left:-2,right:2,budget:1000,terrain:[{x:-10,y:-10},{x:10,y:-10}],anchors:[{x:-2,y:0},{x:2,y:0},{x:0,y:-2}]};
   const b=emptyBridge(level);
