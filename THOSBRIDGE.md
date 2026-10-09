@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v8: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v9: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -83,7 +83,7 @@ Al primer nivell de cadascun dels dos paquets hi ha un exemple triangular de cin
 
 El botó **◈ Test d’esforços** mostra un mapa sobre el disseny quiet, sense animació ni esperes pel pas d’un tren. El càlcul es fa en una còpia aïllada: aplica el pes propi i una càrrega vertical repartida pel tauler, proporcional a la longitud de cada tram i repartida entre els seus extrems. També es pot provar una estructura que encara no tingui un camí continu.
 
-Totes les barres i el centre dels trams de tauler es pinten amb una escala **groc → taronja → vermell**, segons el valor absolut del màxim esforç relatiu: groc a 0%, taronja a 50% i vermell a 100% o més. La tracció i la compressió comparteixen aquesta escala de càrrega; el seu signe es descriu a la targeta de prova. Es destaquen els tres trams més carregats amb identificador i percentatge del límit. Les vores turqueses del tauler es conserven.
+Totes les barres i el centre dels trams de tauler es pinten amb una escala **groc → taronja → vermell**, segons el valor absolut del màxim esforç relatiu: groc a 0%, taronja a 50% i vermell a 100% o més. La tracció i la compressió comparteixen aquesta escala de càrrega; el seu signe es descriu a la targeta de prova. Es destaquen els cinc trams més carregats amb identificador i percentatge del límit. Les vores turqueses del tauler es conserven.
 
 Internament es reutilitza el motor numèric sobre la còpia, fins a 6 segons de temps de càlcul simulat, executats seguits sense animació: 0,8 segons de pes propi i 3 segons d’augment gradual de càrrega, seguits d’estabilització. No és un nou resolutor estàtic. Si supera el límit d’un tram o un node lliure baixa més de 0,7 unitats, el càlcul s’atura amb avís abans d’arribar necessàriament a tota la càrrega. Per presentar el mapa, es restitueixen les coordenades originals i es retenen els màxims d’esforç; no es dibuixen trams trencats ni una caiguda.
 
@@ -165,7 +165,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-effort-meters-v8`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-five-members-v9`.
 
 ### Ordres tècniques
 

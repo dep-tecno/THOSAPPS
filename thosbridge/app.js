@@ -1,6 +1,6 @@
-import {levels} from './levels.js?v=20261009-effort-meters-v8';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-effort-meters-v8';
-import {mountCards} from './cards.js?v=20261009-effort-meters-v8';
+import {levels} from './levels.js?v=20261009-five-members-v9';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-five-members-v9';
+import {mountCards} from './cards.js?v=20261009-five-members-v9';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -109,7 +109,7 @@ function redoAction(){if(simulation||!redo.length)return;undo.push(copy(bridge))
 function beginTest(mode){start=null;selected=null;persist();simulation=mode==='stress'?assessBridge(level,bridge,Number($('weight').value)):new Simulation(level,bridge,Number($('weight').value));paused=false;accumulator=0;$('result').hidden=true;if(mode==='stress'){stress=true;showCards(true);}updateStats();update();if(!simulation.active)finish();else status('Prova en marxa: pes propi i pas del tren.');}
 function run(){beginTest('train');}
 function stressRun(){beginTest('stress');}
-function criticalBeams(){return simulation?simulation.beams.filter(e=>Math.abs(e.peakStress)>.01).sort((a,b)=>Math.abs(b.peakStress)-Math.abs(a.peakStress)).slice(0,3):[];}
+function criticalBeams(){return simulation?simulation.beams.filter(e=>Math.abs(e.peakStress)>.01).sort((a,b)=>Math.abs(b.peakStress)-Math.abs(a.peakStress)).slice(0,5):[];}
 function updateStats(){
   $('testStage').textContent=!simulation?'Construeix → Test d’esforços → Tren':simulation.mode==='train'?'Càrrega mòbil: tren':!simulation.beams.some(e=>e.type==='deck')?'Mapa del pes propi: sense tauler per carregar':'Mapa sota càrrega repartida · pes '+fmt(simulation.weight*100)+'%';
   $('simStats').textContent=!simulation?'Primer construeix el tauler i reforça’l amb triangles.':simulation.mode==='stress'?'Esforç màxim '+fmt(simulation.peak*100)+'%'+(simulation.analysisWarning?' · Avís amb càrrega al '+fmt(simulation.loadFactor*100)+'% · Cal reforçar':' · Observa els colors del pont'):'Temps '+fmt(simulation.time)+' s · Esforç màxim '+fmt(simulation.peak*100)+'% · Trencaments '+simulation.broken;

@@ -30,3 +30,4 @@ dialog{color:#d7e5ee;background:#172936;border:1px solid #395767;border-radius:1
 .critical-meter{height:8px;margin-top:7px;background:#0a1b26;border:1px solid #355060;border-radius:5px;overflow:hidden}.critical-fill{display:block;height:100%;border-radius:4px;transform-origin:left;animation:effort-fill .7s ease-out both;transition:width .3s ease-out,background-color .3s ease-out}
 @keyframes effort-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(prefers-reduced-motion:reduce){.critical-fill{animation:none;transition:none}}
+#critical{max-height:220px;overflow-y:auto;scrollbar-width:thin}
