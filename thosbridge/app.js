@@ -1,10 +1,11 @@
-import {levels} from './levels.js?v=20261009-pack-names-v11';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-pack-names-v11';
-import {mountCards} from './cards.js?v=20261009-pack-names-v11';
+import {levels as originalLevels} from './levels.js?v=20261009-no-badis-v12';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-no-badis-v12';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-no-badis-v12';
+import {mountCards} from './cards.js?v=20261009-no-badis-v12';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
-const packNames={old:'No miris',new:'No cau'};
+const levels=[...originalLevels,...noBadisLevels],packNames={old:'No miris',new:'No cau',[noBadisFamily.id]:noBadisFamily.name};
 let saved={version:1,selectedLevel:'new-01',drafts:{},completed:{}},storageOK=true;
 try {const raw=localStorage.getItem(STORAGE);if(raw){const s=JSON.parse(raw);if(s.version===1&&s.drafts&&typeof s.drafts==='object')saved={...saved,...s,completed:s.completed||{}};}}
 catch{storageOK=false;}
@@ -38,7 +39,8 @@ function update(){
   $('budget').textContent=fmt(c)+' / '+fmt(level.budget);$('budgetBar').style.width=(c/level.budget*100)+'%';
   $('budgetBar').style.background=c===level.budget?'#f4c25c':'#24c0c4';
   $('remaining').textContent='Queden '+fmt(level.budget-c)+' · 100 per tram';$('beamCount').textContent=bridge.beams.length;$('span').textContent=fmt(level.right-level.left)+' u';
-  $('demo').hidden=level.number!==1;
+  $('demo').hidden=level.number!==1||!['old','new'].includes(level.pack);
+  $('levelOrigin').textContent=level.source.author?'Nivell '+level.number+' de '+packNames[level.pack]+' · Original '+level.source.originalLevel+' · Autor: '+level.source.author+' · Conversió al format BBG: '+level.source.convertedBy+'.':'Nivells originals de Bridge Building Game · Alex Austin / Cryptic Sea.';
   for(const b of document.querySelectorAll('[data-tool]')){b.setAttribute('aria-pressed',String(b.dataset.tool===tool));b.disabled=running;}
   $('undo').disabled=running||!undo.length;$('redo').disabled=running||!redo.length;
   for(const id of ['autoDeck','clear','demo','open','weight'])$(id).disabled=running;

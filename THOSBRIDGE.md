@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v11: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v12: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -21,6 +21,18 @@ Construir una estructura amb un pressupost limitat i comprovar si un tren pot tr
 Interfície en català, execució al navegador i projectes desats localment. La primera versió prioritza un camí senzill: triar nivell, construir el pont, prémer **▶ Tren**, observar i millorar.
 
 ## Nivells recuperats
+
+### Incorporació per famílies
+
+S’incorpora una família cada vegada i l’usuari en fa les proves visuals i de joc abans de continuar amb la següent. **No badis** és la primera família addicional: **24 nivells**, procedents de [BB Classics Map Pack 01](https://www.indiedb.com/games/bridge-builder/addons/bb-classics-map-pack-01). L’app ofereix ara **54 nivells**: No miris (15), No cau (15) i No badis (24).
+
+Els 11 fitxers MP01 són de **Schlumpfine** i els 13 MP02 de **Thomas McGuire**. **Captain Smith** els va convertir al format de Bridge Building Game. El readme del paquet explica que n’exclou sis abans de distribuir-lo: MP01L10–13, MP02L01 i MP02L05. THOSBRIDGE incorpora els 24 fitxers disponibles, ordenats pel nom original i numerats de l’1 al 24 dins de No badis; no inventa els sis nivells absents. Es conserva el nom original, l’autor, la geometria, el pressupost, els hashes i la procedència de cada fitxer. Els crèdits del nivell seleccionat es poden consultar a l’Ajuda.
+
+Les dades es publiquen a `thosbridge/families/no-badis.js`, separades dels 30 nivells inicials. Els identificadors nous són `no-badis-01` a `no-badis-24`; els identificadors `old-*` i `new-*` es mantenen. La família nova no inclou un botó d’exemple triangular, perquè aquest exemple només està preparat per al primer nivell de No miris i No cau. Els originals descarregats i les altres 13 famílies addicionals continuen locals, pendents de la seva incorporació i revisió.
+
+**No badis: pendent de les proves de l’usuari.** Les comprovacions de conversió i estabilitat numèrica no certifiquen que els 24 nivells siguin resolubles amb les regles del motor web.
+
+### Paquets inicials
 
 - **No miris** (paquet original Old): `level/01-Old/Level01.lvl` a `Level15.lvl`.
 - **No cau** (paquet original New): `level/02-New/01-Level.bgl` a `15-Level.bgl`.
@@ -161,21 +173,24 @@ thosbridge/core.js
 thosbridge/cards.js
 thosbridge/cards.js
 thosbridge/levels.js
+thosbridge/families/no-badis.js
 thosbridge/tests/core.test.js
+thosbridge/tests/no-badis.test.js
 thosbridge/tools/convert-levels.cjs
+thosbridge/tools/convert-no-badis.cjs
 thosbridge/tools/serve.cjs
 thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-pack-names-v11`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-no-badis-v12`.
 
 ### Ordres tècniques
 
 Des de l’arrel de la carpeta de l’app o del repositori:
 
 ```sh
-node --test thosbridge/tests/core.test.js
+node --test thosbridge/tests/*.test.js
 node thosbridge/tools/serve.cjs
 node thosbridge/tools/convert-levels.cjs "ruta/a/Bridge Building Game"
 ```
@@ -184,7 +199,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 28 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 31 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 

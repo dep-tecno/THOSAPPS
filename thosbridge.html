@@ -6,13 +6,13 @@
   <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
   <title>THOSBRIDGE · Estructures i ponts</title>
   <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-pack-names-v11">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-no-badis-v12">
 </head>
 <body>
   <header>
     <a class="brand" href="index.html" title="Torna a THOSAPPS"><span class="brand-icon">╱╲</span><span>THOS<b>BRIDGE</b><small>ESTRUCTURES I PONTS</small></span></a>
     <nav aria-label="Eines de construcció">
-      <select id="pack" aria-label="Paquet de nivells" title="Paquet de nivells"><option value="old">No miris</option><option value="new">No cau</option></select>
+      <select id="pack" aria-label="Família de nivells" title="Família de nivells"><option value="old">No miris</option><option value="new">No cau</option><option value="no-badis">No badis</option></select>
       <select id="level" aria-label="Nivell" title="Nivell"></select>
       <span class="divider"></span>
       <button data-tool="bar" aria-pressed="true" title="Barra estructural (B)">╱ <span>Barra</span></button>
@@ -74,8 +74,8 @@
   <footer><span id="status" role="status" aria-live="polite">Preparat per construir.</span><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Inspirat en Bridge Building Game · Alex Austin / Cryptic Sea</a></footer>
   <input id="file" type="file" accept=".json,application/json" hidden>
   <dialog id="helpDialog"><div class="dialog-heading"><h2>THOSBRIDGE · Ajuda i crèdits</h2><button id="closeHelp" aria-label="Tanca l’ajuda">×</button></div>
-    <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria un dels 30 nivells. Els punts grocs són ancoratges fixos.</li><li>Amb <b>Tauler</b>, uneix els punts del camí del tren. Pots dibuixar d’una riba a l’altra: es divideix automàticament en trams de fins a 4,5 unitats. Si repasses barres existents amb Tauler, passen a ser transitables.</li><li>Amb <b>Barra</b>, afegeix reforços. Clica dos punts o arrossega entre ells. Cada tram costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Tren</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
-    <p>Al primer nivell de cada paquet pots carregar un <b>exemple triangular</b> i provar-lo directament. El tauler automàtic és horitzontal: als nivells amb desnivells, completa o adapta el camí manualment.</p>
+    <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria una família i un dels 54 nivells. Els punts grocs són ancoratges fixos.</li><li>Amb <b>Tauler</b>, uneix els punts del camí del tren. Pots dibuixar d’una riba a l’altra: es divideix automàticament en trams de fins a 4,5 unitats. Si repasses barres existents amb Tauler, passen a ser transitables.</li><li>Amb <b>Barra</b>, afegeix reforços. Clica dos punts o arrossega entre ells. Cada tram costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Tren</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
+    <p>Al primer nivell de No miris i No cau pots carregar un <b>exemple triangular</b> i provar-lo directament. El tauler automàtic és horitzontal: als nivells amb desnivells, completa o adapta el camí manualment.</p>
     <p>Si el pont no aguanta, la simulació continua perquè puguis observar com cau. Pots <b>pausar</b> la caiguda o prémer <b>Editar</b> per recuperar el disseny i reforçar-lo.</p>
     <p><b>Test d’esforços:</b> mostra un mapa immediat sobre el pont quiet, sota el pes propi i una càrrega repartida pel tauler. <b>Groc → taronja → vermell</b> indica de menys a més esforç, tant a les barres com al tauler. Els trams més carregats s’identifiquen també a la targeta de prova. Pots millorar el pont o fer passar el tren; la deformació i la caiguda es veuen quan prems <b>▶ Tren</b>.</p>
     <h3>Llegenda: símbols i colors</h3>
@@ -88,10 +88,12 @@
     <p><b>Zoom:</b> − allunya, + apropa i ⌖ enquadra el pont. També pots fer zoom amb la roda del ratolí.</p>
     <p><b>Dreceres:</b> B barra · T tauler · V seleccionar · E esborrar · Supr esborrar selecció · Esc cancel·lar tram · Ctrl+Z desfer · Ctrl+Y refer · S test d’esforços · Espai tren/pausar. Roda del ratolí: zoom. Botó central o Alt + arrossegar: moure la vista. Botó dret: esborrar un tram.</p>
     <p><b>Desament:</b> recuperació automàtica per nivell en aquest navegador; ↓ descarrega un JSON i ↑ el torna a obrir. Els teus ponts no s’envien a cap servidor.</p>
-    <h3>Origen i autoria</h3><p>THOSBRIDGE és una adaptació web educativa independent, <b>inspirada en Bridge Building Game, creat per Alex Austin (Cryptic Sea)</b>. Els dos paquets de nivells provenen dels fitxers de la versió 1.25 aportats per l’usuari. El programa original i la seva autoria corresponen al seu creador.</p>
+    <h3>Origen i autoria</h3><p>THOSBRIDGE és una adaptació web educativa independent, <b>inspirada en Bridge Building Game, creat per Alex Austin (Cryptic Sea)</b>. No miris i No cau provenen dels fitxers de la versió 1.25 aportats per l’usuari. El programa original i la seva autoria corresponen al seu creador.</p>
+    <p id="levelOrigin"></p>
+    <p><b>No badis:</b> 24 nivells de BB Classics Map Pack 01, creats per <b>Schlumpfine i Thomas McGuire</b> i convertits al format de Bridge Building Game per <b>Captain Smith</b>. <a href="https://www.indiedb.com/games/bridge-builder/addons/bb-classics-map-pack-01" target="_blank" rel="noopener">Procedència de la biblioteca ↗</a></p>
     <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
     <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
   </dialog>
-  <script type="module" src="thosbridge/app.js?v=20261009-pack-names-v11"></script>
+  <script type="module" src="thosbridge/app.js?v=20261009-no-badis-v12"></script>
 </body>
 </html>
