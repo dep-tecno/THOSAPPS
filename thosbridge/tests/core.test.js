@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
+import {assessBridge,stressHeatColor} from '../core.js';
 import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
@@ -134,11 +135,11 @@ test('stress pretest loads the structure without moving a train or changing the 
     assert.ok(s.peak>0);assert.ok(s.beams.some(e=>Math.abs(e.peakStress)>0));assert.deepEqual(b,before);
   }
 });
-test('stress pretest shows an unsupported deck collapsing without requiring a train route',()=>{
+test('stress calculation flags a weak deck immediately without animating a collapse',()=>{
   const b=makeDeck(first,emptyBridge(first)).bridge,s=new Simulation(first,b,1,{mode:'stress'});
   for(let i=0;i<4000&&s.status==='running';i++)s.step();
-  assert.equal(s.status,'collapsing');assert.match(s.reason,/prèvia/);assert.equal(s.cars,undefined);
-  const time=s.time;s.step();assert.ok(s.time>time);
+  assert.equal(s.status,'failed');assert.match(s.reason,/prèvia/);assert.equal(s.cars,undefined);
+  const time=s.time;s.step();assert.equal(s.time,time);
 });
 test('stress pretest accepts incomplete structures and reports an empty design clearly',()=>{
   const b=emptyBridge(first);addBeam(b,{x:first.left,y:0},{x:first.left+2,y:2},'bar',first);
@@ -150,4 +151,20 @@ test('floating cards remain reachable after a viewport shrink and have separate 
   assert.notDeepEqual(initialCardPosition('costCard',size,stage),initialCardPosition('legendCard',size,stage));
   assert.deepEqual(clampCardPosition({x:850,y:600},size,{width:500,height:400}),{x:247,y:158});
   assert.deepEqual(clampCardPosition({x:-100,y:NaN},size,stage),{x:8,y:8});
+});
+test('the heat map returns an undeformed design and allows a fresh train test after a warning',()=>{
+  for(const b of [demo(first),makeDeck(first,emptyBridge(first)).bridge]){
+    const before=copy(b),s=assessBridge(first,b);
+    assert.equal(s.status,'assessed');assert.equal(s.active,false);assert.equal(s.cars,undefined);
+    assert.deepEqual(s.nodes.map(({id,x,y,fixed})=>({id,x,y,fixed})),b.nodes);assert.deepEqual(b,before);
+    assert.ok(s.beams.some(e=>Math.abs(e.peakStress)>0));
+    const weak=b.beams.every(e=>e.type==='deck');assert.equal(s.analysisWarning,weak);
+    assert.equal(simulate(first,b).status,weak?'failed':'passed');
+  }
+  assert.equal(assessBridge(first,emptyBridge(first)).status,'failed');
+});
+test('heat colors range from yellow to orange to red for both tension and compression',()=>{
+  assert.equal(stressHeatColor(0),'rgb(255,216,66)');assert.equal(stressHeatColor(.5),'rgb(255,140,32)');
+  assert.equal(stressHeatColor(1),'rgb(239,68,44)');assert.equal(stressHeatColor(2),stressHeatColor(1));
+  assert.equal(stressHeatColor(-.75),stressHeatColor(.75));
 });

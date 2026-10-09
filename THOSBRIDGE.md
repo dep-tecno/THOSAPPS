@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v5: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v6: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -81,9 +81,11 @@ Al primer nivell de cadascun dels dos paquets hi ha un exemple triangular de cin
 
 ### Prova prèvia d’esforços
 
-El botó **◈ Test d’esforços** aplica el pes propi durant 0,8 segons i després augmenta progressivament una càrrega vertical repartida pel tauler fins al 100% del pes seleccionat, durant 3 segons. Cada tram de tauler rep càrrega proporcional a la seva longitud, repartida entre els dos extrems. La prova acaba als 6 segons de simulació si l’estructura es manté estable. No hi circula cap tren; també es pot provar una estructura que encara no tingui un camí continu.
+El botó **◈ Test d’esforços** mostra un mapa sobre el disseny quiet, sense animació ni esperes pel pas d’un tren. El càlcul es fa en una còpia aïllada: aplica el pes propi i una càrrega vertical repartida pel tauler, proporcional a la longitud de cada tram i repartida entre els seus extrems. També es pot provar una estructura que encara no tingui un camí continu.
 
-El test conserva l’esforç màxim de cada tram i assenyala els tres més carregats, amb el seu identificador, tracció o compressió i percentatge del límit relatiu. Durant aquesta prova, els colors mostren els màxims assolits. Si es trenca un tram o un node lliure baixa més de 0,7 unitats, es mostra el resultat immediatament i es pot observar el col·lapse.
+Totes les barres i el centre dels trams de tauler es pinten amb una escala **groc → taronja → vermell**, segons el valor absolut del màxim esforç relatiu: groc a 0%, taronja a 50% i vermell a 100% o més. La tracció i la compressió comparteixen aquesta escala de càrrega; el seu signe es descriu a la targeta de prova. Es destaquen els tres trams més carregats amb identificador i percentatge del límit. Les vores turqueses del tauler es conserven.
+
+Internament es reutilitza el motor numèric sobre la còpia, fins a 6 segons de temps de càlcul simulat, executats seguits sense animació: 0,8 segons de pes propi i 3 segons d’augment gradual de càrrega, seguits d’estabilització. No és un nou resolutor estàtic. Si supera el límit d’un tram o un node lliure baixa més de 0,7 unitats, el càlcul s’atura amb avís abans d’arribar necessàriament a tota la càrrega. Per presentar el mapa, es restitueixen les coordenades originals i es retenen els màxims d’esforç; no es dibuixen trams trencats ni una caiguda.
 
 Completar el test no marca el nivell com a superat. Des del resultat es pot prémer **Fer passar el tren**, que inicia una prova nova sobre el disseny original, o **Millorar el pont**. La càrrega repartida és una aproximació didàctica pròpia: no equival al test del programa original i no garanteix resistir una càrrega mòbil. Una estructura formada només per barres es prova sota el seu pes propi, perquè no té tauler on repartir la càrrega.
 
@@ -128,7 +130,7 @@ Els nodes lliures construïts sobre el terreny poden recolzar-hi quan hi contact
 
 Si el pont perd el suport del tren, entra en una fase de **col·lapse**. El càlcul de les barres, la gravetat i el contacte amb el terreny continuen durant 8 segons de simulació perquè es pugui observar la caiguda. Els vehicles sense suport cauen i els que encara recolzen al tauler continuen carregant l’estructura. **El missatge i el botó Millorar el pont apareixen immediatament en detectar la fallada**, mentre la caiguda continua. Es pot pausar el col·lapse o tornar a editar sense esperar que acabi. Una manca de camí inicial continua donant un avís immediat, sense simular un col·lapse.
 
-El tauler es dibuixa amb **dues vores turqueses** que identifiquen el camí del tren i conserven el color durant la prova. Els colors vermells indiquen compressió i els blaus tracció; al tauler es mostren al centre, entre les dues vores. La intensitat expressa la proximitat al límit relatiu del tram, no tensions en MPa ni una verificació de resistència d’un pont real.
+El tauler es dibuixa amb **dues vores turqueses** que identifiquen el camí del tren i conserven el color durant la prova. Durant el pas del tren, els colors vermells indiquen compressió i els blaus tracció; al tauler es mostren al centre, entre les dues vores. El mapa previ utilitza l’escala groc-taronja-vermell descrita abans. La intensitat expressa la proximitat al límit relatiu del tram, no tensions en MPa ni una verificació de resistència d’un pont real.
 
 Quan no hi ha camí continu, el resultat indica **Falta completar el tauler**. Quan el camí existeix però no aguanta la prova, indica **El pont necessita reforços**. Construir un tauler continu permet iniciar la prova; superar-la també requereix resistència estructural.
 
@@ -161,7 +163,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-cards-stress-v5`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-heat-map-v6`.
 
 ### Ordres tècniques
 
@@ -177,7 +179,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 26 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’Old · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 28 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’Old · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 

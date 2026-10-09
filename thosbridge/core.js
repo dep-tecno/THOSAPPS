@@ -239,11 +239,27 @@ export class Simulation {
       }
     }
     if(this.mode==='stress'&&this.status==='running'){
-      if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-RULES.maxSag))this.fail('El pont no aguanta la prova prèvia de càrrega. Reforça els trams més carregats.');
+      if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-RULES.maxSag))this.fail('La càrrega prèvia indica una estructura feble. Reforça els trams més carregats.',false);
       else if(this.time>=6){this.status='assessed';this.reason='Prova prèvia completada. Observa els trams més carregats i fes passar el tren.';}
     }
     if(this.mode==='train'&&this.status==='running'&&this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
     if(this.status==='running'&&this.time>20)this.fail('El tren no ha pogut completar el recorregut.');
     if(this.status==='collapsing'&&this.collapseTime>=8)this.status='failed';
   }
+}
+// Calculate on an isolated copy, then return a heat map on the undeformed design.
+export function assessBridge(level,bridge,weight=1){
+  const assessment=new Simulation(level,bridge,weight,{mode:'stress'});
+  if(!assessment.beams.length)return assessment;
+  for(let step=0;step<1500&&assessment.active;step++)assessment.step();
+  assessment.analysisWarning=assessment.status!=='assessed';
+  assessment.reason=assessment.analysisWarning?'Mapa d’esforços: s’han detectat trams febles o una deformació excessiva. Reforça el pont abans de provar el tren.':'Mapa d’esforços calculat. Del groc al vermell: de menys a més esforç. Pots reforçar el pont o fer passar el tren.';
+  assessment.status='assessed';
+  for(const n of assessment.nodes){n.x=n.x0;n.y=n.y0;n.vx=0;n.vy=0;}
+  return assessment;
+}
+export function stressHeatColor(effort){
+  const value=Math.max(0,Math.min(1,Math.abs(effort)||0));
+  const low=value<=.5?[255,216,66]:[255,140,32],high=value<=.5?[255,140,32]:[239,68,44],t=value<=.5?value*2:(value-.5)*2;
+  return 'rgb('+low.map((channel,i)=>Math.round(channel+(high[i]-channel)*t)).join(',')+')';
 }

@@ -1,6 +1,6 @@
-import {levels} from './levels.js?v=20261009-cards-stress-v5';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation} from './core.js?v=20261009-cards-stress-v5';
-import {mountCards} from './cards.js?v=20261009-cards-stress-v5';
+import {levels} from './levels.js?v=20261009-heat-map-v6';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-heat-map-v6';
+import {mountCards} from './cards.js?v=20261009-heat-map-v6';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -42,6 +42,7 @@ function update(){
   $('run').disabled=running&&!(simulation.mode==='stress'&&simulation.status==='assessed');$('stressTest').disabled=running;$('edit').disabled=!running;$('pause').disabled=!running||!simulation.active;
   $('pause').textContent=paused?'▶':'Ⅱ';$('pause').title=paused?'Continua la prova':'Pausa la prova';$('pause').setAttribute('aria-label',$('pause').title);
   $('stress').setAttribute('aria-pressed',String(stress));
+  $('stressLegend').hidden=simulation?.mode!=='stress';$('trainLegend').hidden=simulation?.mode==='stress';
   const e=bridge.beams.find(e=>e.id===selected);$('selection').hidden=!e||running;
   if(e){const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b);$('selectionInfo').textContent=(e.type==='deck'?'Tauler':'Barra')+' · '+fmt(Math.hypot(a.x-b.x,a.y-b.y))+' u · 100';}
   $('hint').textContent=running?'Observa el pont. Prem Editar per recuperar el disseny.':start?'Escull el segon punt · Esc per cancel·lar.':tool==='erase'?'Clica un tram per esborrar-lo.':tool==='select'?'Clica un tram per veure’n el tipus o esborrar-lo.':tool==='deck'?'Uneix les ribes: el tauler es divideix en trams vàlids · Alt + arrossegar per moure la vista.':'Clica un punt i després un altre · màxim 4,5 u per barra · Alt + arrossegar per moure la vista.';
@@ -104,20 +105,20 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pointerPosition(e
 function deleteSelection(){if(selected&&!simulation)mutate(()=>removeBeam(bridge,selected),'Tram esborrat.');}
 function undoAction(){if(simulation||!undo.length)return;redo.push(copy(bridge));bridge=undo.pop();start=null;selected=null;persist();update();status('Canvi desfet.');}
 function redoAction(){if(simulation||!redo.length)return;undo.push(copy(bridge));bridge=redo.pop();start=null;selected=null;persist();update();status('Canvi refet.');}
-function beginTest(mode){start=null;selected=null;persist();simulation=new Simulation(level,bridge,Number($('weight').value),{mode});paused=false;accumulator=0;$('result').hidden=true;if(mode==='stress'){stress=true;showCards(true);}updateStats();update();if(simulation.status==='failed')finish();else status(mode==='stress'?'Prova prèvia: pes propi i càrrega repartida sobre el tauler.':'Prova en marxa: pes propi i pas del tren.');}
+function beginTest(mode){start=null;selected=null;persist();simulation=mode==='stress'?assessBridge(level,bridge,Number($('weight').value)):new Simulation(level,bridge,Number($('weight').value));paused=false;accumulator=0;$('result').hidden=true;if(mode==='stress'){stress=true;showCards(true);}updateStats();update();if(!simulation.active)finish();else status('Prova en marxa: pes propi i pas del tren.');}
 function run(){beginTest('train');}
 function stressRun(){beginTest('stress');}
 function criticalBeams(){return simulation?simulation.beams.filter(e=>Math.abs(e.peakStress)>.01).sort((a,b)=>Math.abs(b.peakStress)-Math.abs(a.peakStress)).slice(0,3):[];}
 function updateStats(){
-  $('testStage').textContent=!simulation?'Construeix → Test d’esforços → Tren':simulation.mode==='train'?'Càrrega mòbil: tren':!simulation.beams.some(e=>e.type==='deck')?'Pes propi: sense tauler per carregar':simulation.loadFactor===0?'Pes propi de l’estructura':'Càrrega repartida: '+fmt(simulation.loadFactor*100)+'%';
-  $('simStats').textContent=simulation?'Temps '+fmt(simulation.time)+' s · Esforç màxim '+fmt(simulation.peak*100)+'% · Trencaments '+simulation.broken:'Primer construeix el tauler i reforça’l amb triangles.';
+  $('testStage').textContent=!simulation?'Construeix → Test d’esforços → Tren':simulation.mode==='train'?'Càrrega mòbil: tren':!simulation.beams.some(e=>e.type==='deck')?'Mapa del pes propi: sense tauler per carregar':'Mapa sota càrrega repartida · pes '+fmt(simulation.weight*100)+'%';
+  $('simStats').textContent=!simulation?'Primer construeix el tauler i reforça’l amb triangles.':simulation.mode==='stress'?'Esforç màxim '+fmt(simulation.peak*100)+'%'+(simulation.analysisWarning?' · Avís amb càrrega al '+fmt(simulation.loadFactor*100)+'% · Cal reforçar':' · Observa els colors del pont'):'Temps '+fmt(simulation.time)+' s · Esforç màxim '+fmt(simulation.peak*100)+'% · Trencaments '+simulation.broken;
   $('critical').replaceChildren();
-  for(const e of criticalBeams()){const li=document.createElement('li');li.textContent='Tram '+(Number(e.id.slice(1))+1)+' · '+(e.peakStress>0?'tracció':'compressió')+' · '+fmt(Math.abs(e.peakStress)*100)+'%'+(e.broken?' · trencat':'');$('critical').append(li);}
+  for(const e of criticalBeams()){const li=document.createElement('li');li.textContent='Tram '+(Number(e.id.slice(1))+1)+' · '+(e.peakStress>0?'tracció':'compressió')+' · '+fmt(Math.abs(e.peakStress)*100)+'%'+(e.broken?(simulation.mode==='stress'?' · límit superat':' · trencat'):'');$('critical').append(li);}
   if(!$('critical').childElementCount){const li=document.createElement('li');li.textContent='Es mostraran durant la prova.';$('critical').append(li);}
 }
 function finish(){
-  const passed=simulation.status==='passed',assessed=simulation.status==='assessed';$('result').hidden=false;$('result').classList.toggle('passed',passed||assessed);
-  $('resultTitle').textContent=passed?'✓ Pont superat!':assessed?'Prova prèvia completada':simulation.failureKind==='route'?'Falta completar el tauler':'El pont necessita reforços';
+  const passed=simulation.status==='passed',assessed=simulation.status==='assessed';$('result').hidden=false;$('result').classList.toggle('passed',passed||assessed&&!simulation.analysisWarning);
+  $('resultTitle').textContent=passed?'✓ Pont superat!':assessed?(simulation.analysisWarning?'Mapa: cal reforçar el pont':'Mapa d’esforços'):simulation.failureKind==='route'?'Falta completar el tauler':'El pont necessita reforços';
   $('resultRun').hidden=!assessed;
   const light=passed&&simulation.weight<1;
   $('resultText').textContent=simulation.reason+(light?' Prova també amb el pes del 100% per marcar aquest nivell com a superat.':'')+(passed&&simulation.broken?' Hi ha '+simulation.broken+' trams trencats: pots millorar el disseny.':'');
@@ -188,11 +189,12 @@ function draw(){
   const nodes=simulation?.nodes||bridge.nodes,edges=simulation?.beams||bridge.beams,byId=new Map(nodes.map(n=>[n.id,n]));
   for(const e of edges){const a=byId.get(e.a),b=byId.get(e.b);let color=e.type==='deck'?'#142c34':'#789ab3';
     const effort=simulation?.mode==='stress'?e.peakStress:e.stress;
-    if(simulation&&stress&&Math.abs(effort)>.035){const v=Math.min(1,Math.abs(effort));color=effort>0?`rgb(${Math.round(120-55*v)},${Math.round(157+10*v)},${Math.round(181+65*v)})`:`rgb(${Math.round(120+123*v)},${Math.round(157-61*v)},${Math.round(181-82*v)})`;}
+    if(simulation?.mode==='stress'&&stress)color=stressHeatColor(effort);
+    else if(simulation&&stress&&Math.abs(effort)>.035){const v=Math.min(1,Math.abs(effort));color=effort>0?`rgb(${Math.round(120-55*v)},${Math.round(157+10*v)},${Math.round(181+65*v)})`:`rgb(${Math.round(120+123*v)},${Math.round(157-61*v)},${Math.round(181-82*v)})`;}
     if(e.id===selected)line(a,b,'#29d5cf',9);
-    if(e.broken){line(a,b,'#e16d6155',2,true);continue;}
+    if(e.broken&&simulation?.mode!=='stress'){line(a,b,'#e16d6155',2,true);continue;}
     if(e.type==='deck')line(a,b,'#35d4c4',7);
-    line(a,b,color,e.type==='deck'?3:2.5);
+    line(a,b,color,e.type==='deck'?3:simulation?.mode==='stress'&&stress?4:2.5);
     if(e.type==='deck'){const p=screen(a),q=screen(b),dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy);ctx.strokeStyle='#0e2334';ctx.lineWidth=1;
       for(let d=6;d<len;d+=12){const x=p.x+dx*d/len,y=p.y+dy*d/len;ctx.beginPath();ctx.moveTo(x-dy/len*3,y+dx/len*3);ctx.lineTo(x+dy/len*3,y-dx/len*3);ctx.stroke();}
     }
