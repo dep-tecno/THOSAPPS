@@ -6,7 +6,7 @@
   <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
   <title>THOSBRIDGE · Estructures i ponts</title>
   <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-dades-v16">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-fletxes-v17">
 </head>
 <body>
   <header>
@@ -34,7 +34,7 @@
       <button id="trainSettings" title="Opcions del tren: pes i velocitat" aria-label="Opcions del tren: pes i velocitat">⚙</button>
       <button id="pause" title="Pausa o continua la prova" aria-label="Pausa" disabled>Ⅱ</button>
       <button id="edit" title="Torna a la construcció original" disabled>✎ Editar</button>
-      <button id="stress" aria-pressed="true" title="Mostra els esforços" aria-label="Mostra els esforços">◉</button>
+      <button id="stress" aria-pressed="true" title="Mostra els esforços i les fletxes didàctiques" aria-label="Mostra els esforços i les fletxes didàctiques">◉</button>
       <button id="cardsToggle" title="Mostra o amaga les targetes informatives" aria-label="Mostra o amaga les targetes informatives" aria-pressed="true">▣</button>
       <button id="resetCards" title="Restableix la posició de les targetes" aria-label="Restableix la posició de les targetes">⤢</button>
       <button id="help" title="Ajuda i crèdits" aria-label="Ajuda i crèdits">?</button>
@@ -82,7 +82,7 @@
     <p>Al primer nivell de No miris i No cau pots carregar un <b>exemple triangular</b> i provar-lo directament. El tauler automàtic és horitzontal: als nivells amb desnivells, completa o adapta el camí manualment.</p>
     <p>Si el pont no aguanta, la simulació continua perquè puguis observar com cau. Pots <b>pausar</b> la caiguda o prémer <b>Editar</b> per recuperar el disseny i reforçar-lo.</p>
     <p><b>Opcions del tren:</b> prem ⚙ al costat de ▶ Tren per ajustar el pes i la velocitat de la simulació. La targeta Prova i esforços només mostra dades.</p><p><b>Test d’esforços:</b> mostra un mapa immediat sobre el pont quiet, sota el pes propi i una càrrega repartida pel tauler. <b>Groc → taronja → vermell</b> indica de menys a més esforç, tant a les barres com al tauler. Els trams més carregats s’identifiquen també a la targeta de prova. Pots millorar el pont o fer passar el tren; la deformació i la caiguda es veuen quan prems <b>▶ Tren</b>.</p>
-    <h3>Llegenda: símbols i colors</h3>
+    <h3>Llegenda: símbols i colors</h3><p><b>Fletxes didàctiques:</b> blau cap enfora = tracció; vermell cap endins = compressió; lila vertical = fletxa màxima registrada del tauler (deformació, no esforç de flexió); groc lateral discontinu = vinclament orientatiu en una barra llarga comprimida, sense càlcul físic. Se’n mostra com a màxim una indicació de cada tipus quan hi ha dades. Durant el tren els esforços són els actuals; al mapa previ i al resultat són els màxims registrats. ◉ permet mostrar o amagar les fletxes i els colors.</p>
     <div class="legend"><p><i class="anchor-dot"></i> Punt groc: ancoratge fix</p><p><i class="deck-line"></i> Dues vores turqueses: tauler per on passa el tren</p><p><i class="bar-line"></i> Barra: reforç estructural</p>
       <p><b>Test d’esforços:</b> groc → taronja → vermell, de poc esforç a prop del límit, tant en tracció com en compressió.</p><div class="stress-scale heat-scale"></div><div class="scale-labels"><span>Poc esforç</span><span>Al límit</span></div>
       <p><b>Durant el pas del tren:</b> vermell indica compressió i blau indica tracció. El color s’intensifica prop del límit; al tauler es veu entre les vores turqueses.</p><div class="stress-scale"></div><div class="scale-labels"><span>Compressió</span><span>Tracció</span></div>
@@ -98,6 +98,6 @@
     <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
     <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
   </dialog>
-  <script type="module" src="thosbridge/app.js?v=20261009-dades-v16"></script>
+  <script type="module" src="thosbridge/app.js?v=20261009-fletxes-v17"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261009-dades-v16';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-dades-v16';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-dades-v16';
-import {mountCards} from './cards.js?v=20261009-dades-v16';
+import {levels as originalLevels} from './levels.js?v=20261009-fletxes-v17';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-fletxes-v17';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators} from './core.js?v=20261009-fletxes-v17';
+import {mountCards} from './cards.js?v=20261009-fletxes-v17';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -191,7 +191,53 @@ document.addEventListener('keydown',e=>{
   const mapping={b:'bar',t:'deck',v:'select',e:'erase'};if(mapping[e.key.toLowerCase()])selectTool(mapping[e.key.toLowerCase()]);
 },true);
 function line(a,b,color,widthPx=2,dashed=false){const p=screen(a),q=screen(b);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle=color;ctx.lineWidth=widthPx;ctx.setLineDash(dashed?[5,5]:[]);ctx.stroke();ctx.setLineDash([]);}
-function draw(){
+const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+function drawIndicators(time){
+  if(!simulation||!stress)return;
+  const annotations=didacticIndicators(simulation),labels=[];
+  const phase=reducedMotion.matches||paused?0:Math.sin(time/450)*2.5;
+  const arrow=(a,b,color,dashed=false)=>{
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<2)return;
+    const nx=dx/len,ny=dy/len,head=Math.min(4,len*.4);
+    ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=1.5;ctx.setLineDash(dashed?[3,3]:[]);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-nx*head-ny*head*.6,b.y-ny*head+nx*head*.6);ctx.lineTo(b.x-nx*head+ny*head*.6,b.y-ny*head-nx*head*.6);ctx.closePath();ctx.fill();
+  };
+  const label=(p,text,color)=>{
+    ctx.font='10px Segoe UI';const w=ctx.measureText(text).width+8,h=16;
+    const x=Math.max(8,Math.min(width-w-8,p.x-w/2)),base=Math.max(38,Math.min(height-h-35,p.y));let y=base;
+    for(let attempt=0;attempt<8&&labels.some(r=>x<r.x+r.w&&x+w>r.x&&y<r.y+r.h&&y+h>r.y);attempt++)y=Math.max(38,Math.min(height-h-35,base+(attempt%2?-1:1)*Math.ceil((attempt+1)/2)*19));
+    if(labels.some(r=>x<r.x+r.w&&x+w>r.x&&y<r.y+r.h&&y+h>r.y))return;
+    labels.push({x,y,w,h});ctx.fillStyle='#0d1821d9';ctx.fillRect(x,y,w,h);ctx.fillStyle=color;ctx.textAlign='left';ctx.fillText(text,x+4,y+11);
+  };
+  ctx.save();ctx.globalAlpha=.8;
+  for(const item of annotations){
+    if(item.kind==='deflection'){
+      ctx.globalAlpha=.72+phase*.025;
+      const initial=screen({x:item.x,y:item.y0}),lowest=screen({x:item.x,y:item.y}),a={x:initial.x+13,y:initial.y},b={x:lowest.x+13,y:lowest.y};
+      ctx.strokeStyle='#b99fed';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(initial.x-8,initial.y);ctx.lineTo(a.x+5,initial.y);ctx.moveTo(lowest.x,lowest.y);ctx.lineTo(b.x+5,lowest.y);ctx.stroke();ctx.setLineDash([]);
+      arrow(a,b,'#c4a7f4');arrow(b,a,'#c4a7f4');
+      const value=new Intl.NumberFormat('ca-ES',{maximumFractionDigits:2}).format(item.amount);
+      label({x:a.x+62,y:(a.y+b.y)/2},'Fletxa màx. '+value+' u','#c4a7f4');ctx.globalAlpha=.8;continue;
+    }
+    const e=simulation.edgeMap.get(item.beam),a=screen(simulation.byId.get(e.a)),b=screen(simulation.byId.get(e.b));
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<18)continue;
+    const nx=dx/len,ny=dy/len,px=-ny,py=nx,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    if(item.kind==='buckling'){
+      const start={x:mid.x+px*18,y:mid.y+py*18},end={x:mid.x+px*(32+phase),y:mid.y+py*(32+phase)};
+      arrow(start,end,'#edbd69',true);label({x:end.x,y:end.y+8},'Vinclament · orientatiu','#edbd69');continue;
+    }
+    const tensile=item.kind==='tension',offset=tensile?-11:11,color=tensile?'#78baff':'#f59b93',spread=Math.min(25,len*.2);
+    for(const side of [-1,1]){
+      const direction=side*(tensile?1:-1),position=side*spread+direction*phase;
+      const start={x:mid.x+nx*position+px*offset,y:mid.y+ny*position+py*offset};
+      arrow(start,{x:start.x+nx*direction*10,y:start.y+ny*direction*10},color);
+    }
+    label({x:mid.x+px*offset*2,y:mid.y+py*offset*2-8},(tensile?'Tracció':'Compressió')+' · '+fmt(item.value*100)+'%',color);
+  }
+  ctx.restore();
+}
+function draw(time){
   ctx.clearRect(0,0,width,height);ctx.fillStyle='#0d1821';ctx.fillRect(0,0,width,height);
   const lo=world(0,height),hi=world(width,0),gridStep=view.scale<12?4:view.scale<22?2:1;
   ctx.fillStyle='#203544';
@@ -239,6 +285,7 @@ function draw(){
       ctx.fillStyle='#14212a';for(const dx of [-.32,.32]){ctx.beginPath();ctx.arc(size*dx,size*.03,size*.14,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#95a8b2';ctx.stroke();}ctx.restore();
     }
   }
+  drawIndicators(time);
 }
 function frame(time){
   const dt=lastFrame?Math.min((time-lastFrame)/1000,.05):0;lastFrame=time;
@@ -248,7 +295,7 @@ function frame(time){
       if(!simulation.active){finish();break;}}
     updateStats();
   }
-  draw();requestAnimationFrame(frame);
+  draw(time);requestAnimationFrame(frame);
 }
 const observer=new ResizeObserver(()=>{const r=canvas.getBoundingClientRect(),first=width===1;width=r.width;height=r.height;const dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=width*dpr;canvas.height=height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);if(first)fit();});observer.observe(canvas);
 restore();populateLevels();updateStats();update();persist();requestAnimationFrame(frame);

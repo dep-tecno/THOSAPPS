@@ -6,12 +6,45 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
-import {assessBridge,stressHeatColor} from '../core.js';
+import {assessBridge,stressHeatColor,didacticIndicators} from '../core.js';
 import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,nodeAt,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
 function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
+test('canvas annotations select at most one representative of each concept',()=>{
+  const s={mode:'train',active:true,maxDeckDrop:{node:'n0',x:0,y:-.2,y0:0,amount:.2},beams:[
+    {id:'b0',type:'bar',length:4,stress:-.6,broken:false},
+    {id:'b1',type:'bar',length:2,stress:.7,broken:false},
+    {id:'b2',type:'bar',length:4,stress:.2,broken:false},
+    {id:'b3',type:'bar',length:4,stress:-.9,broken:true}]};
+  const markers=didacticIndicators(s);assert.equal(markers.length,4);
+  assert.equal(markers.find(m=>m.kind==='tension').beam,'b1');
+  assert.equal(markers.find(m=>m.kind==='compression').beam,'b0');
+  const buckling=markers.find(m=>m.kind==='buckling');assert.equal(buckling.beam,'b0');assert.equal(buckling.qualitative,true);assert.equal(buckling.value,undefined);
+  assert.deepEqual(didacticIndicators(null),[]);
+});
+test('canvas directions follow current axial stress during the train and recorded peaks on the map',()=>{
+  const beam={id:'b0',type:'bar',length:2,stress:-.2,peakTension:.7,peakCompression:.4,broken:false},s={mode:'train',active:true,beams:[beam]};
+  assert.equal(didacticIndicators(s).some(m=>m.kind==='tension'),false);
+  s.mode='stress';assert.equal(didacticIndicators(s).find(m=>m.kind==='tension').value,.7);
+  assert.equal(didacticIndicators(s).find(m=>m.kind==='compression').value,.4);
+  beam.length=2;assert.equal(didacticIndicators(s).some(m=>m.kind==='buckling'),false);
+});
+test('canvas deck drop retains its measured position and excludes collapse and non-deck nodes',()=>{
+  const b=demo(first),s=new Simulation(first,b),n=s.nodes.find(n=>!n.fixed&&s.deckNodeIds.has(n.id)),other=s.nodes.find(n=>!n.fixed&&!s.deckNodeIds.has(n.id));
+  n.y=n.y0-.2;other.y=other.y0-2;s.step(0);
+  assert.ok(Math.abs(s.maxDeckDrop.amount-.2)<1e-9);assert.equal(s.maxDeckDrop.node,n.id);
+  const measured=copy(s.maxDeckDrop);n.y=n.y0+.1;s.step(0);assert.deepEqual(s.maxDeckDrop,measured);
+  s.fail('test');n.y=n.y0-10;s.step(0);assert.deepEqual(s.maxDeckDrop,measured);
+  assert.equal(new Simulation(first,b).maxDeckDrop,null);
+});
+test('the stationary pretest preserves measured drop without moving the displayed bridge',()=>{
+  const b=demo(first),s=assessBridge(first,b);
+  assert.ok(s.maxDeckDrop.amount>0);
+  assert.ok(s.beams.some(e=>e.peakCompression>0));
+  for(const n of s.nodes){assert.equal(n.x,n.x0);assert.equal(n.y,n.y0);}
+});
 test('maximum tension remains visible when the same bar later has a larger compression peak',()=>{
   const level={...copy(first),budget:1000},b=emptyBridge(level);
   assert.equal(addBeam(b,{x:0,y:2},{x:2,y:2},'bar',level),null);

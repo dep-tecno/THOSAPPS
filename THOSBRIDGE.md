@@ -183,7 +183,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-dades-v16`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-fletxes-v17`.
 
 ### Ordres tècniques
 
@@ -199,7 +199,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 36 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 40 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
@@ -234,3 +234,13 @@ La targeta Prova i esforços incorpora una barra blava animada de tracció màxi
 El pes del tren i la velocitat passen al diàleg Opcions del tren, accessible amb ⚙ a la barra superior. La targeta Prova i esforços només conté dades: resum de prova, tracció màxima amb barra blava animada i els cinc trams més carregats amb el seu tipus d’esforç. Es conserva el bloqueig del pes durant una prova i la velocitat es pot canviar en directe.
 
 Per decisió de l’usuari, s’han retirat les dades de fletxa i vinclament orientatiu, incloent el contorn groc discontinu del pont. El motor continua representant només esforços axials de tracció i compressió.
+
+### Fletxes didàctiques al llenç (v17)
+
+Per petició de l’usuari, s’incorporen fins a quatre indicacions petites i semitransparents al llenç, sense tornar a afegir fletxa ni vinclament a la targeta de dades. Tracció: dues fletxes blaves cap enfora; compressió: dues fletxes vermelles cap endins. Es tria un tram representatiu per a cada tipus, amb esforç superior al 3,5% del límit axial. Durant el tren s’utilitza l’esforç actual; al mapa previ i al resultat, els pics registrats per separat.
+
+La fletxa màxima és una mesura vertical lila entre la cota original i el punt de màxim descens registrat del tauler, en unitats de graella. Conserva les coordenades del moment mesurat i s’atura quan comença el col·lapse. No calcula moments de flexió. El mapa previ conserva aquesta mesura tot i mostrar el pont sense deformació. No es dibuixa per descensos menors o iguals a 0,025 u.
+
+El vinclament es representa amb una petita fletxa lateral discontínua groga, explícitament etiquetada com a orientatiu, sobre una barra no trencada de longitud mínima 3,375 u i compressió superior al 3,5%. És una il·lustració didàctica, no un esforç calculat ni una corba de deformació simulada. No proporciona càrrega crítica, no dóna percentatge i no altera la física. Es prioritza compressió per longitud al quadrat per escollir un sol exemple.
+
+L’animació és discreta: desplaçament curt de les fletxes axials, oscil·lació curta de l’indicador lateral i canvi suau d’opacitat a la mesura vertical, sense alterar la geometria del pont. Es respecta la preferència de reduir moviment i la pausa. El botó ◉ amaga també les fletxes. Els textos s’intenten separar per evitar solapaments. Les comprovacions visuals queden a càrrec de l’usuari.
