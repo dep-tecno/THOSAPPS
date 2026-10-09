@@ -10,7 +10,7 @@ L'objectiu principal és oferir recursos digitals d'accés lliure que permetin a
 
 ## 📱 Accés a les Aplicacions
 Podeu utilitzar les aplicacions directament des del següent enllaç:
-👉 [https://dep-tecno.github.io/THOSAPPS/](https://dep-tecno.github.io/THOSAPPS/)
+👉 [https://tecno-apps.cat/](https://tecno-apps.cat)
 
 ---
 
