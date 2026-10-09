@@ -6,7 +6,7 @@
   <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
   <title>THOSBRIDGE · Estructures i ponts</title>
   <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-no-badis-v12">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-unions-v13">
 </head>
 <body>
   <header>
@@ -74,7 +74,7 @@
   <footer><span id="status" role="status" aria-live="polite">Preparat per construir.</span><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Inspirat en Bridge Building Game · Alex Austin / Cryptic Sea</a></footer>
   <input id="file" type="file" accept=".json,application/json" hidden>
   <dialog id="helpDialog"><div class="dialog-heading"><h2>THOSBRIDGE · Ajuda i crèdits</h2><button id="closeHelp" aria-label="Tanca l’ajuda">×</button></div>
-    <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria una família i un dels 54 nivells. Els punts grocs són ancoratges fixos.</li><li>Amb <b>Tauler</b>, uneix els punts del camí del tren. Pots dibuixar d’una riba a l’altra: es divideix automàticament en trams de fins a 4,5 unitats. Si repasses barres existents amb Tauler, passen a ser transitables.</li><li>Amb <b>Barra</b>, afegeix reforços. Clica dos punts o arrossega entre ells. Cada tram costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Tren</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
+    <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria una família i un dels 54 nivells. Els punts grocs són ancoratges fixos.</li><li>Amb <b>Tauler</b>, uneix els punts del camí del tren. Pots dibuixar d’una riba a l’altra: es divideix automàticament en trams de fins a 4,5 unitats. Si repasses barres existents amb Tauler, passen a ser transitables.</li><li>Amb <b>Barra</b>, afegeix reforços. Clica dos punts o arrossega entre ells. Cada tram costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Si comences o acabes una barra sobre un tram existent, es crea una unió real i el tram es divideix. Cada tram resultant costa 100. Dues barres que només es creuen no s’uneixen. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Tren</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
     <p>Al primer nivell de No miris i No cau pots carregar un <b>exemple triangular</b> i provar-lo directament. El tauler automàtic és horitzontal: als nivells amb desnivells, completa o adapta el camí manualment.</p>
     <p>Si el pont no aguanta, la simulació continua perquè puguis observar com cau. Pots <b>pausar</b> la caiguda o prémer <b>Editar</b> per recuperar el disseny i reforçar-lo.</p>
     <p><b>Test d’esforços:</b> mostra un mapa immediat sobre el pont quiet, sota el pes propi i una càrrega repartida pel tauler. <b>Groc → taronja → vermell</b> indica de menys a més esforç, tant a les barres com al tauler. Els trams més carregats s’identifiquen també a la targeta de prova. Pots millorar el pont o fer passar el tren; la deformació i la caiguda es veuen quan prems <b>▶ Tren</b>.</p>
@@ -94,6 +94,6 @@
     <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
     <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
   </dialog>
-  <script type="module" src="thosbridge/app.js?v=20261009-no-badis-v12"></script>
+  <script type="module" src="thosbridge/app.js?v=20261009-unions-v13"></script>
 </body>
 </html>

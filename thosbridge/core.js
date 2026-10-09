@@ -15,6 +15,27 @@ export function emptyBridge(level) {
 }
 export const cost = bridge => bridge.beams.length * RULES.beamCost;
 export function nodeAt(bridge,p) {return bridge.nodes.find(n=>Math.hypot(n.x-p.x,n.y-p.y)<0.025);}
+function nextId(items,prefix){let i=0;while(items.some(item=>item.id===prefix+i))i++;return prefix+i;}
+function connectPoint(bridge,p){
+  let node=nodeAt(bridge,p);
+  if(!node){node={id:nextId(bridge.nodes,'n'),x:p.x,y:p.y,fixed:false};bridge.nodes.push(node);}
+  // Only explicit endpoints make junctions; geometric crossings alone stay separate.
+  for(const edge of [...bridge.beams]){
+    if(edge.a===node.id||edge.b===node.id)continue;
+    const a=bridge.nodes.find(n=>n.id===edge.a),b=bridge.nodes.find(n=>n.id===edge.b);
+    const dx=b.x-a.x,dy=b.y-a.y,t=((node.x-a.x)*dx+(node.y-a.y)*dy)/(dx*dx+dy*dy);
+    if(t<=0||t>=1||Math.hypot(node.x-a.x-t*dx,node.y-a.y-t*dy)>1e-6)continue;
+    const oldEnd=edge.b;edge.b=node.id;
+    if(!bridge.beams.some(e=>(e.a===node.id&&e.b===oldEnd)||(e.a===oldEnd&&e.b===node.id)))
+      bridge.beams.push({id:nextId(bridge.beams,'b'),a:node.id,b:oldEnd,type:edge.type});
+  }
+  return node;
+}
+function constructionLimit(bridge,level){
+  if(cost(bridge)>level.budget)return 'No queda prou pressupost. Cada tram costa 100; crear una unió també pot dividir trams existents.';
+  if(bridge.nodes.length>RULES.maxNodes||bridge.beams.length>RULES.maxBeams)return 'Has arribat al límit d’elements.';
+  return null;
+}
 export function addBeam(bridge,a,b,type='bar',level) {
   const bound=Math.max(150,level.right-level.left+50);
   if(!['bar','deck'].includes(type)||[a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return 'Escull punts dins l’àrea de construcció.';
@@ -23,11 +44,12 @@ export function addBeam(bridge,a,b,type='bar',level) {
   if(length>RULES.maxLength+1e-6) return 'La longitud màxima és de 4,5 unitats de graella.';
   const na=nodeAt(bridge,a),nb=nodeAt(bridge,b);
   if(na&&nb&&bridge.beams.some(e=>(e.a===na.id&&e.b===nb.id)||(e.a===nb.id&&e.b===na.id))) return 'Aquests punts ja estan units.';
-  if(cost(bridge)+RULES.beamCost>level.budget) return 'No queda prou pressupost. Cada tram costa 100.';
-  if(bridge.nodes.length+(na?0:1)+(nb?0:1)>RULES.maxNodes||bridge.beams.length>=RULES.maxBeams) return 'Has arribat al límit d’elements.';
-  const get=p=>nodeAt(bridge,p)||(()=>{let i=0;while(bridge.nodes.some(n=>n.id==='n'+i))i++;const n={id:'n'+i,x:p.x,y:p.y,fixed:false};bridge.nodes.push(n);return n;})();
-  const n1=get(a),n2=get(b);let i=0;while(bridge.beams.some(e=>e.id==='b'+i))i++;
-  bridge.beams.push({id:'b'+i,a:n1.id,b:n2.id,type});return null;
+  const draft=copy(bridge),n1=connectPoint(draft,a),n2=connectPoint(draft,b);
+  const existing=draft.beams.find(e=>(e.a===n1.id&&e.b===n2.id)||(e.a===n2.id&&e.b===n1.id));
+  if(existing){if(type==='deck')existing.type='deck';}
+  else draft.beams.push({id:nextId(draft.beams,'b'),a:n1.id,b:n2.id,type});
+  const error=constructionLimit(draft,level);if(error)return error;
+  bridge.nodes=draft.nodes;bridge.beams=draft.beams;return null;
 }
 export function removeBeam(bridge,id) {
   bridge.beams=bridge.beams.filter(e=>e.id!==id);
@@ -57,23 +79,25 @@ export function planDeckSpan(bridge,a,b) {
     }while(part.some((p,j)=>j>0&&Math.hypot(p.x-part[j-1].x,p.y-part[j-1].y)>RULES.maxLength+1e-6)&&count<800);
     points.push(...part.slice(1));
   }
+  const draft=copy(bridge);for(const p of points)connectPoint(draft,p);
   const segments=[];
   for(let i=1;i<points.length;i++){
-    const a=points[i-1],b=points[i],na=nodeAt(bridge,a),nb=nodeAt(bridge,b);
-    const existing=na&&nb&&bridge.beams.find(e=>(e.a===na.id&&e.b===nb.id)||(e.a===nb.id&&e.b===na.id));
+    const a=points[i-1],b=points[i],na=nodeAt(draft,a),nb=nodeAt(draft,b);
+    const existing=na&&nb&&draft.beams.find(e=>(e.a===na.id&&e.b===nb.id)||(e.a===nb.id&&e.b===na.id));
     segments.push({a,b,existing:existing?.id,type:existing?.type});
   }
-  return {segments,added:segments.filter(s=>!s.existing).length,converted:segments.filter(s=>s.type==='bar').length};
+  return {segments,draft,added:draft.beams.length-bridge.beams.length+segments.filter(s=>!s.existing).length,converted:segments.filter(s=>s.type==='bar').length};
 }
 export function addDeckSpan(bridge,a,b,level) {
   const bound=Math.max(150,level.right-level.left+50);
   if([a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return {error:'Escull punts dins l’àrea de construcció.'};
   const plan=planDeckSpan(bridge,a,b);if(plan.error)return plan;
-  const draft=copy(bridge);
+  const draft=plan.draft;
   for(const segment of plan.segments){
     if(segment.existing){draft.beams.find(e=>e.id===segment.existing).type='deck';continue;}
     const error=addBeam(draft,segment.a,segment.b,'deck',level);if(error)return {error};
   }
+  const error=constructionLimit(draft,level);if(error)return {error};
   return {bridge:draft,added:plan.added,converted:plan.converted};
 }
 export function makeDeck(level,bridge) {

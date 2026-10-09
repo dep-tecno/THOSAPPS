@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261009-no-badis-v12';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-no-badis-v12';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-no-badis-v12';
-import {mountCards} from './cards.js?v=20261009-no-badis-v12';
+import {levels as originalLevels} from './levels.js?v=20261009-unions-v13';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-unions-v13';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-unions-v13';
+import {mountCards} from './cards.js?v=20261009-unions-v13';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -79,7 +79,7 @@ function createSegment(end,type=tool){
     let result;
     const ok=mutate(()=>{result=addDeckSpan(bridge,a,end,level);if(result.error)return result.error;bridge=result.bridge;});
     if(ok)status(result.added?'Tauler creat: '+result.added+' trams · cost '+fmt(result.added*RULES.beamCost)+(result.converted?' · '+result.converted+' barres convertides a tauler.':'.'):result.converted?result.converted+' barres convertides a tauler.':'Aquests trams ja són tauler.');
-  }else{const ok=mutate(()=>addBeam(bridge,a,end,type,level));if(ok)status('Barra afegida.');}
+  }else{const before=cost(bridge),ok=mutate(()=>addBeam(bridge,a,end,type,level));if(ok)status('Barra afegida'+(cost(bridge)-before>RULES.beamCost?' amb unions als trams existents':'')+' · cost '+fmt(cost(bridge)-before)+'.');}
   update();
 }
 canvas.addEventListener('pointerdown',e=>{

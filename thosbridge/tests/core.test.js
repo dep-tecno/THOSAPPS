@@ -7,11 +7,52 @@ import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
 import {assessBridge,stressHeatColor} from '../core.js';
-import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
+import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,nodeAt,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
 function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
+test('an endpoint on a deck makes a shared joint that carries the train load',()=>{
+  const level={...copy(first),left:-2,right:2,budget:1000,terrain:[{x:-10,y:-10},{x:10,y:-10}],anchors:[{x:-2,y:0},{x:2,y:0},{x:0,y:-2}]};
+  const b=emptyBridge(level);
+  assert.equal(addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level),null);
+  assert.equal(addBeam(b,{x:0,y:-2},{x:0,y:0},'bar',level),null);
+  const joint=b.nodes.find(n=>n.x===0&&n.y===0);
+  assert.equal(b.beams.filter(e=>e.a===joint.id||e.b===joint.id).length,3);
+  assert.equal(b.beams.filter(e=>e.type==='deck').length,2);
+  assert.equal(cost(b),300);assert.equal(deckRoute(level,b).length,2);
+  assert.equal(simulate(level,b).status,'passed');assert.deepEqual(validateBridge(b,level),b);
+  const count=b.nodes.length;
+  assert.equal(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',level),null);
+  assert.equal(b.nodes.length,count+1);
+});
+test('geometric crossings stay separate unless an endpoint explicitly creates a junction',()=>{
+  const level={...copy(first),budget:2000},b=emptyBridge(level);
+  assert.equal(addBeam(b,{x:-2,y:0},{x:2,y:0},'bar',level),null);
+  assert.equal(addBeam(b,{x:0,y:-2},{x:0,y:2},'bar',level),null);
+  assert.equal(nodeAt(b,{x:0,y:0}),undefined);assert.equal(b.beams.length,2);
+  assert.equal(addBeam(b,{x:0,y:0},{x:2,y:2},'bar',level),null);
+  const joint=nodeAt(b,{x:0,y:0});
+  assert.equal(b.beams.filter(e=>e.a===joint.id||e.b===joint.id).length,5);
+});
+test('junction cost is checked atomically, including splits at both endpoints',()=>{
+  const level={...copy(first),budget:2000},b=emptyBridge(level);
+  addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level);
+  addBeam(b,{x:-2,y:2},{x:2,y:2},'bar',level);
+  const before=copy(b);
+  assert.match(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',{...level,budget:400}),/pressupost/);
+  assert.deepEqual(b,before);
+  assert.equal(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',{...level,budget:500}),null);
+  assert.equal(cost(b),500);
+});
+test('drawing deck over a longer existing deck splits it without laying a second deck',()=>{
+  const level={...copy(first),budget:1000},b=emptyBridge(level);
+  addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level);
+  const r=addDeckSpan(b,{x:-2,y:0},{x:0,y:0},level);
+  assert.equal(r.error,undefined);assert.equal(r.added,1);assert.equal(r.bridge.beams.length,2);
+  const again=addDeckSpan(r.bridge,{x:-2,y:0},{x:0,y:0},level);
+  assert.equal(again.added,0);assert.deepEqual(again.bridge,r.bridge);
+});
 test('30 source files, two ordered packs, finite coordinates and exact provenance',()=>{
   assert.equal(levels.length,30);assert.equal(new Set(levels.map(l=>l.id)).size,30);
   for(const pack of ['old','new'])assert.deepEqual(levels.filter(l=>l.pack===pack).map(l=>l.number),Array.from({length:15},(_,i)=>i+1));
