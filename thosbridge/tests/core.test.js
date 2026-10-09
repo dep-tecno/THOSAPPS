@@ -9,7 +9,7 @@ import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,planDeckSpan,addDeck
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
-function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<6000&&s.status==='running';i++)s.step();return s;}
+function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
 test('30 source files, two ordered packs, finite coordinates and exact provenance',()=>{
   assert.equal(levels.length,30);assert.equal(new Set(levels.map(l=>l.id)).size,30);
   for(const pack of ['old','new'])assert.deepEqual(levels.filter(l=>l.pack===pack).map(l=>l.number),Array.from({length:15},(_,i)=>i+1));
@@ -34,6 +34,13 @@ test('initial examples in both packs survive the standard train without changing
 });
 test('a horizontal deck with no triangular reinforcement fails under the standard train',()=>{
   const b=makeDeck(first,emptyBridge(first)).bridge;assert.ok(deckRoute(first,b));assert.equal(simulate(first,b).status,'failed');
+});
+test('an under-reinforced bridge continues falling after losing train support',()=>{
+  const b=makeDeck(first,emptyBridge(first)).bridge,s=new Simulation(first,b),design=copy(b);
+  for(let i=0;i<6000&&s.status==='running';i++)s.step();assert.equal(s.status,'collapsing');assert.equal(s.active,true);
+  const time=s.time,positions=s.nodes.map(n=>n.y),cars=s.cars.map(c=>c.y);
+  for(let i=0;i<240;i++)s.step();assert.ok(s.time>time);assert.ok(s.nodes.some((n,i)=>Math.abs(n.y-positions[i])>.01));assert.ok(s.cars.some((c,i)=>c.y<cars[i]-.1));
+  for(let i=0;i<2400&&s.active;i++)s.step();assert.equal(s.status,'failed');assert.ok(s.nodes.every(n=>Number.isFinite(n.x)&&Number.isFinite(n.y)));assert.deepEqual(b,design);
 });
 test('missing and disconnected decks fail instead of awarding success',()=>{
   const missing=simulate(first,emptyBridge(first));assert.equal(missing.status,'failed');assert.equal(missing.failureKind,'route');

@@ -163,7 +163,15 @@ export class Simulation {
     if(!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Tauler o fes servir Construir tauler horitzontal.';}
     this.trainMass=Math.max(4,Math.min(24,(level.source.trainWeight||40000)/5000))*weight;
   }
-  fail(reason){if(this.status==='running'){this.status='failed';this.reason=reason;}}
+  get active(){return this.status==='running'||this.status==='collapsing';}
+  fail(reason,animate=true){
+    if(this.status!=='running')return;
+    this.reason=reason;this.failureKind='structure';this.status=animate?'collapsing':'failed';this.collapseTime=0;
+    if(animate)this.cars=[0,1.3,2.6,3.9].map(offset=>{
+      const x=this.trainX-offset,rail=this.railAt(x);
+      return {x,y:rail.broken?this.trainY:rail.y,vx:0,vy:0,falling:false};
+    });
+  }
   railAt(x){
     const s=this.route?.find(s=>{const a=this.byId.get(s.a),b=this.byId.get(s.b);return x>=a.x0-0.001&&x<=b.x0+0.001;});
     if(!s)return {y:0,ground:true};
@@ -173,19 +181,35 @@ export class Simulation {
     return {a,b,t,y:a.y*(1-t)+b.y*t,ground:!s.beam,designY:a.y0*(1-t)+b.y0*t};
   }
   step(dt=RULES.step) {
-    if(this.status!=='running')return;
+    if(!this.active)return;
     this.time+=dt;
     for(const n of this.nodes){n.fx=0;n.fy=-RULES.gravity*n.mass;}
-    if(this.time>0.8){
+    if(this.status==='running'&&this.time>0.8){
       this.trainX+=(this.level.right-this.level.left+10)/12*dt;
       for(const offset of [0,1.3,2.6,3.9]) {
         const x=this.trainX-offset;
         if(x<this.level.left||x>this.level.right)continue;
         const rail=this.railAt(x);
-        if(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag){this.fail('El tren ha perdut el suport del tauler. Reforça el pont amb triangles.');return;}
+        if(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag){this.fail('El pont no ha aguantat el pas del tren. Reforça’l amb triangles.');break;}
         if(!rail.ground&&rail.a){const load=this.trainMass*RULES.gravity/4;rail.a.fy-=load*(1-rail.t);rail.b.fy-=load*rail.t;}
       }
-      this.trainY=this.railAt(this.trainX).y;
+      const front=this.railAt(this.trainX);if(!front.broken)this.trainY=front.y;
+    }
+    if(this.status==='collapsing'){
+      this.collapseTime+=dt;
+      for(const car of this.cars){
+        const rail=this.railAt(car.x);
+        if(!car.falling&&(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag)){
+          car.falling=true;car.vx=(this.level.right-this.level.left+10)/24;
+        }
+        if(car.falling){
+          car.vy-=RULES.gravity*dt;car.x+=car.vx*dt;car.y+=car.vy*dt;
+          const floor=terrainAt(this.level,car.x);if(car.y<floor){car.y=floor;car.vy=0;car.vx*=Math.exp(-8*dt);}
+        }else{
+          car.y=rail.y;
+          if(!rail.ground&&rail.a){const load=this.trainMass*RULES.gravity/4;rail.a.fy-=load*(1-rail.t);rail.b.fy-=load*rail.t;}
+        }
+      }
     }
     for(const e of this.beams){if(e.broken)continue;const a=this.byId.get(e.a),b=this.byId.get(e.b);
       const dx=b.x-a.x,dy=b.y-a.y,len=Math.max(.001,Math.hypot(dx,dy)),nx=dx/len,ny=dy/len;
@@ -202,9 +226,12 @@ export class Simulation {
       const floor=terrainAt(this.level,n.x);
       // Ground contact also makes overhang and single-anchor levels playable.
       if(n.y<floor&&n.y0>=terrainAt(this.level,n.x0)-0.1){n.y=floor;n.vy=Math.max(0,-n.vy*.05);n.vx*=.85;}
-      if(!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>1000||Math.abs(n.y)>1000){this.fail('La construcció és inestable. Torna a editar el pont.');return;}
+      if(!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>1000||Math.abs(n.y)>1000){
+        n.x=n.x0;n.y=n.y0;n.vx=0;n.vy=0;this.status='failed';this.reason='La construcció és inestable. Torna a editar el pont.';return;
+      }
     }
-    if(this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
-    if(this.time>20)this.fail('El tren no ha pogut completar el recorregut.');
+    if(this.status==='running'&&this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
+    if(this.status==='running'&&this.time>20)this.fail('El tren no ha pogut completar el recorregut.');
+    if(this.status==='collapsing'&&this.collapseTime>=8)this.status='failed';
   }
 }

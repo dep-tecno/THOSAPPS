@@ -1,5 +1,5 @@
-import {levels} from './levels.js?v=20261009-deck-v2';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation} from './core.js?v=20261009-deck-v2';
+import {levels} from './levels.js?v=20261009-collapse-v3';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation} from './core.js?v=20261009-collapse-v3';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
 let saved={version:1,selectedLevel:'new-01',drafts:{},completed:{}},storageOK=true;
@@ -29,7 +29,7 @@ function changeLevel(id){persist();level=levels.find(l=>l.id===id)||level;bridge
 function update(){
   const c=cost(bridge),running=!!simulation;
   $('levelTitle').textContent=(level.pack==='new'?'New':'Old')+' / '+String(level.number).padStart(2,'0')+' · '+(saved.completed[level.id]?'Superat':'Construcció de ponts');
-  $('mode').textContent=running?(paused?'EN PAUSA':simulation.status==='running'?'PROVA DEL TREN':'RESULTAT'):'CONSTRUCCIÓ';
+  $('mode').textContent=running?(paused?'EN PAUSA':simulation.status==='running'?'PROVA DEL TREN':simulation.status==='collapsing'?'COL·LAPSE DEL PONT':'RESULTAT'):'CONSTRUCCIÓ';
   $('budget').textContent=fmt(c)+' / '+fmt(level.budget);$('budgetBar').style.width=(c/level.budget*100)+'%';
   $('budgetBar').style.background=c===level.budget?'#f4c25c':'#24c0c4';
   $('remaining').textContent='Queden '+fmt(level.budget-c)+' · 100 per tram';$('beamCount').textContent=bridge.beams.length;$('span').textContent=fmt(level.right-level.left)+' u';
@@ -37,7 +37,7 @@ function update(){
   for(const b of document.querySelectorAll('[data-tool]')){b.setAttribute('aria-pressed',String(b.dataset.tool===tool));b.disabled=running;}
   $('undo').disabled=running||!undo.length;$('redo').disabled=running||!redo.length;
   for(const id of ['autoDeck','clear','demo','open','weight'])$(id).disabled=running;
-  $('run').disabled=running;$('edit').disabled=!running;$('pause').disabled=!running||simulation.status!=='running';
+  $('run').disabled=running;$('edit').disabled=!running;$('pause').disabled=!running||!simulation.active;
   $('pause').textContent=paused?'▶':'Ⅱ';$('pause').title=paused?'Continua la prova':'Pausa la prova';$('pause').setAttribute('aria-label',$('pause').title);
   $('stress').setAttribute('aria-pressed',String(stress));
   const e=bridge.beams.find(e=>e.id===selected);$('selection').hidden=!e||running;
@@ -112,7 +112,7 @@ function finish(){
   if(passed&&!light){saved.completed[level.id]=true;persist();populateLevels();}
   update();status(simulation.reason);
 }
-function togglePause(){if(simulation?.status==='running'){paused=!paused;accumulator=0;update();}}
+function togglePause(){if(simulation?.active){paused=!paused;accumulator=0;update();}}
 for(const b of document.querySelectorAll('[data-tool]'))b.addEventListener('click',()=>selectTool(b.dataset.tool));
 $('undo').onclick=undoAction;$('redo').onclick=redoAction;$('deleteSelected').onclick=deleteSelection;
 $('changeType').onclick=()=>mutate(()=>{const e=bridge.beams.find(e=>e.id===selected);if(e)e.type=e.type==='bar'?'deck':'bar';},'Tipus de tram canviat.');
@@ -190,7 +190,7 @@ function draw(){
     }
   }
   if(simulation){
-    for(let i=3;i>=0;i--){const x=simulation.trainX-i*1.3,rail=simulation.railAt(x),p=screen({x,y:rail.broken?simulation.trainY:rail.y});const size=Math.max(11,Math.min(32,view.scale*.95));
+    for(let i=3;i>=0;i--){const car=simulation.cars?.[i],x=car?.x??simulation.trainX-i*1.3,rail=simulation.railAt(x),p=screen({x,y:car?.y??(rail.broken?simulation.trainY:rail.y)});const size=Math.max(11,Math.min(32,view.scale*.95));
       ctx.save();ctx.translate(p.x,p.y-size*.3);ctx.fillStyle=i===0?'#efb64f':'#688d9c';ctx.strokeStyle='#0a1722';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(-size*.55,-size*.7,size*1.1,size*.7,3);ctx.fill();ctx.stroke();
       if(i===0){ctx.fillStyle='#c5e5ec';ctx.fillRect(size*.03,-size*.6,size*.23,size*.25);ctx.fillStyle='#efb64f';ctx.fillRect(-size*.3,-size*.9,size*.18,size*.3);}
       ctx.fillStyle='#14212a';for(const dx of [-.32,.32]){ctx.beginPath();ctx.arc(size*dx,size*.03,size*.14,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#95a8b2';ctx.stroke();}ctx.restore();
@@ -199,8 +199,10 @@ function draw(){
 }
 function frame(time){
   const dt=lastFrame?Math.min((time-lastFrame)/1000,.05):0;lastFrame=time;
-  if(simulation?.status==='running'&&!paused){accumulator+=dt*Number($('speed').value);let steps=0;
-    while(accumulator>=RULES.step&&steps++<100){simulation.step();accumulator-=RULES.step;if(simulation.status!=='running'){finish();break;}}
+  if(simulation?.active&&!paused){accumulator+=dt*Number($('speed').value);let steps=0;
+    while(accumulator>=RULES.step&&steps++<100){const before=simulation.status;simulation.step();accumulator-=RULES.step;
+      if(before!==simulation.status&&simulation.status==='collapsing'){update();status('El pont està caient. Pots pausar o tornar a editar.');}
+      if(!simulation.active){finish();break;}}
     $('simStats').textContent='Temps '+fmt(simulation.time)+' s · Esforç màxim '+fmt(simulation.peak*100)+'% · Trencaments '+simulation.broken;
   }
   draw();requestAnimationFrame(frame);

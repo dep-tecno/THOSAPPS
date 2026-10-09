@@ -6,7 +6,7 @@
   <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
   <title>THOSBRIDGE · Estructures i ponts</title>
   <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-deck-v2">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261009-collapse-v3">
 </head>
 <body>
   <header>
@@ -56,12 +56,13 @@
   <dialog id="helpDialog"><div class="dialog-heading"><h2>THOSBRIDGE · Ajuda i crèdits</h2><button id="closeHelp" aria-label="Tanca l’ajuda">×</button></div>
     <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria un dels 30 nivells. Els punts grocs són ancoratges fixos.</li><li>Amb <b>Tauler</b>, uneix els punts del camí del tren. Pots dibuixar d’una riba a l’altra: es divideix automàticament en trams de fins a 4,5 unitats. Si repasses barres existents amb Tauler, passen a ser transitables.</li><li>Amb <b>Barra</b>, afegeix reforços. Clica dos punts o arrossega entre ells. Cada tram costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Provar pont</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
     <p>Al primer nivell de cada paquet pots carregar un <b>exemple triangular</b> i provar-lo directament. El tauler automàtic és horitzontal: als nivells amb desnivells, completa o adapta el camí manualment.</p>
+    <p>Si el pont no aguanta, la simulació continua perquè puguis observar com cau. Pots <b>pausar</b> la caiguda o prémer <b>Editar</b> per recuperar el disseny i reforçar-lo.</p>
     <p><b>Dreceres:</b> B barra · T tauler · V seleccionar · E esborrar · Supr esborrar selecció · Esc cancel·lar tram · Ctrl+Z desfer · Ctrl+Y refer · Espai provar/pausar. Roda del ratolí: zoom. Botó central o Alt + arrossegar: moure la vista. Botó dret: esborrar un tram.</p>
     <p><b>Desament:</b> recuperació automàtica per nivell en aquest navegador; ↓ descarrega un JSON i ↑ el torna a obrir. Els teus ponts no s’envien a cap servidor.</p>
     <h3>Origen i autoria</h3><p>THOSBRIDGE és una adaptació web educativa independent, <b>inspirada en Bridge Building Game, creat per Alex Austin (Cryptic Sea)</b>. Els dos paquets de nivells provenen dels fitxers de la versió 1.25 aportats per l’usuari. El programa original i la seva autoria corresponen al seu creador.</p>
     <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
     <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
   </dialog>
-  <script type="module" src="thosbridge/app.js?v=20261009-deck-v2"></script>
+  <script type="module" src="thosbridge/app.js?v=20261009-collapse-v3"></script>
 </body>
 </html>
