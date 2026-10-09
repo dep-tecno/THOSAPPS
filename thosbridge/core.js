@@ -33,14 +33,57 @@ export function removeBeam(bridge,id) {
   bridge.beams=bridge.beams.filter(e=>e.id!==id);
   bridge.nodes=bridge.nodes.filter(n=>n.fixed||bridge.beams.some(e=>e.a===n.id||e.b===n.id));
 }
-export function makeDeck(level,bridge) {
+export function planDeckSpan(bridge,a,b) {
+  const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
+  if(!Number.isFinite(length)||length<0.1)return {error:'Escull dos punts diferents.'};
+  const stops=[{...a,t:0},{...b,t:1}];
+  for(const n of bridge.nodes){
+    const t=((n.x-a.x)*dx+(n.y-a.y)*dy)/(length*length);
+    if(t>0.001&&t<0.999&&Math.hypot(n.x-a.x-dx*t,n.y-a.y-dy*t)<0.025)stops.push({...n,t});
+  }
+  stops.sort((a,b)=>a.t-b.t);
+  const points=[{x:a.x,y:a.y}];
+  for(let i=1;i<stops.length;i++){
+    const from=stops[i-1],to=stops[i],span=Math.hypot(to.x-from.x,to.y-from.y);
+    if(span<0.025)continue;
+    let count=Math.ceil(span/RULES.maxLength),part;
+    do{
+      part=[{x:from.x,y:from.y}];
+      for(let j=1;j<count;j++){
+        const p={x:Math.round(from.x+(to.x-from.x)*j/count),y:Math.round(from.y+(to.y-from.y)*j/count)};
+        if(Math.hypot(p.x-part.at(-1).x,p.y-part.at(-1).y)>0.1&&Math.hypot(p.x-to.x,p.y-to.y)>0.1)part.push(p);
+      }
+      part.push({x:to.x,y:to.y});count++;
+    }while(part.some((p,j)=>j>0&&Math.hypot(p.x-part[j-1].x,p.y-part[j-1].y)>RULES.maxLength+1e-6)&&count<800);
+    points.push(...part.slice(1));
+  }
+  const segments=[];
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i],na=nodeAt(bridge,a),nb=nodeAt(bridge,b);
+    const existing=na&&nb&&bridge.beams.find(e=>(e.a===na.id&&e.b===nb.id)||(e.a===nb.id&&e.b===na.id));
+    segments.push({a,b,existing:existing?.id,type:existing?.type});
+  }
+  return {segments,added:segments.filter(s=>!s.existing).length,converted:segments.filter(s=>s.type==='bar').length};
+}
+export function addDeckSpan(bridge,a,b,level) {
+  const bound=Math.max(150,level.right-level.left+50);
+  if([a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return {error:'Escull punts dins l’àrea de construcció.'};
+  const plan=planDeckSpan(bridge,a,b);if(plan.error)return plan;
   const draft=copy(bridge);
+  for(const segment of plan.segments){
+    if(segment.existing){draft.beams.find(e=>e.id===segment.existing).type='deck';continue;}
+    const error=addBeam(draft,segment.a,segment.b,'deck',level);if(error)return {error};
+  }
+  return {bridge:draft,added:plan.added,converted:plan.converted};
+}
+export function makeDeck(level,bridge) {
+  let draft=copy(bridge);
   // Follow the level's nominal rail height. Existing solid ground forms the approaches.
   for(let x=level.left;x<level.right-0.01;x+=2) {
     const end=Math.min(level.right,x+2);
     if(terrainAt(level,(x+end)/2)>=-0.02) continue;
-    const error=addBeam(draft,{x,y:0},{x:end,y:0},'deck',level);
-    if(error&&!error.includes('ja estan units')) return {error};
+    const result=addDeckSpan(draft,{x,y:0},{x:end,y:0},level);
+    if(result.error)return {error:result.error};draft=result.bridge;
   }
   return {bridge:draft};
 }
@@ -117,7 +160,7 @@ export class Simulation {
       return {...e,length,stress:0,broken:false};});
     this.edgeMap=new Map(this.beams.map(e=>[e.id,e]));
     this.route=deckRoute(level,bridge);this.trainX=level.left-5;this.trainY=0;this.status='running';this.reason='';this.peak=0;this.broken=0;
-    if(!this.route?.length){this.status='failed';this.reason='Falta un tauler continu entre les dues ribes. Marca els trams transitables amb l’eina Tauler.';}
+    if(!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Tauler o fes servir Construir tauler horitzontal.';}
     this.trainMass=Math.max(4,Math.min(24,(level.source.trainWeight||40000)/5000))*weight;
   }
   fail(reason){if(this.status==='running'){this.status='failed';this.reason=reason;}}

@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la primera versió web educativa per a THOSAPPS. Data: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v2: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -67,7 +67,9 @@ La capçalera BGL completa i els tres camps enters finals es conserven com a met
 
 Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Cada tram costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
 
-Un tram no es crea si supera el pressupost, té longitud nul·la, és massa llarg o duplica una unió existent. Els ancoratges no es poden moure ni afegir arbitràriament. Aquesta versió no inclou l’arrossegament de nodes ja construïts; es poden esborrar i reconstruir els trams afectats.
+Amb l’eina **Tauler** es pot dibuixar directament d’una riba a l’altra. El traç es divideix en trams vàlids, reutilitza els nodes existents que hi coincideixen i mostra el nombre de trams i el cost abans de crear-los. A Old · Nivell 1, el traç de 8 unitats es divideix en dos trams de 4 unitats i costa 200. Repassar una cadena de barres amb Tauler les converteix en trams transitables sense duplicar-les ni tornar a cobrar-les. Si falta pressupost, tota l’operació es descarta.
+
+Un tram no es crea si supera el pressupost, té longitud nul·la o duplica una unió del mateix tipus. Les barres individuals massa llargues es rebutgen; l’eina Tauler les subdivideix. Els ancoratges no es poden moure ni afegir arbitràriament. Aquesta versió no inclou l’arrossegament de nodes ja construïts; es poden esborrar i reconstruir els trams afectats.
 
 Desfer i refer conserven fins a 80 estats per al nivell actual. Canviar de nivell manté el seu pont desat, però reinicia l’historial de desfer. Buidar el pont és reversible amb Desfer.
 
@@ -108,7 +110,9 @@ Els nodes lliures construïts sobre el terreny poden recolzar-hi quan hi contact
 - Una prova al 50% de pes no marca el nivell com a superat. Cal superar-la com a mínim al 100%.
 - Pausa atura l’avanç del càlcul. **Editar** recupera les coordenades originals del pont; la deformació i la ruptura de la prova no modifiquen el projecte.
 
-Els colors vermells indiquen compressió i els blaus tracció. La intensitat expressa la proximitat al límit relatiu del tram, no tensions en MPa ni una verificació de resistència d’un pont real.
+El tauler es dibuixa amb **dues vores turqueses** que identifiquen el camí del tren i conserven el color durant la prova. Els colors vermells indiquen compressió i els blaus tracció; al tauler es mostren al centre, entre les dues vores. La intensitat expressa la proximitat al límit relatiu del tram, no tensions en MPa ni una verificació de resistència d’un pont real.
+
+Quan no hi ha camí continu, el resultat indica **Falta completar el tauler**. Quan el camí existeix però no aguanta la prova, indica **El pont necessita reforços**. Construir un tauler continu permet iniciar la prova; superar-la també requereix resistència estructural.
 
 ## Desament i privacitat del projecte
 
@@ -137,7 +141,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-v1`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. La revisió v2 només modifica fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-deck-v2`.
 
 ### Ordres tècniques
 
@@ -153,7 +157,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 15 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 21 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’Old · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 

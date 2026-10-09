@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
-import {copy,emptyBridge,demo,Simulation,cost,addBeam,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
+import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
@@ -36,7 +36,49 @@ test('a horizontal deck with no triangular reinforcement fails under the standar
   const b=makeDeck(first,emptyBridge(first)).bridge;assert.ok(deckRoute(first,b));assert.equal(simulate(first,b).status,'failed');
 });
 test('missing and disconnected decks fail instead of awarding success',()=>{
-  assert.equal(simulate(first,emptyBridge(first)).status,'failed');const b=demo(first);removeBeam(b,b.beams.find(e=>e.type==='deck').id);assert.equal(deckRoute(first,b),null);assert.equal(simulate(first,b).status,'failed');
+  const missing=simulate(first,emptyBridge(first));assert.equal(missing.status,'failed');assert.equal(missing.failureKind,'route');
+  const b=demo(first);removeBeam(b,b.beams.find(e=>e.type==='deck').id);assert.equal(deckRoute(first,b),null);assert.equal(simulate(first,b).status,'failed');
+});
+test('Old level 1 accepts drawing a deck directly from one bank to the other',()=>{
+  const level=levels.find(l=>l.id==='old-01'),before=emptyBridge(level);
+  const result=addDeckSpan(before,{x:level.left,y:0},{x:level.right,y:0},level);
+  assert.equal(result.error,undefined);assert.equal(result.added,2);assert.equal(cost(result.bridge),200);
+  assert.deepEqual(before,emptyBridge(level));assert.equal(deckRoute(level,result.bridge).length,2);
+  const s=new Simulation(level,result.bridge);assert.equal(s.status,'running');assert.equal(s.time,0);assert.notEqual(s.failureKind,'route');
+  assert.deepEqual(validateBridge(result.bridge,level),result.bridge);
+});
+test('direct deck strokes work in either drawing direction and reuse existing nodes',()=>{
+  for(const reverse of [false,true]){
+    const b=emptyBridge(first);addBeam(b,{x:0,y:0},{x:0,y:2},'bar',first);
+    const a={x:first.left,y:0},z={x:first.right,y:0},result=addDeckSpan(b,reverse?z:a,reverse?a:z,first);
+    assert.ok(deckRoute(first,result.bridge));assert.equal(result.bridge.nodes.filter(n=>n.x===0&&n.y===0).length,1);
+    assert.equal(result.added,2);
+  }
+});
+test('drawing Tauler over existing bars converts them without adding cost',()=>{
+  const b=demo(first);b.beams.filter(e=>e.type==='deck').forEach(e=>e.type='bar');const before=cost(b);
+  assert.equal(deckRoute(first,b),null);
+  const result=addDeckSpan(b,{x:first.left,y:0},{x:first.right,y:0},first);
+  assert.equal(result.converted,2);assert.equal(result.added,0);assert.equal(cost(result.bridge),before);
+  assert.equal(simulate(first,result.bridge).status,'passed');
+  assert.ok(b.beams.every(e=>e.type==='bar'));
+});
+test('a long deck stroke rolls back completely when it exceeds the budget',()=>{
+  const b=emptyBridge(first),before=copy(b),result=addDeckSpan(b,{x:-4,y:0},{x:4,y:0},{...first,budget:100});
+  assert.match(result.error,/pressupost/);assert.deepEqual(b,before);
+});
+test('long inclined deck strokes keep grid points and respect each segment limit',()=>{
+  const level={...copy(first),budget:2000,left:-6,right:6},b=emptyBridge(level);
+  for(const end of [{x:6,y:4},{x:6,y:1},{x:6,y:6}]){
+    const result=addDeckSpan(b,{x:-6,y:0},end,level);assert.equal(result.error,undefined);
+    assert.ok(result.bridge.nodes.filter(n=>!n.fixed).every(n=>Number.isInteger(n.x)&&Number.isInteger(n.y)));
+    assert.deepEqual(validateBridge(result.bridge,level),result.bridge);
+    assert.ok(planDeckSpan(b,{x:-6,y:0},end).segments.every(s=>Math.hypot(s.a.x-s.b.x,s.a.y-s.b.y)<=RULES.maxLength+1e-6));
+  }
+});
+test('automatic deck converts pre-existing bars instead of silently leaving a missing route',()=>{
+  const b=makeDeck(first,emptyBridge(first)).bridge;b.beams.forEach(e=>e.type='bar');
+  const result=makeDeck(first,b);assert.ok(deckRoute(first,result.bridge));assert.equal(cost(result.bridge),cost(b));
 });
 test('an inclined deck can connect an elevated right anchor',()=>{
   const l={...copy(first),anchors:[{x:-4,y:0},{x:4,y:2}]},b=emptyBridge(l);

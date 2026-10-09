@@ -1,5 +1,5 @@
-import {levels} from './levels.js?v=20261009-v1';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,removeBeam,makeDeck,demo,validateBridge,Simulation} from './core.js?v=20261009-v1';
+import {levels} from './levels.js?v=20261009-deck-v2';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation} from './core.js?v=20261009-deck-v2';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
 let saved={version:1,selectedLevel:'new-01',drafts:{},completed:{}},storageOK=true;
@@ -42,7 +42,7 @@ function update(){
   $('stress').setAttribute('aria-pressed',String(stress));
   const e=bridge.beams.find(e=>e.id===selected);$('selection').hidden=!e||running;
   if(e){const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b);$('selectionInfo').textContent=(e.type==='deck'?'Tauler':'Barra')+' · '+fmt(Math.hypot(a.x-b.x,a.y-b.y))+' u · 100';}
-  $('hint').textContent=running?'Observa el pont. Prem Editar per recuperar el disseny.':start?'Escull el segon punt · Esc per cancel·lar.':tool==='erase'?'Clica un tram per esborrar-lo.':tool==='select'?'Clica un tram per veure’n el tipus o esborrar-lo.':'Clica un punt i després un altre · màxim 4,5 u · Alt + arrossegar per moure la vista.';
+  $('hint').textContent=running?'Observa el pont. Prem Editar per recuperar el disseny.':start?'Escull el segon punt · Esc per cancel·lar.':tool==='erase'?'Clica un tram per esborrar-lo.':tool==='select'?'Clica un tram per veure’n el tipus o esborrar-lo.':tool==='deck'?'Uneix les ribes: el tauler es divideix en trams vàlids · Alt + arrossegar per moure la vista.':'Clica un punt i després un altre · màxim 4,5 u per barra · Alt + arrossegar per moure la vista.';
 }
 function fit(){
   const points=[...level.anchors,...bridge.nodes,{x:level.left-5,y:2},{x:level.right+5,y:2},{x:0,y:Math.max(level.water,-18)}];
@@ -67,7 +67,12 @@ function hitBeam(p){
 function createSegment(end,type=tool){
   if(!start)return;const a=start;start=null;
   if(Math.hypot(a.x-end.x,a.y-end.y)<.1){update();return;}
-  const ok=mutate(()=>addBeam(bridge,a,end,type,level));if(ok)status((type==='deck'?'Tauler':'Barra')+' afegit.');update();
+  if(type==='deck'){
+    let result;
+    const ok=mutate(()=>{result=addDeckSpan(bridge,a,end,level);if(result.error)return result.error;bridge=result.bridge;});
+    if(ok)status(result.added?'Tauler creat: '+result.added+' trams · cost '+fmt(result.added*RULES.beamCost)+(result.converted?' · '+result.converted+' barres convertides a tauler.':'.'):result.converted?result.converted+' barres convertides a tauler.':'Aquests trams ja són tauler.');
+  }else{const ok=mutate(()=>addBeam(bridge,a,end,type,level));if(ok)status('Barra afegida.');}
+  update();
 }
 canvas.addEventListener('pointerdown',e=>{
   canvas.focus();const p=pointerPosition(e);pointer={...p,view:{...view},pan:e.button===1||e.altKey,dragStart:false};
@@ -99,7 +104,7 @@ function redoAction(){if(simulation||!redo.length)return;undo.push(copy(bridge))
 function run(){start=null;selected=null;persist();simulation=new Simulation(level,bridge,Number($('weight').value));paused=false;accumulator=0;$('result').hidden=true;update();if(simulation.status==='failed')finish();else status('Prova en marxa: pes propi i pas del tren.');}
 function finish(){
   const passed=simulation.status==='passed';$('result').hidden=false;$('result').classList.toggle('passed',passed);
-  $('resultTitle').textContent=passed?'✓ Pont superat!':'El pont necessita reforços';
+  $('resultTitle').textContent=passed?'✓ Pont superat!':simulation.failureKind==='route'?'Falta completar el tauler':'El pont necessita reforços';
   const light=passed&&simulation.weight<1;
   $('resultText').textContent=simulation.reason+(light?' Prova també amb el pes del 100% per marcar aquest nivell com a superat.':'')+(passed&&simulation.broken?' Hi ha '+simulation.broken+' trams trencats: pots millorar el disseny.':'');
   const nextLevel=levels.find(l=>l.pack===level.pack&&l.number===level.number+1);
@@ -162,11 +167,12 @@ function draw(){
   line({x:level.left,y:0},{x:level.right,y:0},'#526d7b60',1,true);
   for(const [x,label] of [[level.left,'SORTIDA'],[level.right,'ARRIBADA']]){const p=screen({x,y:0});ctx.font='9px Segoe UI';ctx.fillStyle='#82a3b3';ctx.textAlign='center';ctx.fillText(label,p.x,p.y+22);}
   const nodes=simulation?.nodes||bridge.nodes,edges=simulation?.beams||bridge.beams,byId=new Map(nodes.map(n=>[n.id,n]));
-  for(const e of edges){const a=byId.get(e.a),b=byId.get(e.b);let color=e.type==='deck'?'#d5e6ef':'#789ab3';
+  for(const e of edges){const a=byId.get(e.a),b=byId.get(e.b);let color=e.type==='deck'?'#142c34':'#789ab3';
     if(simulation&&stress&&Math.abs(e.stress)>.035){const v=Math.min(1,Math.abs(e.stress));color=e.stress>0?`rgb(${Math.round(120-55*v)},${Math.round(157+10*v)},${Math.round(181+65*v)})`:`rgb(${Math.round(120+123*v)},${Math.round(157-61*v)},${Math.round(181-82*v)})`;}
     if(e.id===selected)line(a,b,'#29d5cf',9);
     if(e.broken){line(a,b,'#e16d6155',2,true);continue;}
-    line(a,b,color,e.type==='deck'?5:2.5);
+    if(e.type==='deck')line(a,b,'#35d4c4',7);
+    line(a,b,color,e.type==='deck'?3:2.5);
     if(e.type==='deck'){const p=screen(a),q=screen(b),dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy);ctx.strokeStyle='#0e2334';ctx.lineWidth=1;
       for(let d=6;d<len;d+=12){const x=p.x+dx*d/len,y=p.y+dy*d/len;ctx.beginPath();ctx.moveTo(x-dy/len*3,y+dx/len*3);ctx.lineTo(x+dy/len*3,y-dx/len*3);ctx.stroke();}
     }
@@ -175,7 +181,13 @@ function draw(){
     ctx.beginPath();if(n.fixed){ctx.moveTo(p.x,p.y-6);ctx.lineTo(p.x+6,p.y);ctx.lineTo(p.x,p.y+6);ctx.lineTo(p.x-6,p.y);ctx.closePath();}else ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();ctx.stroke();
   }
   if(start&&!simulation){const p=screen(start);ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);ctx.strokeStyle='#2bcfca';ctx.lineWidth=2;ctx.stroke();
-    if(hover){const length=Math.hypot(hover.x-start.x,hover.y-start.y);line(start,hover,length<=RULES.maxLength?'#2bcfca':'#f17b65',2,true);const q=screen(hover);ctx.fillStyle='#b7d8e6';ctx.font='11px Segoe UI';ctx.textAlign='left';ctx.fillText(fmt(length)+' u · 100',q.x+13,q.y-12);}
+    if(hover){
+      const length=Math.hypot(hover.x-start.x,hover.y-start.y),plan=tool==='deck'?planDeckSpan(bridge,start,hover):null;
+      if(plan?.segments){for(const s of plan.segments){line(s.a,s.b,'#2bcfca',2,true);const p=screen(s.b);ctx.fillStyle='#2bcfca';ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}}
+      else line(start,hover,length<=RULES.maxLength?'#2bcfca':'#f17b65',2,true);
+      const q=screen(hover);ctx.fillStyle='#b7d8e6';ctx.font='11px Segoe UI';ctx.textAlign='left';
+      ctx.fillText(fmt(length)+' u · '+(plan?.segments?plan.segments.length+' trams · '+fmt(plan.added*RULES.beamCost):'100'),q.x+13,q.y-12);
+    }
   }
   if(simulation){
     for(let i=3;i>=0;i--){const x=simulation.trainX-i*1.3,rail=simulation.railAt(x),p=screen({x,y:rail.broken?simulation.trainY:rail.y});const size=Math.max(11,Math.min(32,view.scale*.95));
