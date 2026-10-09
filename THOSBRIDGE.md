@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v3: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v4: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -110,7 +110,7 @@ Els nodes lliures construïts sobre el terreny poden recolzar-hi quan hi contact
 - Una prova al 50% de pes no marca el nivell com a superat. Cal superar-la com a mínim al 100%.
 - Pausa atura l’avanç del càlcul. **Editar** recupera les coordenades originals del pont; la deformació i la ruptura de la prova no modifiquen el projecte.
 
-Si el pont perd el suport del tren, entra en una fase de **col·lapse**. El càlcul de les barres, la gravetat i el contacte amb el terreny continuen durant 8 segons de simulació perquè es pugui observar la caiguda. Els vehicles sense suport cauen i els que encara recolzen al tauler continuen carregant l’estructura. El missatge final es mostra després d’aquesta fase. Es pot pausar el col·lapse o prémer Editar en qualsevol moment. Una manca de camí inicial continua donant un avís immediat, sense simular un col·lapse.
+Si el pont perd el suport del tren, entra en una fase de **col·lapse**. El càlcul de les barres, la gravetat i el contacte amb el terreny continuen durant 8 segons de simulació perquè es pugui observar la caiguda. Els vehicles sense suport cauen i els que encara recolzen al tauler continuen carregant l’estructura. **El missatge i el botó Millorar el pont apareixen immediatament en detectar la fallada**, mentre la caiguda continua. Es pot pausar el col·lapse o tornar a editar sense esperar que acabi. Una manca de camí inicial continua donant un avís immediat, sense simular un col·lapse.
 
 El tauler es dibuixa amb **dues vores turqueses** que identifiquen el camí del tren i conserven el color durant la prova. Els colors vermells indiquen compressió i els blaus tracció; al tauler es mostren al centre, entre les dues vores. La intensitat expressa la proximitat al límit relatiu del tram, no tensions en MPa ni una verificació de resistència d’un pont real.
 
@@ -143,7 +143,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. La revisió v2 només modifica fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-collapse-v3`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. La revisió v2 només modifica fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-result-v4`.
 
 ### Ordres tècniques
 

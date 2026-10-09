@@ -1,5 +1,5 @@
-import {levels} from './levels.js?v=20261009-collapse-v3';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation} from './core.js?v=20261009-collapse-v3';
+import {levels} from './levels.js?v=20261009-result-v4';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation} from './core.js?v=20261009-result-v4';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
 let saved={version:1,selectedLevel:'new-01',drafts:{},completed:{}},storageOK=true;
@@ -201,7 +201,7 @@ function frame(time){
   const dt=lastFrame?Math.min((time-lastFrame)/1000,.05):0;lastFrame=time;
   if(simulation?.active&&!paused){accumulator+=dt*Number($('speed').value);let steps=0;
     while(accumulator>=RULES.step&&steps++<100){const before=simulation.status;simulation.step();accumulator-=RULES.step;
-      if(before!==simulation.status&&simulation.status==='collapsing'){update();status('El pont està caient. Pots pausar o tornar a editar.');}
+      if(before!==simulation.status&&simulation.status==='collapsing')finish();
       if(!simulation.active){finish();break;}}
     $('simStats').textContent='Temps '+fmt(simulation.time)+' s · Esforç màxim '+fmt(simulation.peak*100)+'% · Trencaments '+simulation.broken;
   }
