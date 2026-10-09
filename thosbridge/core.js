@@ -151,23 +151,25 @@ export function deckRoute(level,bridge) {
   return null;
 }
 export class Simulation {
-  constructor(level,bridge,weight=1) {
-    this.level=level;this.design=copy(bridge);this.time=0;this.weight=weight;
+  constructor(level,bridge,weight=1,options={}) {
+    this.mode=options.mode==='stress'?'stress':'train';
+    this.level=level;this.design=copy(bridge);this.time=0;this.weight=weight;this.loadFactor=0;
     this.nodes=bridge.nodes.map(n=>({...n,x0:n.x,y0:n.y,vx:0,vy:0,mass:0.35,fx:0,fy:0}));
     this.byId=new Map(this.nodes.map(n=>[n.id,n]));
     this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
       if(!a.fixed)a.mass+=length*.08;if(!b.fixed)b.mass+=length*.08;
-      return {...e,length,stress:0,broken:false};});
+      return {...e,length,stress:0,peakStress:0,broken:false};});
     this.edgeMap=new Map(this.beams.map(e=>[e.id,e]));
     this.route=deckRoute(level,bridge);this.trainX=level.left-5;this.trainY=0;this.status='running';this.reason='';this.peak=0;this.broken=0;
-    if(!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Tauler o fes servir Construir tauler horitzontal.';}
+    if(this.mode==='train'&&!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Tauler o fes servir Construir tauler horitzontal.';}
+    if(this.mode==='stress'&&!this.beams.length){this.status='failed';this.failureKind='structure';this.reason='Construeix algun tram abans de fer la prova d’esforços.';}
     this.trainMass=Math.max(4,Math.min(24,(level.source.trainWeight||40000)/5000))*weight;
   }
   get active(){return this.status==='running'||this.status==='collapsing';}
   fail(reason,animate=true){
     if(this.status!=='running')return;
     this.reason=reason;this.failureKind='structure';this.status=animate?'collapsing':'failed';this.collapseTime=0;
-    if(animate)this.cars=[0,1.3,2.6,3.9].map(offset=>{
+    if(animate&&this.mode==='train')this.cars=[0,1.3,2.6,3.9].map(offset=>{
       const x=this.trainX-offset,rail=this.railAt(x);
       return {x,y:rail.broken?this.trainY:rail.y,vx:0,vy:0,falling:false};
     });
@@ -184,7 +186,12 @@ export class Simulation {
     if(!this.active)return;
     this.time+=dt;
     for(const n of this.nodes){n.fx=0;n.fy=-RULES.gravity*n.mass;}
-    if(this.status==='running'&&this.time>0.8){
+    if(this.mode==='stress'){
+      this.loadFactor=Math.max(0,Math.min(1,(this.time-.8)/3));
+      const deck=this.beams.filter(e=>e.type==='deck'&&!e.broken),total=deck.reduce((s,e)=>s+e.length,0);
+      for(const e of deck){const load=total?this.trainMass*RULES.gravity*this.loadFactor*e.length/total/2:0;this.byId.get(e.a).fy-=load;this.byId.get(e.b).fy-=load;}
+    }
+    if(this.mode==='train'&&this.status==='running'&&this.time>0.8){
       this.trainX+=(this.level.right-this.level.left+10)/12*dt;
       for(const offset of [0,1.3,2.6,3.9]) {
         const x=this.trainX-offset;
@@ -197,7 +204,7 @@ export class Simulation {
     }
     if(this.status==='collapsing'){
       this.collapseTime+=dt;
-      for(const car of this.cars){
+      for(const car of this.cars||[]){
         const rail=this.railAt(car.x);
         if(!car.falling&&(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag)){
           car.falling=true;car.vx=(this.level.right-this.level.left+10)/24;
@@ -217,6 +224,7 @@ export class Simulation {
       const force=RULES.stiffness*extension+RULES.damping*relative;
       const strength=RULES.strength/(1+e.length*e.length/30);
       e.stress=RULES.stiffness*extension/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
+      if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;
       if(Math.abs(e.stress)>1){e.broken=true;this.broken++;continue;}
       a.fx+=force*nx;a.fy+=force*ny;b.fx-=force*nx;b.fy-=force*ny;
     }
@@ -230,7 +238,11 @@ export class Simulation {
         n.x=n.x0;n.y=n.y0;n.vx=0;n.vy=0;this.status='failed';this.reason='La construcció és inestable. Torna a editar el pont.';return;
       }
     }
-    if(this.status==='running'&&this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
+    if(this.mode==='stress'&&this.status==='running'){
+      if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-RULES.maxSag))this.fail('El pont no aguanta la prova prèvia de càrrega. Reforça els trams més carregats.');
+      else if(this.time>=6){this.status='assessed';this.reason='Prova prèvia completada. Observa els trams més carregats i fes passar el tren.';}
+    }
+    if(this.mode==='train'&&this.status==='running'&&this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
     if(this.status==='running'&&this.time>20)this.fail('El tren no ha pogut completar el recorregut.');
     if(this.status==='collapsing'&&this.collapseTime>=8)this.status='failed';
   }

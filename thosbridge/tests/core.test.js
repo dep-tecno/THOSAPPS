@@ -5,6 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
+import {clampCardPosition,initialCardPosition} from '../cards.js';
 import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
@@ -124,4 +125,29 @@ test('terrain interpolation and contact preserve finite simulations on all 30 le
   for(const l of levels){assert.equal(terrainAt(l,l.terrain[0].x),l.terrain[0].y);const result=makeDeck(l,emptyBridge(l));if(!result.bridge)continue;
     const s=simulate(l,result.bridge);assert.notEqual(s.status,'running');assert.ok(s.nodes.every(n=>Number.isFinite(n.x)&&Number.isFinite(n.y)));
   }
+});
+test('stress pretest loads the structure without moving a train or changing the saved design',()=>{
+  for(const level of [levels[0],levels[15]]){
+    const b=demo(level),before=copy(b),s=new Simulation(level,b,1,{mode:'stress'}),trainX=s.trainX;
+    for(let i=0;i<4000&&s.active;i++)s.step();
+    assert.equal(s.status,'assessed');assert.equal(s.loadFactor,1);assert.equal(s.trainX,trainX);assert.equal(s.cars,undefined);
+    assert.ok(s.peak>0);assert.ok(s.beams.some(e=>Math.abs(e.peakStress)>0));assert.deepEqual(b,before);
+  }
+});
+test('stress pretest shows an unsupported deck collapsing without requiring a train route',()=>{
+  const b=makeDeck(first,emptyBridge(first)).bridge,s=new Simulation(first,b,1,{mode:'stress'});
+  for(let i=0;i<4000&&s.status==='running';i++)s.step();
+  assert.equal(s.status,'collapsing');assert.match(s.reason,/prèvia/);assert.equal(s.cars,undefined);
+  const time=s.time;s.step();assert.ok(s.time>time);
+});
+test('stress pretest accepts incomplete structures and reports an empty design clearly',()=>{
+  const b=emptyBridge(first);addBeam(b,{x:first.left,y:0},{x:first.left+2,y:2},'bar',first);
+  const s=new Simulation(first,b,1,{mode:'stress'});assert.equal(s.status,'running');assert.equal(s.route,null);
+  const empty=new Simulation(first,emptyBridge(first),1,{mode:'stress'});assert.equal(empty.status,'failed');assert.match(empty.reason,/Construeix/);
+});
+test('floating cards remain reachable after a viewport shrink and have separate initial positions',()=>{
+  const size={width:245,height:200},stage={width:900,height:650};
+  assert.notDeepEqual(initialCardPosition('costCard',size,stage),initialCardPosition('legendCard',size,stage));
+  assert.deepEqual(clampCardPosition({x:850,y:600},size,{width:500,height:400}),{x:247,y:158});
+  assert.deepEqual(clampCardPosition({x:-100,y:NaN},size,stage),{x:8,y:8});
 });

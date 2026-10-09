@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v4: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v5: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -18,7 +18,7 @@ Els fitxers dels nivells aportats s’han llegit i convertit a dades web, manten
 
 Construir una estructura amb un pressupost limitat i comprovar si un tren pot travessar-la. L’alumnat ha de poder observar la diferència entre tauler i reforç, l’efecte de la triangulació, els esforços de tracció i compressió, la deformació i la ruptura dels trams.
 
-Interfície en català, execució al navegador i projectes desats localment. La primera versió prioritza un camí senzill: triar nivell, construir el pont, prémer **▶ Provar pont**, observar i millorar.
+Interfície en català, execució al navegador i projectes desats localment. La primera versió prioritza un camí senzill: triar nivell, construir el pont, prémer **▶ Tren**, observar i millorar.
 
 ## Nivells recuperats
 
@@ -79,6 +79,22 @@ Al primer nivell de cadascun dels dos paquets hi ha un exemple triangular de cin
 
 ## Simulació pròpia
 
+### Prova prèvia d’esforços
+
+El botó **◈ Test d’esforços** aplica el pes propi durant 0,8 segons i després augmenta progressivament una càrrega vertical repartida pel tauler fins al 100% del pes seleccionat, durant 3 segons. Cada tram de tauler rep càrrega proporcional a la seva longitud, repartida entre els dos extrems. La prova acaba als 6 segons de simulació si l’estructura es manté estable. No hi circula cap tren; també es pot provar una estructura que encara no tingui un camí continu.
+
+El test conserva l’esforç màxim de cada tram i assenyala els tres més carregats, amb el seu identificador, tracció o compressió i percentatge del límit relatiu. Durant aquesta prova, els colors mostren els màxims assolits. Si es trenca un tram o un node lliure baixa més de 0,7 unitats, es mostra el resultat immediatament i es pot observar el col·lapse.
+
+Completar el test no marca el nivell com a superat. Des del resultat es pot prémer **Fer passar el tren**, que inicia una prova nova sobre el disseny original, o **Millorar el pont**. La càrrega repartida és una aproximació didàctica pròpia: no equival al test del programa original i no garanteix resistir una càrrega mòbil. Una estructura formada només per barres es prova sota el seu pes propi, perquè no té tauler on repartir la càrrega.
+
+### Targetes i controls
+
+Els selectors de paquet i nivell i les accions de construcció se situen a la barra superior. El panell lateral desapareix i la graella ocupa tota l’amplada. El cost i el pressupost, els paràmetres i resultats de la prova i la llegenda es mostren en targetes sobre la graella, visibles durant el pas del tren.
+
+Es poden arrossegar per la capçalera, moure amb les fletxes quan aquesta té el focus i plegar o ampliar independentment. La selecció d’un tram i el resultat també són targetes mòbils. **▣** amaga o mostra les targetes informatives; **⤢** restableix les posicions. Les posicions i l’estat plegat es desen amb la clau `thosbridge:cards:v1`, separats del projecte. Canviar-los no modifica el pont, el JSON ni l’historial. En redimensionar la pantalla, les targetes es mantenen dins de la graella.
+
+### Prova amb tren
+
 El motor web modela nodes amb massa i barres elàstiques articulades. Primer deixa actuar el pes propi durant 0,8 segons i després fa avançar una càrrega distribuïda en quatre punts, representada visualment com un tren.
 
 | Paràmetre web | Valor inicial |
@@ -135,6 +151,8 @@ thosbridge.html
 thosbridge/app.css
 thosbridge/app.js
 thosbridge/core.js
+thosbridge/cards.js
+thosbridge/cards.js
 thosbridge/levels.js
 thosbridge/tests/core.test.js
 thosbridge/tools/convert-levels.cjs
@@ -143,7 +161,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. La revisió v2 només modifica fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-result-v4`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-cards-stress-v5`.
 
 ### Ordres tècniques
 
@@ -159,7 +177,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 22 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’Old · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 26 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’Old · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
@@ -173,5 +191,6 @@ Aspectes per a la seva revisió:
 4. Desar i reobrir un JSON; recarregar i recuperar els ponts de diversos nivells.
 5. Recórrer els 30 escenaris, especialment els nivells amb desnivells, un sol ancoratge i obstacles alts.
 6. Contrastar amb l’executable original la geometria visible i identificar les regles especials que calgui reproduir en una iteració posterior.
+7. Moure i plegar les targetes, comprovar la barra superior i fer **Test d’esforços → Tren**. Contrastar els identificadors dels trams amb la targeta de prova.
 
 Les millores posteriors s’han de decidir a partir d’aquesta revisió. No s’incorporen en aquesta primera versió un editor de nivells, materials addicionals, còpia/simetria d’estructures ni un motor professional de càlcul estructural.
