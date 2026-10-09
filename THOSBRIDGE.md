@@ -183,7 +183,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-traccio-v14`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-dades-v15`.
 
 ### Ordres tècniques
 
@@ -199,7 +199,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 36 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 38 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
@@ -228,3 +228,11 @@ Els fitxers desats no es transformen automàticament. Aquesta revisió s’ha co
 ### Indicador de tracció (v14)
 
 La targeta Prova i esforços incorpora una barra blava animada de tracció màxima, amb percentatge respecte del límit i tram associat. Manté els cinc trams més carregats i els seus tipus d’esforç. La tracció es registra independentment del pic absolut, perquè una compressió posterior més gran a la mateixa barra no esborri la tracció anterior. El registre es reinicia a cada prova. Sense prova mostra pendent; si no hi ha tracció mostra 0% i no detectada. L’amplada es limita al 100%, però la xifra pot superar-lo. Es respecta la preferència de reduir moviment.
+
+### Targeta de dades, fletxa i vinclament orientatiu (v15)
+
+El pes del tren i la velocitat passen al diàleg Opcions del tren, accessible amb ⚙ a la barra superior. La targeta Prova i esforços només conté dades. Es conserva el bloqueig del pes durant una prova i la velocitat es pot canviar en directe.
+
+La fletxa és el màxim descens vertical registrat als nodes del tauler respecte del disseny, en unitats de graella, fins a l’inici del col·lapse. Es conserva quan el mapa d’esforços torna el disseny a la posició original, i es reinicia amb cada prova. No representa moments de flexió ni deformacions d’una biga contínua.
+
+Per decisió de l’usuari, el vinclament és només un indicador orientatiu: barres estructurals no trencades de longitud igual o superior a tres quarts del màxim (3,375 u), amb pic de compressió superior a l’1% del límit axial. Es destaquen amb contorn groc discontinu. El tram destacat es prioritza segons compressió registrada i longitud al quadrat, només com a ajuda d’observació. No és un càlcul d’Euler, no utilitza material/secció, no dóna cap percentatge o càrrega crítica de vinclament i no altera la física ni els criteris de fallada. La compressió màxima de cada tram es registra independentment de la tracció.

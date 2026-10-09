@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261009-traccio-v14';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-traccio-v14';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-traccio-v14';
-import {mountCards} from './cards.js?v=20261009-traccio-v14';
+import {levels as originalLevels} from './levels.js?v=20261009-dades-v15';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-dades-v15';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,bucklingCandidates} from './core.js?v=20261009-dades-v15';
+import {mountCards} from './cards.js?v=20261009-dades-v15';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -122,6 +122,10 @@ function updateStats(){
   $('tensionFill').style.width=Math.min(100,value*100)+'%';
   $('tensionMeter').setAttribute('aria-valuenow',String(Math.round(Math.min(100,value*100))));
   $('tensionMeter').setAttribute('aria-valuetext',tensionText);
+  $('deflectionValue').textContent=simulation?fmt(simulation.maxDeflection)+' u':'Pendent de prova';
+  const candidates=simulation?bucklingCandidates(simulation.beams):[];
+  $('bucklingValue').textContent=!simulation?'Pendent de prova':!candidates.length?'Sense barres destacades':candidates.length+' barres · Tram '+(Number(candidates[0].id.slice(1))+1)+' destacat';
+  $('bucklingSummary').classList.toggle('attention',candidates.length>0);
   const list=$('critical'),beams=criticalBeams();
   if(statsSimulation!==simulation){statsSimulation=simulation;criticalRows.clear();list.replaceChildren();}
   if(!beams.length){if(!list.querySelector('[data-empty]')){list.replaceChildren();const li=document.createElement('li');li.dataset.empty='true';li.textContent='Es mostraran durant la prova.';list.append(li);}return;}
@@ -164,6 +168,7 @@ function showCards(show){for(const card of document.querySelectorAll('[data-info
 $('cardsToggle').onclick=()=>showCards($('cardsToggle').getAttribute('aria-pressed')!=='true');
 $('resetCards').onclick=()=>{showCards(true);cards.reset();status('Targetes recol·locades.');};
 $('help').onclick=()=>$('helpDialog').showModal();$('closeHelp').onclick=()=>$('helpDialog').close();
+$('trainSettings').onclick=()=>$('trainDialog').showModal();$('closeTrainSettings').onclick=()=>$('trainDialog').close();
 $('save').onclick=()=>{
   const payload={app:'THOSBRIDGE',version:1,levelId:level.id,bridge:copy(bridge)};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='thosbridge-'+level.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Pont descarregat en JSON.');
@@ -179,7 +184,7 @@ $('file').onchange=async()=>{
   }catch(e){status('No s’ha obert el pont: '+e.message);}
 };
 document.addEventListener('keydown',e=>{
-  if(e.target.closest?.('input,select,textarea,[contenteditable=true]')||$('helpDialog').open)return;
+  if(e.target.closest?.('input,select,textarea,[contenteditable=true]')||$('helpDialog').open||$('trainDialog').open)return;
   if(e.key===' '&&e.target.closest?.('button'))return;
   if(e.ctrlKey||e.metaKey){if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoAction():undoAction();}else if(e.key.toLowerCase()==='y'){e.preventDefault();redoAction();}return;}
   if(e.key===' '){e.preventDefault();simulation?.active?togglePause():!simulation||simulation.status==='assessed'?run():null;return;}
@@ -206,12 +211,14 @@ function draw(){
   line({x:level.left,y:0},{x:level.right,y:0},'#526d7b60',1,true);
   for(const [x,label] of [[level.left,'SORTIDA'],[level.right,'ARRIBADA']]){const p=screen({x,y:0});ctx.font='9px Segoe UI';ctx.fillStyle='#82a3b3';ctx.textAlign='center';ctx.fillText(label,p.x,p.y+22);}
   const nodes=simulation?.nodes||bridge.nodes,edges=simulation?.beams||bridge.beams,byId=new Map(nodes.map(n=>[n.id,n]));
+  const bucklingIds=new Set(simulation?bucklingCandidates(simulation.beams).map(e=>e.id):[]);
   for(const e of edges){const a=byId.get(e.a),b=byId.get(e.b);let color=e.type==='deck'?'#142c34':'#789ab3';
     const effort=simulation?.mode==='stress'?e.peakStress:e.stress;
     if(simulation?.mode==='stress'&&stress)color=stressHeatColor(effort);
     else if(simulation&&stress&&Math.abs(effort)>.035){const v=Math.min(1,Math.abs(effort));color=effort>0?`rgb(${Math.round(120-55*v)},${Math.round(157+10*v)},${Math.round(181+65*v)})`:`rgb(${Math.round(120+123*v)},${Math.round(157-61*v)},${Math.round(181-82*v)})`;}
     if(e.id===selected)line(a,b,'#29d5cf',9);
     if(e.broken&&simulation?.mode!=='stress'){line(a,b,'#e16d6155',2,true);continue;}
+    if(stress&&bucklingIds.has(e.id))line(a,b,'#edb658',8,true);
     if(e.type==='deck')line(a,b,'#35d4c4',7);
     line(a,b,color,e.type==='deck'?3:simulation?.mode==='stress'&&stress?4:2.5);
     if(e.type==='deck'){const p=screen(a),q=screen(b),dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy);ctx.strokeStyle='#0e2334';ctx.lineWidth=1;

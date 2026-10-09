@@ -6,12 +6,25 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
-import {assessBridge,stressHeatColor} from '../core.js';
+import {assessBridge,stressHeatColor,bucklingCandidates} from '../core.js';
 import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,nodeAt,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
 function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
+test('deck deflection keeps the downward maximum, excludes other bars and freezes on collapse',()=>{
+  const b=demo(first),s=new Simulation(first,b),deckNode=s.nodes.find(n=>!n.fixed&&s.deckNodeIds.has(n.id)),other=s.nodes.find(n=>!s.deckNodeIds.has(n.id)&&!n.fixed);
+  deckNode.y=deckNode.y0-.2;other.y=other.y0-2;s.step(0);
+  assert.ok(Math.abs(s.maxDeflection-.2)<1e-9);
+  deckNode.y=deckNode.y0+.1;s.step(0);assert.ok(Math.abs(s.maxDeflection-.2)<1e-9);
+  s.fail('test');deckNode.y=deckNode.y0-10;s.step(0);assert.ok(Math.abs(s.maxDeflection-.2)<1e-9);
+  assert.equal(new Simulation(first,b).maxDeflection,0);
+});
+test('buckling cue only highlights long unbroken structural bars that recorded compression',()=>{
+  const beam={id:'b0',type:'bar',length:4,peakCompression:.3,broken:false};
+  assert.deepEqual(bucklingCandidates([beam,{...beam,id:'b1',length:2},{...beam,id:'b2',peakCompression:0},{...beam,id:'b3',type:'deck'},{...beam,id:'b4',broken:true}]).map(e=>e.id),['b0']);
+  assert.equal(bucklingCandidates([{...beam,peakStress:.5}]).length,1);
+});
 test('maximum tension remains visible when the same bar later has a larger compression peak',()=>{
   const level={...copy(first),budget:1000},b=emptyBridge(level);
   assert.equal(addBeam(b,{x:0,y:2},{x:2,y:2},'bar',level),null);
