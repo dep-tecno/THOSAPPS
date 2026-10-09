@@ -1,6 +1,6 @@
-import {levels} from './levels.js?v=20261009-legend-help-v7';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-legend-help-v7';
-import {mountCards} from './cards.js?v=20261009-legend-help-v7';
+import {levels} from './levels.js?v=20261009-effort-meters-v8';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-effort-meters-v8';
+import {mountCards} from './cards.js?v=20261009-effort-meters-v8';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -10,6 +10,8 @@ catch{storageOK=false;}
 let level=levels.find(l=>l.id===saved.selectedLevel)||levels[15],bridge=emptyBridge(level);
 let undo=[],redo=[],tool='bar',start=null,hover=null,selected=null,simulation=null,paused=false,stress=true;
 let view={x:0,y:0,scale:30},width=1,height=1,pointer=null,lastFrame=0,accumulator=0;
+let statsSimulation=null;
+const criticalRows=new Map();
 function status(text){$('status').textContent=text;}
 function persist(){
   saved.selectedLevel=level.id;saved.drafts[level.id]=copy(bridge);
@@ -111,9 +113,18 @@ function criticalBeams(){return simulation?simulation.beams.filter(e=>Math.abs(e
 function updateStats(){
   $('testStage').textContent=!simulation?'Construeix → Test d’esforços → Tren':simulation.mode==='train'?'Càrrega mòbil: tren':!simulation.beams.some(e=>e.type==='deck')?'Mapa del pes propi: sense tauler per carregar':'Mapa sota càrrega repartida · pes '+fmt(simulation.weight*100)+'%';
   $('simStats').textContent=!simulation?'Primer construeix el tauler i reforça’l amb triangles.':simulation.mode==='stress'?'Esforç màxim '+fmt(simulation.peak*100)+'%'+(simulation.analysisWarning?' · Avís amb càrrega al '+fmt(simulation.loadFactor*100)+'% · Cal reforçar':' · Observa els colors del pont'):'Temps '+fmt(simulation.time)+' s · Esforç màxim '+fmt(simulation.peak*100)+'% · Trencaments '+simulation.broken;
-  $('critical').replaceChildren();
-  for(const e of criticalBeams()){const li=document.createElement('li');li.textContent='Tram '+(Number(e.id.slice(1))+1)+' · '+(e.peakStress>0?'tracció':'compressió')+' · '+fmt(Math.abs(e.peakStress)*100)+'%'+(e.broken?(simulation.mode==='stress'?' · límit superat':' · trencat'):'');$('critical').append(li);}
-  if(!$('critical').childElementCount){const li=document.createElement('li');li.textContent='Es mostraran durant la prova.';$('critical').append(li);}
+  const list=$('critical'),beams=criticalBeams();
+  if(statsSimulation!==simulation){statsSimulation=simulation;criticalRows.clear();list.replaceChildren();}
+  if(!beams.length){if(!list.querySelector('[data-empty]')){list.replaceChildren();const li=document.createElement('li');li.dataset.empty='true';li.textContent='Es mostraran durant la prova.';list.append(li);}return;}
+  list.querySelector('[data-empty]')?.remove();
+  for(const [index,e] of beams.entries()){
+    let row=criticalRows.get(e.id);
+    if(!row){const li=document.createElement('li'),label=document.createElement('span'),meter=document.createElement('div'),fill=document.createElement('i');meter.className='critical-meter';meter.setAttribute('role','progressbar');meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');fill.className='critical-fill';meter.append(fill);li.append(label,meter);row={li,label,meter,fill};criticalRows.set(e.id,row);}
+    const value=Math.abs(e.peakStress),percent=Math.min(100,value*100),name='Tram '+(Number(e.id.slice(1))+1),text=name+' · '+(e.peakStress>0?'tracció':'compressió')+' · '+fmt(value*100)+'%'+(e.broken?(simulation.mode==='stress'?' · límit superat':' · trencat'):'');
+    row.label.textContent=text;row.meter.setAttribute('aria-label',name+' · esforç respecte del límit');row.meter.setAttribute('aria-valuenow',String(Math.round(percent)));row.meter.setAttribute('aria-valuetext',text);row.fill.style.width=percent+'%';row.fill.style.backgroundColor=stressHeatColor(value);
+    if(list.children[index]!==row.li)list.insertBefore(row.li,list.children[index]||null);
+  }
+  for(const [id,row] of criticalRows)if(!beams.some(e=>e.id===id)){row.li.remove();criticalRows.delete(id);}
 }
 function finish(){
   const passed=simulation.status==='passed',assessed=simulation.status==='assessed';$('result').hidden=false;$('result').classList.toggle('passed',passed||assessed&&!simulation.analysisWarning);
