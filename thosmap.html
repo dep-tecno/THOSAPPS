@@ -181,12 +181,14 @@
 
         .mode-flow .node.flow-node {
             background: transparent !important; border: 0; box-shadow: none;
-            padding: 0; width: 180px; max-width: 600px; min-width: 140px;
+            padding: 0; width: 180px; max-width: 600px; min-width: 0;
             transform: translate(-50%, -50%) !important;
         }
-        .flow-node .flow-content { position: relative; padding: 16px 24px; min-height: 72px; box-sizing: border-box; }
-        .flow-node.flow-decision .flow-content { padding: 40px 26%; min-height: 150px; }
-        .flow-node.flow-data .flow-content { padding-left: 30px; padding-right: 30px; }
+        .flow-node .flow-content { position: relative; padding: 8px 10px; min-height: 0; box-sizing: border-box; }
+        .flow-node.flow-decision .flow-content { padding: 8px 26%; }
+        .flow-node.flow-data .flow-content { padding-left: 16%; padding-right: 16%; }
+        .flow-node.flow-terminator .flow-content { padding-left: 22%; padding-right: 22%; }
+        .flow-node.flow-operation .flow-content { padding: 0; flex-shrink: 0; }
         .flow-symbol { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
         .flow-symbol > * { stroke: #94a3b8; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
         .flow-node.selected .flow-symbol > * { stroke: #e879f9; stroke-width: 2.5; }
@@ -407,6 +409,7 @@
     <div id="flow-shape-menu" class="floating-menu">
         <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('terminator')"><i class="fas fa-play"></i> Inici / Fi</button>
         <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('process')"><i class="fas fa-square"></i> Procés</button>
+        <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('operation')"><i class="fas fa-circle"></i> Operació</button>
         <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('decision')"><i class="fas fa-diamond"></i> Decisió</button>
         <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('data')"><i class="fas fa-right-left"></i> Entrada / Sortida</button>
     </div>
@@ -566,7 +569,7 @@
                     if (this.pendingFlowShape) {
                         const shape = this.pendingFlowShape;
                         this.pendingFlowShape = null;
-                        const names = { terminator: 'Inici / Fi', process: 'Procés', decision: 'Decisió', data: 'Entrada / Sortida' };
+                        const names = { terminator: 'Inici / Fi', process: 'Procés', operation: 'Operació', decision: 'Decisió', data: 'Entrada / Sortida' };
                         const id = this.addNode(null, names[shape], false, x, y);
                         const node = this.nodes.find(n => n.id === id);
                         node.flowShape = shape;
@@ -663,7 +666,7 @@
             }
 
             chooseFlowShape(shape) {
-                if (this.currentLayout !== 'flow' || !['terminator', 'process', 'decision', 'data'].includes(shape)) return;
+                if (this.currentLayout !== 'flow' || !['terminator', 'process', 'operation', 'decision', 'data'].includes(shape)) return;
                 this.currentFlowShape = shape;
                 const node = this.nodes.find(n => n.id === this.selectedNodeId && n.type !== 'text');
                 if (node) {
@@ -1145,7 +1148,7 @@
                     if (node) {
                         const el = document.querySelector(`.node[data-id="${node.id}"]`);
                         const currentWidth = (e.clientX - this.resizeStartX) / this.zoomLevel + this.resizeStartWidth;
-                        node.width = Math.max(this.currentLayout === 'flow' && node.type !== 'text' ? 140 : 80, currentWidth);
+                        node.width = Math.max(this.currentLayout === 'flow' && node.type !== 'text' ? 1 : 80, currentWidth);
                         if (el) { el.style.width = node.width + 'px'; el.style.maxWidth = 'none'; }
                         this.fitFlowSymbol(node);
                         this.renderConnections();
@@ -1256,13 +1259,39 @@
                 this.autoSave();
             }
 
+            getFlowMinimumWidth(node, content) {
+                const style = window.getComputedStyle(content);
+                if (!this._flowMeasureContext) this._flowMeasureContext = document.createElement('canvas').getContext('2d');
+                const measure = this._flowMeasureContext;
+                measure.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+                const words = (content.innerText || '').split(/\s+/);
+                const wordWidth = Math.max(4, ...words.map(word => measure.measureText(word).width));
+                if (node.flowShape === 'operation') return Math.ceil(Math.SQRT2*(wordWidth+16));
+                if (node.flowShape === 'decision') return Math.ceil((wordWidth+4)/0.48);
+                if (node.flowShape === 'data') return Math.ceil((wordWidth+4)/0.68);
+                if (node.flowShape === 'terminator') return Math.ceil((wordWidth+4)/0.56);
+                return Math.ceil(wordWidth+20);
+            }
+
             fitFlowSymbol(node) {
-                if (this.currentLayout !== 'flow' || node.type === 'text' || node.flowShape !== 'decision') return;
+                if (this.currentLayout !== 'flow' || node.type === 'text') return;
                 const el = document.querySelector(`.node[data-id="${node.id}"]`);
                 const wrapper = el?.querySelector('.flow-content');
-                if (!wrapper) return;
+                const content = el?.querySelector('.node-content');
+                if (!wrapper || !content) return;
+                const minimum = this.getFlowMinimumWidth(node, content);
+                el.style.minWidth = minimum+'px';
+                const width = Math.max(node.width || el.offsetWidth, minimum);
+                el.style.width = width+'px';
+                if (node.flowShape === 'operation') wrapper.style.width = (width/Math.SQRT2-16)+'px';
                 const contentHeight = [...wrapper.children].reduce((sum, child) => sum+child.offsetHeight+(child.classList.contains('node-img') ? 5 : 0), 0);
-                wrapper.style.paddingTop = wrapper.style.paddingBottom = Math.max(40, contentHeight/2+12)+'px';
+                if (node.flowShape === 'decision') wrapper.style.paddingTop = wrapper.style.paddingBottom = (contentHeight/2+8)+'px';
+                if (node.flowShape === 'terminator') wrapper.style.paddingTop = wrapper.style.paddingBottom = (contentHeight*0.04+8)+'px';
+                if (node.flowShape === 'operation') {
+                    const diameter = Math.max(width, Math.ceil(Math.SQRT2*(contentHeight+16)));
+                    el.style.width = el.style.height = diameter+'px';
+                    wrapper.style.width = (diameter/Math.SQRT2-16)+'px';
+                }
             }
 
             renderNode(node) {
@@ -1273,7 +1302,7 @@
             createNodeElement(node) {
                 const el = document.createElement('div');
                 const flow = this.currentLayout === 'flow' && node.type !== 'text';
-                const shape = ['terminator', 'decision', 'data'].includes(node.flowShape) ? node.flowShape : 'process';
+                const shape = ['terminator', 'operation', 'decision', 'data'].includes(node.flowShape) ? node.flowShape : 'process';
                 el.className = `node ${node.id === this.selectedNodeId ? 'selected' : ''} ${node.isRoot ? 'root-node' : ''} ${node.type === 'text' ? 'free-text' : ''}`;
                 if (flow) el.classList.add('flow-node', 'flow-' + shape);
                 
@@ -1310,11 +1339,12 @@
                 const imgHtml = safeImage ? `<img src="${safeImage}" class="node-img">` : '';
                 const symbols = {
                     process: '<rect x="1" y="1" width="198" height="118"/>',
+                    operation: '<circle cx="100" cy="100" r="99"/>',
                     terminator: '<rect x="1" y="1" width="198" height="118" rx="59"/>',
                     decision: '<polygon points="100,1 199,60 100,119 1,60"/>',
                     data: '<polygon points="28,1 199,1 172,119 1,119"/>'
                 };
-                const symbol = flow ? `<svg class="flow-symbol" viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true" fill="${this.sanitizeColor(node.color, '#374151')}">${symbols[shape]}</svg>` : '';
+                const symbol = flow ? `<svg class="flow-symbol" viewBox="0 0 200 ${shape === 'operation' ? '200' : '120'}" preserveAspectRatio="none" aria-hidden="true" fill="${this.sanitizeColor(node.color, '#374151')}">${symbols[shape]}</svg>` : '';
 
                 // SECURITY: node.text s'escapa amb escapeHTML per evitar XSS via innerHTML
                 el.innerHTML = `
@@ -1329,6 +1359,7 @@
                 const contentDiv = el.querySelector('.node-content');
                 if (this.isConnecting) contentDiv.style.pointerEvents = 'none';
                 contentDiv.style.textAlign = this.getTextAlignment(node);
+                if (flow && safeImage) el.querySelector('.node-img').addEventListener('load', () => { this.fitFlowSymbol(node); this.renderConnections(); this.autoSave(); });
                 
                 // KEYDOWN SPECIFIC FOR NODE CONTENT (ENTER / ALT+ENTER)
                 contentDiv.addEventListener('keydown', (e) => {
@@ -1393,7 +1424,8 @@
 
             getFlowNodeSize(node) {
                 const el = document.querySelector(`.node[data-id="${node.id}"]`);
-                return { width: el?.offsetWidth || node.width || 180, height: el?.offsetHeight || (node.flowShape === 'decision' ? 130 : 72) };
+                const width = el?.offsetWidth || node.width || 180;
+                return { width, height: el?.offsetHeight || (node.flowShape === 'operation' ? width : node.flowShape === 'decision' ? 130 : 72) };
             }
 
             flowRouteKey(from, to) {
@@ -1404,6 +1436,10 @@
                 const { width: w, height: h } = this.getFlowNodeSize(node);
                 const dx = toward.x - node.x, dy = toward.y - node.y;
                 if (!dx && !dy) return { x: node.x, y: node.y };
+                if (node.flowShape === 'operation') {
+                    const scale = (w/2)/Math.hypot(dx, dy);
+                    return {x: node.x+dx*scale, y: node.y+dy*scale};
+                }
                 let vertices;
                 if (node.flowShape === 'decision') vertices = [[0, -h/2], [w/2, 0], [0, h/2], [-w/2, 0]];
                 else if (node.flowShape === 'data') vertices = [[-w*.36, -h/2], [w/2, -h/2], [w*.36, h/2], [-w/2, h/2]];
@@ -1651,10 +1687,10 @@
                             x:        Number.isFinite(Number(n.x)) ? Number(n.x) : 0,
                             y:        Number.isFinite(Number(n.y)) ? Number(n.y) : 0,
                             isRoot:   layout !== 'flow' && n.type !== 'text' && Boolean(n.isRoot),
-                            flowShape: ['terminator', 'process', 'decision', 'data'].includes(n.flowShape) ? n.flowShape : 'process',
+                            flowShape: ['terminator', 'process', 'operation', 'decision', 'data'].includes(n.flowShape) ? n.flowShape : 'process',
                             color:    this.sanitizeColor(n.color, n.type === 'text' ? '#f9fafb' : '#374151'),
                             image:    n.type !== 'text' && n.image && allowedImg.some(t => String(n.image).startsWith(t)) ? n.image : null,
-                            width:    n.width ? Math.min(Math.max(Number(n.width) || 200, 50), 1200) : null,
+                            width:    n.width ? Math.min(Math.max(Number(n.width) || 200, layout === 'flow' ? 1 : 50), 1200) : null,
                             fontSize: n.fontSize ? Math.min(Math.max(Number(n.fontSize) || 14, 10), 64) : 14,
                             bold:     typeof n.bold === 'boolean' ? n.bold : n.type !== 'text' && Boolean(n.isRoot),
                             textAlign: ['left', 'center', 'right', 'justify'].includes(n.textAlign) ? n.textAlign : null
