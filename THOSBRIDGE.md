@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v6: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v7: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -91,7 +91,7 @@ Completar el test no marca el nivell com a superat. Des del resultat es pot pré
 
 ### Targetes i controls
 
-Els selectors de paquet i nivell i les accions de construcció se situen a la barra superior. El panell lateral desapareix i la graella ocupa tota l’amplada. El cost i el pressupost, els paràmetres i resultats de la prova i la llegenda es mostren en targetes sobre la graella, visibles durant el pas del tren.
+Els selectors de paquet i nivell i les accions de construcció se situen a la barra superior. El panell lateral desapareix i la graella ocupa tota l’amplada. El cost i el pressupost i els paràmetres i resultats de la prova es mostren en targetes sobre la graella, visibles durant el pas del tren. La llegenda de símbols i colors es consulta dins **Ajuda (?)**, juntament amb les indicacions de zoom; no ocupa una targeta sobre la graella.
 
 Es poden arrossegar per la capçalera, moure amb les fletxes quan aquesta té el focus i plegar o ampliar independentment. La selecció d’un tram i el resultat també són targetes mòbils. **▣** amaga o mostra les targetes informatives; **⤢** restableix les posicions. Les posicions i l’estat plegat es desen amb la clau `thosbridge:cards:v1`, separats del projecte. Canviar-los no modifica el pont, el JSON ni l’historial. En redimensionar la pantalla, les targetes es mantenen dins de la graella.
 
@@ -163,7 +163,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-heat-map-v6`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-legend-help-v7`.
 
 ### Ordres tècniques
 

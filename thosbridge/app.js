@@ -1,6 +1,6 @@
-import {levels} from './levels.js?v=20261009-heat-map-v6';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-heat-map-v6';
-import {mountCards} from './cards.js?v=20261009-heat-map-v6';
+import {levels} from './levels.js?v=20261009-legend-help-v7';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-legend-help-v7';
+import {mountCards} from './cards.js?v=20261009-legend-help-v7';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -42,7 +42,6 @@ function update(){
   $('run').disabled=running&&!(simulation.mode==='stress'&&simulation.status==='assessed');$('stressTest').disabled=running;$('edit').disabled=!running;$('pause').disabled=!running||!simulation.active;
   $('pause').textContent=paused?'▶':'Ⅱ';$('pause').title=paused?'Continua la prova':'Pausa la prova';$('pause').setAttribute('aria-label',$('pause').title);
   $('stress').setAttribute('aria-pressed',String(stress));
-  $('stressLegend').hidden=simulation?.mode!=='stress';$('trainLegend').hidden=simulation?.mode==='stress';
   const e=bridge.beams.find(e=>e.id===selected);$('selection').hidden=!e||running;
   if(e){const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b);$('selectionInfo').textContent=(e.type==='deck'?'Tauler':'Barra')+' · '+fmt(Math.hypot(a.x-b.x,a.y-b.y))+' u · 100';}
   $('hint').textContent=running?'Observa el pont. Prem Editar per recuperar el disseny.':start?'Escull el segon punt · Esc per cancel·lar.':tool==='erase'?'Clica un tram per esborrar-lo.':tool==='select'?'Clica un tram per veure’n el tipus o esborrar-lo.':tool==='deck'?'Uneix les ribes: el tauler es divideix en trams vàlids · Alt + arrossegar per moure la vista.':'Clica un punt i després un altre · màxim 4,5 u per barra · Alt + arrossegar per moure la vista.';
