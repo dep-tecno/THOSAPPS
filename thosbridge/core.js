@@ -2,11 +2,6 @@
 export const RULES = Object.freeze({beamCost:100, maxLength:4.5, stiffness:1800,
   gravity:10, strength:260, maxSag:0.7, step:1/240, damping:5, maxNodes:700, maxBeams:1500});
 export const copy = value => JSON.parse(JSON.stringify(value));
-// A teaching cue, not an Euler buckling calculation or a failure criterion.
-export function bucklingCandidates(beams){
-  return beams.filter(e=>e.type==='bar'&&!e.broken&&e.length>=RULES.maxLength*.75&&e.peakCompression>.01)
-    .sort((a,b)=>b.peakCompression*b.length*b.length-a.peakCompression*a.length*a.length);
-}
 export function terrainAt(level,x) {
   const t=level.terrain;
   if(x<=t[0].x) return t[0].y;
@@ -187,10 +182,8 @@ export class Simulation {
     this.byId=new Map(this.nodes.map(n=>[n.id,n]));
     this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
       if(!a.fixed)a.mass+=length*.08;if(!b.fixed)b.mass+=length*.08;
-      return {...e,length,stress:0,peakStress:0,peakTension:0,peakCompression:0,broken:false};});
+      return {...e,length,stress:0,peakStress:0,peakTension:0,broken:false};});
     this.edgeMap=new Map(this.beams.map(e=>[e.id,e]));
-    this.deckNodeIds=new Set(this.beams.filter(e=>e.type==='deck').flatMap(e=>[e.a,e.b]));
-    this.maxDeflection=0;
     this.route=deckRoute(level,bridge);this.trainX=level.left-5;this.trainY=0;this.status='running';this.reason='';this.peak=0;this.broken=0;
     if(this.mode==='train'&&!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Tauler o fes servir Construir tauler horitzontal.';}
     if(this.mode==='stress'&&!this.beams.length){this.status='failed';this.failureKind='structure';this.reason='Construeix algun tram abans de fer la prova d’esforços.';}
@@ -256,7 +249,6 @@ export class Simulation {
       const strength=RULES.strength/(1+e.length*e.length/30);
       e.stress=RULES.stiffness*extension/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
       e.peakTension=Math.max(e.peakTension,e.stress);
-      e.peakCompression=Math.max(e.peakCompression,-e.stress);
       if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;
       if(Math.abs(e.stress)>1){e.broken=true;this.broken++;continue;}
       a.fx+=force*nx;a.fy+=force*ny;b.fx-=force*nx;b.fy-=force*ny;
@@ -271,7 +263,6 @@ export class Simulation {
         n.x=n.x0;n.y=n.y0;n.vx=0;n.vy=0;this.status='failed';this.reason='La construcció és inestable. Torna a editar el pont.';return;
       }
     }
-    if(this.status==='running')for(const n of this.nodes)if(this.deckNodeIds.has(n.id))this.maxDeflection=Math.max(this.maxDeflection,n.y0-n.y);
     if(this.mode==='stress'&&this.status==='running'){
       if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-RULES.maxSag))this.fail('La càrrega prèvia indica una estructura feble. Reforça els trams més carregats.',false);
       else if(this.time>=6){this.status='assessed';this.reason='Prova prèvia completada. Observa els trams més carregats i fes passar el tren.';}
