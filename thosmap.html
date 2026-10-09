@@ -1283,15 +1283,32 @@
                 el.style.minWidth = minimum+'px';
                 const width = Math.max(node.width || el.offsetWidth, minimum);
                 el.style.width = width+'px';
-                if (node.flowShape === 'operation') wrapper.style.width = (width/Math.SQRT2-16)+'px';
+                if (node.flowShape === 'operation') {
+                    const image = el.querySelector('.node-img');
+                    const heightAt = diameter => {
+                        const innerWidth = diameter/Math.SQRT2-16;
+                        wrapper.style.width = innerWidth+'px';
+                        if (image) {
+                            image.style.maxHeight = Math.max(1, innerWidth-content.offsetHeight-5)+'px';
+                            image.style.objectFit = 'contain';
+                        }
+                        return [...wrapper.children].reduce((sum, child) => sum+child.offsetHeight+(child.classList.contains('node-img') ? 5 : 0), 0);
+                    };
+                    let low = width;
+                    let high = Math.max(low, Math.ceil(Math.SQRT2*(heightAt(low)+16)));
+                    // Troba el cercle més petit que conté el text replegat, sense inflar-lo per les primeres línies.
+                    for (let i = 0; i < 12 && high-low > 1; i++) {
+                        const mid = (low+high)/2;
+                        if (Math.SQRT2*(heightAt(mid)+16) <= mid) high = mid; else low = mid;
+                    }
+                    const diameter = Math.ceil(high);
+                    heightAt(diameter);
+                    el.style.width = el.style.height = diameter+'px';
+                    return;
+                }
                 const contentHeight = [...wrapper.children].reduce((sum, child) => sum+child.offsetHeight+(child.classList.contains('node-img') ? 5 : 0), 0);
                 if (node.flowShape === 'decision') wrapper.style.paddingTop = wrapper.style.paddingBottom = (contentHeight/2+8)+'px';
                 if (node.flowShape === 'terminator') wrapper.style.paddingTop = wrapper.style.paddingBottom = (contentHeight*0.04+8)+'px';
-                if (node.flowShape === 'operation') {
-                    const diameter = Math.max(width, Math.ceil(Math.SQRT2*(contentHeight+16)));
-                    el.style.width = el.style.height = diameter+'px';
-                    wrapper.style.width = (diameter/Math.SQRT2-16)+'px';
-                }
             }
 
             renderNode(node) {
