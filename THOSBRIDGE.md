@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v9: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v10: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -91,6 +91,8 @@ Completar el test no marca el nivell com a superat. Des del resultat es pot pré
 
 ### Targetes i controls
 
+La targeta de resultat de la prova del tren té la capçalera verda si el pont se supera i vermella si no se supera. Només canvia el fons de la capçalera; el cos i el contorn de la targeta conserven els colors habituals. El mapa previ d’esforços conserva la capçalera neutra, perquè no marca el pont com a superat.
+
 A **Trams més carregats**, cada tram inclou una barra que s’omple amb una animació curta fins al seu percentatge d’esforç i adopta el mateix color groc-taronja-vermell del mapa. L’amplada es limita al 100%; si l’esforç supera el límit, la xifra mostra el valor real. Durant el tren, les barres s’actualitzen sense recrear tota la llista ni reiniciar l’animació a cada fotograma. El tipus d’esforç i el percentatge continuen visibles en text. Es respecta la preferència del navegador de reduir moviment.
 
 Els selectors de paquet i nivell i les accions de construcció se situen a la barra superior. El panell lateral desapareix i la graella ocupa tota l’amplada. El cost i el pressupost i els paràmetres i resultats de la prova es mostren en targetes sobre la graella, visibles durant el pas del tren. La llegenda de símbols i colors es consulta dins **Ajuda (?)**, juntament amb les indicacions de zoom; no ocupa una targeta sobre la graella.
@@ -165,7 +167,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-five-members-v9`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-result-headers-v10`.
 
 ### Ordres tècniques
 

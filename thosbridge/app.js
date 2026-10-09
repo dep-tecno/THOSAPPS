@@ -1,6 +1,6 @@
-import {levels} from './levels.js?v=20261009-five-members-v9';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-five-members-v9';
-import {mountCards} from './cards.js?v=20261009-five-members-v9';
+import {levels} from './levels.js?v=20261009-result-headers-v10';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-result-headers-v10';
+import {mountCards} from './cards.js?v=20261009-result-headers-v10';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -127,7 +127,7 @@ function updateStats(){
   for(const [id,row] of criticalRows)if(!beams.some(e=>e.id===id)){row.li.remove();criticalRows.delete(id);}
 }
 function finish(){
-  const passed=simulation.status==='passed',assessed=simulation.status==='assessed';$('result').hidden=false;$('result').classList.toggle('passed',passed||assessed&&!simulation.analysisWarning);
+  const passed=simulation.status==='passed',assessed=simulation.status==='assessed';$('result').hidden=false;$('result').classList.toggle('passed',passed);$('result').classList.toggle('failed',!passed&&!assessed);
   $('resultTitle').textContent=passed?'✓ Pont superat!':assessed?(simulation.analysisWarning?'Mapa: cal reforçar el pont':'Mapa d’esforços'):simulation.failureKind==='route'?'Falta completar el tauler':'El pont necessita reforços';
   $('resultRun').hidden=!assessed;
   const light=passed&&simulation.weight<1;
