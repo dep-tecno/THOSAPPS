@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- SECURITY: Content Security Policy — limita fonts de scripts/estils externs -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://cdn.tailwindcss.com https://html2canvas.hertzen.com; style-src 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://cdn.tailwindcss.com https://html2canvas.hertzen.com https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'none'">
     <title>THOSMap v2.0</title>
     <!-- SECURITY: cdn.tailwindcss.com és un CDN dinàmic (Play CDN) i no admet SRI estàtic -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@dagrejs/dagre@1.1.8/dist/dagre.min.js" integrity="sha384-APx0Be9S9z04dTSdhLIIDbTZcU5XrIh2mdU3KlrwJ6+r/5wn/XSXNb6BBAGWZ++D" crossorigin="anonymous"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
     <!-- FontAwesome per icones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
@@ -178,6 +179,35 @@
         .node.free-text:hover { text-decoration: none; }
         .node.free-text .node-content { color: inherit !important; }
 
+        .mode-flow .node.flow-node {
+            background: transparent !important; border: 0; box-shadow: none;
+            padding: 0; width: 180px; max-width: 600px; min-width: 140px;
+            transform: translate(-50%, -50%) !important;
+        }
+        .flow-node .flow-content { position: relative; padding: 16px 24px; min-height: 72px; box-sizing: border-box; }
+        .flow-node.flow-decision .flow-content { padding: 40px 26%; min-height: 150px; }
+        .flow-node.flow-data .flow-content { padding-left: 30px; padding-right: 30px; }
+        .flow-symbol { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+        .flow-symbol > * { stroke: #94a3b8; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+        .flow-node.selected .flow-symbol > * { stroke: #e879f9; stroke-width: 2.5; }
+        .flow-node.linking-source .flow-symbol > * { stroke: #f87171; stroke-width: 2.5; }
+        .mode-flow .flow-node.linking-source { border: 0 !important; animation: none; }
+        .flow-only { display: none; }
+        body[data-layout="flow"] #toolbar .map-only { display: none; }
+        body[data-layout="flow"] #toolbar .flow-only { display: flex; }
+        #flow-shape-menu { width: 190px; }
+        #flow-label-menu { width: 210px; padding: 10px; }
+        #flow-label-menu label { display: block; font-size: 13px; margin-bottom: 6px; }
+        .flow-label-row { display: flex; gap: 4px; }
+        #flow-edge-text { flex: 1; min-width: 0; color: #f9fafb; background: #111827; border: 1px solid #4b5563; padding: 6px; border-radius: 4px; }
+        .canvas-dialog { position: fixed; inset: 0; z-index: 600; background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center; }
+        .canvas-dialog-panel { width: min(440px, calc(100% - 32px)); padding: 24px; background: #1f2937; border: 1px solid #4b5563; border-radius: 6px; }
+        .canvas-dialog-panel h2 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+        .canvas-dialog-panel p { font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+        .canvas-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+        .canvas-dialog-actions button { padding: 8px 12px; border: 1px solid #4b5563; border-radius: 4px; background: #374151; color: #f9fafb; }
+        .canvas-dialog-actions .danger { background: #991b1b; border-color: #b91c1c; }
+
         /* --- ELEMENTS ADICIONALS --- */
         .node.linking-source {
             border: 3px dashed #f87171 !important;
@@ -262,7 +292,7 @@
             cursor: pointer; display: inline-block; margin: 2px;
         }
         #color-menu { width: 160px; padding: 8px; }
-        #layout-menu { width: 180px; }
+        #layout-menu { width: 250px; }
         #alignment-menu { width: 160px; }
         .alignment-choice { width: 100%; border: 0; background: transparent; text-align: left; }
         .alignment-choice[aria-checked="true"] { background: #374151; color: #fff; }
@@ -322,9 +352,12 @@
         <button onclick="app.undo()" id="btn-undo" class="tool-btn" title="Desfer (Ctrl+Z)" disabled><i class="fas fa-undo"></i></button>
         <button onclick="app.redo()" id="btn-redo" class="tool-btn" title="Refer (Ctrl+Y)" disabled><i class="fas fa-redo"></i></button>
         <div class="tool-separator"></div>
-        <button onclick="app.addChild()" class="tool-btn" title="Afegir fill (Tab)" aria-label="Afegir fill"><i class="fas fa-sitemap"></i><span class="tool-label">Fill</span></button>
-        <button onclick="app.addSibling()" class="tool-btn" title="Afegir germà (Enter)" aria-label="Afegir germà"><i class="fas fa-plus"></i><span class="tool-label">Germà</span></button>
-        <button onclick="app.addRootNode()" class="tool-btn font-bold text-blue-400" title="Afegir pare" aria-label="Afegir pare"><i class="fas fa-star"></i><span class="tool-label">Pare</span></button>
+        <button onclick="app.addChild()" class="tool-btn map-only" title="Afegir fill (Tab)" aria-label="Afegir fill"><i class="fas fa-sitemap"></i><span class="tool-label">Fill</span></button>
+        <button onclick="app.addSibling()" class="tool-btn map-only" title="Afegir germà (Enter)" aria-label="Afegir germà"><i class="fas fa-plus"></i><span class="tool-label">Germà</span></button>
+        <button onclick="app.addRootNode()" class="tool-btn map-only font-bold text-blue-400" title="Afegir pare" aria-label="Afegir pare"><i class="fas fa-star"></i><span class="tool-label">Pare</span></button>
+        <button onclick="app.startFlowBlock()" id="btn-flow-add" class="tool-btn flow-only" title="Afegir bloc" aria-label="Afegir bloc" aria-pressed="false"><i class="fas fa-plus"></i><span class="tool-label">Bloc</span></button>
+        <button onclick="app.toggleFlowMenu(event, 'flow-shape-menu')" class="tool-btn flow-only" title="Símbol del bloc" aria-label="Símbol del bloc"><i class="fas fa-shapes"></i></button>
+        <button onclick="app.toggleFlowMenu(event, 'flow-label-menu')" id="btn-flow-label" class="tool-btn flow-only" title="Text de la fletxa" aria-label="Text de la fletxa" disabled><i class="fas fa-tag"></i></button>
         <button onclick="app.toggleTextMode()" id="btn-text" class="tool-btn" title="Afegir text lliure" aria-label="Afegir text lliure" aria-pressed="false"><i class="fas fa-font"></i><span class="tool-label">Text</span></button>
         <button onclick="app.deleteNode()" class="tool-btn text-red-400" title="Eliminar selecció" aria-label="Eliminar selecció"><i class="fas fa-trash-alt"></i></button>
         <div class="tool-separator"></div>
@@ -368,7 +401,19 @@
         <div class="menu-item" onclick="app.applyLayout('mindmap')"><i class="fas fa-sitemap w-5"></i> Mapa Mental</div>
         <div class="menu-item" onclick="app.applyLayout('outline')"><i class="fas fa-list-ul w-5"></i> Esquema</div>
         <div class="menu-item" onclick="app.applyLayout('hierarchy')"><i class="fas fa-network-wired w-5"></i> Jerarquia</div>
+        <div class="menu-item" onclick="app.applyLayout('flow')"><i class="fas fa-diagram-project w-5"></i> Diagrama de processos</div>
     </div>
+
+    <div id="flow-shape-menu" class="floating-menu">
+        <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('terminator')"><i class="fas fa-play"></i> Inici / Fi</button>
+        <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('process')"><i class="fas fa-square"></i> Procés</button>
+        <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('decision')"><i class="fas fa-diamond"></i> Decisió</button>
+        <button type="button" class="menu-item alignment-choice" onclick="app.chooseFlowShape('data')"><i class="fas fa-right-left"></i> Entrada / Sortida</button>
+    </div>
+    <form id="flow-label-menu" class="floating-menu" onsubmit="app.saveFlowLabel(event)">
+        <label for="flow-edge-text">Text de la fletxa</label>
+        <div class="flow-label-row"><input id="flow-edge-text" type="text" maxlength="80" autocomplete="off"><button type="submit" class="tool-btn" title="Desar text" aria-label="Desar text"><i class="fas fa-check"></i></button></div>
+    </form>
 
     <div id="alignment-menu" class="floating-menu" role="menu" aria-label="Alineació del text">
         <button type="button" class="menu-item alignment-choice" role="menuitemradio" aria-checked="false" data-align="left" onclick="app.setTextAlignment('left')"><i class="fas fa-align-left"></i> Esquerra</button>
@@ -389,8 +434,10 @@
                 </marker>
                 
                 <marker id="arrowhead-selected" markerWidth="12" markerHeight="4" refX="11" refY="2" orient="auto">
-                  <polygon points="0 0, 12 2, 0 4" fill="#3b82f6" />
+                   <polygon points="0 0, 12 2, 0 4" fill="#3b82f6" />
                 </marker>
+                <marker id="flow-arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#93c5fd" /></marker>
+                <marker id="flow-arrowhead-selected" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#e879f9" /></marker>
             </defs>
             <g id="connections-group"></g>
         </svg>
@@ -409,6 +456,8 @@
                 
                 this.isConnecting = false;
                 this.isPlacingText = false;
+                this.pendingFlowShape = null;
+                this.currentFlowShape = 'process';
                 this.connectionSourceId = null;
                 
                 this.panX = window.innerWidth / 2;
@@ -508,14 +557,26 @@
                 });
                 this.workspace.addEventListener('mousedown', this.handleMouseDown);
                 this.workspace.addEventListener('mousedown', (e) => {
-                    if (!this.isPlacingText || e.button !== 0) return;
+                    if ((!this.isPlacingText && !this.pendingFlowShape) || e.button !== 0) return;
                     e.preventDefault();
-                    e.stopPropagation();
+                    e.stopImmediatePropagation();
                     const rect = this.workspace.getBoundingClientRect();
                     const x = (e.clientX - rect.left - this.panX) / this.zoomLevel;
                     const y = (e.clientY - rect.top - this.panY) / this.zoomLevel;
-                    this.toggleTextMode();
-                    this.addNode(null, 'Text', false, x, y, 'text');
+                    if (this.pendingFlowShape) {
+                        const shape = this.pendingFlowShape;
+                        this.pendingFlowShape = null;
+                        const names = { terminator: 'Inici / Fi', process: 'Procés', decision: 'Decisió', data: 'Entrada / Sortida' };
+                        const id = this.addNode(null, names[shape], false, x, y);
+                        const node = this.nodes.find(n => n.id === id);
+                        node.flowShape = shape;
+                        node.width = shape === 'decision' ? 200 : 180;
+                        this.render();
+                    } else {
+                        this.toggleTextMode();
+                        this.addNode(null, 'Text', false, x, y, 'text');
+                    }
+                    this.updatePlacementButtons();
                     this.saveHistory();
                 }, true);
                 this.workspace.addEventListener('wheel', (e) => {
@@ -536,6 +597,8 @@
                         this.layoutMenu.style.display = 'none';
                     }
                     if (!e.target.closest('#alignment-menu') && !e.target.closest('#btn-align')) this.closeAlignmentMenu();
+                    if (!e.target.closest('#flow-shape-menu') && !e.target.closest('[onclick*="toggleFlowMenu"]')) document.getElementById('flow-shape-menu').style.display = 'none';
+                    if (!e.target.closest('#flow-label-menu') && !e.target.closest('[onclick*="toggleFlowMenu"]')) document.getElementById('flow-label-menu').style.display = 'none';
                 });
                 this.render();
             }
@@ -574,12 +637,78 @@
 
             toggleTextMode() {
                 if (!this._autoSaveReady) return;
+                this.pendingFlowShape = null;
                 if (this.isConnecting) this.toggleConnectMode();
                 this.isPlacingText = !this.isPlacingText;
                 const btn = document.getElementById('btn-text');
                 btn.classList.toggle('active', this.isPlacingText);
                 btn.setAttribute('aria-pressed', String(this.isPlacingText));
                 this.workspace.style.cursor = this.isPlacingText ? 'text' : 'grab';
+                this.updatePlacementButtons();
+            }
+
+            updatePlacementButtons() {
+                const btn = document.getElementById('btn-flow-add');
+                btn.classList.toggle('active', !!this.pendingFlowShape);
+                btn.setAttribute('aria-pressed', String(!!this.pendingFlowShape));
+                this.workspace.style.cursor = this.isPlacingText ? 'text' : (this.pendingFlowShape || this.isConnecting) ? 'crosshair' : 'grab';
+            }
+
+            startFlowBlock() {
+                if (!this._autoSaveReady || this.currentLayout !== 'flow') return;
+                if (this.isPlacingText) this.toggleTextMode();
+                if (this.isConnecting) this.toggleConnectMode();
+                this.pendingFlowShape = this.pendingFlowShape ? null : this.currentFlowShape;
+                this.updatePlacementButtons();
+            }
+
+            chooseFlowShape(shape) {
+                if (this.currentLayout !== 'flow' || !['terminator', 'process', 'decision', 'data'].includes(shape)) return;
+                this.currentFlowShape = shape;
+                const node = this.nodes.find(n => n.id === this.selectedNodeId && n.type !== 'text');
+                if (node) {
+                    this.saveHistory();
+                    node.flowShape = shape;
+                    this.saveHistory();
+                    this.render();
+                } else {
+                    if (this.isPlacingText) this.toggleTextMode();
+                    if (this.isConnecting) this.toggleConnectMode();
+                    this.pendingFlowShape = shape;
+                    this.updatePlacementButtons();
+                }
+                document.getElementById('flow-shape-menu').style.display = 'none';
+            }
+
+            toggleFlowMenu(e, id) {
+                if (this.currentLayout !== 'flow') return;
+                const menu = document.getElementById(id);
+                const open = menu.style.display !== 'block';
+                document.querySelectorAll('.floating-menu').forEach(m => m.style.display = 'none');
+                this.closeAlignmentMenu();
+                if (!open) return;
+                if (id === 'flow-label-menu') {
+                    const conn = this.extraConnections.find(c => c.id === this.selectedConnectionId);
+                    if (!conn) return;
+                    document.getElementById('flow-edge-text').value = conn.label || '';
+                }
+                const rect = e.currentTarget.getBoundingClientRect();
+                menu.style.top = (rect.bottom + 5) + 'px';
+                menu.style.left = Math.max(6, Math.min(rect.left, window.innerWidth - (id === 'flow-label-menu' ? 216 : 196))) + 'px';
+                menu.style.display = 'block';
+                if (id === 'flow-label-menu') document.getElementById('flow-edge-text').focus();
+            }
+
+            saveFlowLabel(e) {
+                e.preventDefault();
+                const conn = this.extraConnections.find(c => c.id === this.selectedConnectionId);
+                if (!conn || this.currentLayout !== 'flow') return;
+                this.saveHistory();
+                conn.label = document.getElementById('flow-edge-text').value.substring(0, 80);
+                delete conn.points;
+                this.saveHistory();
+                document.getElementById('flow-label-menu').style.display = 'none';
+                this.render();
             }
 
             addNode(parentId, text = "Nova Idea", isRoot = false, customX = null, customY = null, type = 'node') {
@@ -629,11 +758,22 @@
                     this.saveHistory();
                     this.extraConnections = this.extraConnections.filter(c => c.id !== this.selectedConnectionId);
                     this.selectedConnectionId = null;
+                    if (this.currentLayout === 'flow') this.saveHistory();
                     this.render();
                     return;
                 }
 
                 if (!this.selectedNodeId) return;
+                if (this.currentLayout === 'flow') {
+                    this.saveHistory();
+                    const id = this.selectedNodeId;
+                    this.nodes = this.nodes.filter(n => n.id !== id);
+                    this.extraConnections = this.extraConnections.filter(c => c.from !== id && c.to !== id);
+                    this.selectedNodeId = null;
+                    this.saveHistory();
+                    this.render();
+                    return;
+                }
                 const deletingText = this.nodes.find(n => n.id === this.selectedNodeId)?.type === 'text';
                 this.saveHistory();
                 const deleteRecursive = (id) => {
@@ -661,7 +801,37 @@
 
             // --- LAYOUTS ---
 
-            applyLayout(type) {
+            applyLayout(type, confirmed = false) {
+                if (!this._autoSaveReady || !['mindmap', 'outline', 'hierarchy', 'flow'].includes(type)) return;
+                if (type === this.currentLayout) { this.layoutMenu.style.display = 'none'; return; }
+                if (type === 'flow' || this.currentLayout === 'flow') {
+                    this.layoutMenu.style.display = 'none';
+                    if (!confirmed) { this.confirmLayoutReset(type); return; }
+                    this.saveHistory();
+                    this.nodes = [];
+                    this.extraConnections = [];
+                    this.selectedNodeId = null;
+                    this.selectedConnectionId = null;
+                    this.pendingFlowShape = null;
+                    this.isPlacingText = false;
+                    this.isConnecting = false;
+                    this.connectionSourceId = null;
+                    this.currentLayout = type;
+                    this.resetTools();
+                    this.panX = window.innerWidth / 2;
+                    this.panY = window.innerHeight / 2;
+                    this.zoomLevel = 1;
+                    document.getElementById('btn-text').classList.remove('active');
+                    document.getElementById('btn-text').setAttribute('aria-pressed', 'false');
+                    document.getElementById('btn-connect').classList.remove('active');
+                    this.updatePlacementButtons();
+                    document.querySelectorAll('.floating-menu').forEach(m => m.style.display = 'none');
+                    if (type !== 'flow') this.addRootNode();
+                    this.render();
+                    this.saveHistory();
+                    this.flushAutoSave();
+                    return;
+                }
                 // 1. SAVE STATE if leaving MindMap
                 if (this.currentLayout === 'mindmap') {
                     this.nodes.forEach(n => {
@@ -695,6 +865,33 @@
                 this.centerView();
                 this.layoutMenu.style.display = 'none';
                 this.render();
+            }
+
+            confirmLayoutReset(type) {
+                if (document.getElementById('layout-change-dialog')) return;
+                const dlg = document.createElement('div');
+                dlg.id = 'layout-change-dialog';
+                dlg.className = 'canvas-dialog';
+                dlg.setAttribute('role', 'dialog');
+                dlg.setAttribute('aria-modal', 'true');
+                dlg.setAttribute('aria-labelledby', 'layout-change-title');
+                dlg.setAttribute('aria-describedby', 'layout-change-warning');
+                dlg.innerHTML = `<div class="canvas-dialog-panel">
+                    <h2 id="layout-change-title">${type === 'flow' ? 'Entrar al Diagrama de processos?' : 'Sortir del Diagrama de processos?'}</h2>
+                    <p id="layout-change-warning">S'esborraran tots els nodes, textos lliures i enllaços del llenç. No és una transformació del mapa.</p>
+                    <div class="canvas-dialog-actions"><button id="layout-save">Desa una còpia</button><button id="layout-cancel">Cancel·la</button><button id="layout-confirm" class="danger">Canvia i esborra</button></div>
+                </div>`;
+                document.body.appendChild(dlg);
+                document.getElementById('layout-save').onclick = () => this.saveToJSON();
+                document.getElementById('layout-cancel').onclick = () => dlg.remove();
+                document.getElementById('layout-confirm').onclick = () => { dlg.remove(); this.applyLayout(type, true); };
+                document.getElementById('layout-cancel').focus();
+            }
+
+            syncLayoutUI() {
+                ['outline', 'hierarchy', 'flow'].forEach(type => this.workspace.classList.toggle('mode-' + type, this.currentLayout === type));
+                document.body.dataset.layout = this.currentLayout;
+                document.getElementById('btn-flow-label').disabled = this.currentLayout !== 'flow' || !this.extraConnections.some(c => c.id === this.selectedConnectionId);
             }
 
             layoutHierarchy(resetView = false) {
@@ -836,6 +1033,7 @@
             }
 
             autoArrange() {
+                if (this.currentLayout === 'flow') return this.arrangeFlow();
                 if (this.currentLayout === 'outline') {
                     this.layoutOutline(false);
                 } else if (this.currentLayout === 'hierarchy') {
@@ -850,6 +1048,7 @@
             }
 
             toggleConnectMode() {
+                this.pendingFlowShape = null;
                 if (this.isPlacingText) this.toggleTextMode();
                 this.isConnecting = !this.isConnecting;
                 this.connectionSourceId = null;
@@ -863,6 +1062,8 @@
                     this.workspace.style.cursor = "grab";
                     document.querySelectorAll('.node').forEach(n => n.classList.remove('linking-source'));
                 }
+                this.updatePlacementButtons();
+                document.querySelectorAll('.node-content').forEach(el => el.style.pointerEvents = this.isConnecting ? 'none' : '');
             }
 
             addExtraConnection(sourceId, targetId) {
@@ -871,8 +1072,13 @@
                 const exists = this.extraConnections.find(c => c.from === sourceId && c.to === targetId);
                 if (!exists) {
                     this.saveHistory();
-                    this.extraConnections.push({ id: 'conn_' + Date.now(), from: sourceId, to: targetId });
+                    const decision = this.currentLayout === 'flow' && this.nodes.find(n => n.id === sourceId)?.flowShape === 'decision';
+                    const count = this.extraConnections.filter(c => c.from === sourceId).length;
+                    this.extraConnections.push({ id: 'conn_' + Date.now() + Math.random().toString(36).slice(2, 7), from: sourceId, to: targetId,
+                        label: decision ? (count === 0 ? 'Sí' : count === 1 ? 'No' : '') : '' });
+                    if (this.currentLayout === 'flow') this.saveHistory();
                     this.renderConnections();
+                    this.autoSave();
                 }
             }
 
@@ -922,7 +1128,7 @@
 
             handleResizeMouseDown(e, id) {
                 e.stopPropagation();
-                if (this.nodes.find(n => n.id === id)?.type === 'text') this.saveHistory();
+                if (this.currentLayout === 'flow' || this.nodes.find(n => n.id === id)?.type === 'text') this.saveHistory();
                 this.isResizing = true;
                 this.resizingNodeId = id;
                 this.resizeStartX = e.clientX;
@@ -939,8 +1145,9 @@
                     if (node) {
                         const el = document.querySelector(`.node[data-id="${node.id}"]`);
                         const currentWidth = (e.clientX - this.resizeStartX) / this.zoomLevel + this.resizeStartWidth;
-                        node.width = Math.max(80, currentWidth);
+                        node.width = Math.max(this.currentLayout === 'flow' && node.type !== 'text' ? 140 : 80, currentWidth);
                         if (el) { el.style.width = node.width + 'px'; el.style.maxWidth = 'none'; }
+                        this.fitFlowSymbol(node);
                         this.renderConnections();
                     }
                 } else if (this.isDraggingWorkspace) {
@@ -974,8 +1181,8 @@
                         if (this.currentLayout === 'hierarchy') this.layoutHierarchy(false);
                     }
                 }
-                if (this.draggedNodeId && this.dragMoved && this.nodes.find(n => n.id === this.draggedNodeId)?.type === 'text') this.saveHistory();
-                if (this.isResizing && this.nodes.find(n => n.id === this.resizingNodeId)?.type === 'text') this.saveHistory();
+                if (this.draggedNodeId && this.dragMoved && (this.currentLayout === 'flow' || this.nodes.find(n => n.id === this.draggedNodeId)?.type === 'text')) this.saveHistory();
+                if (this.isResizing && (this.currentLayout === 'flow' || this.nodes.find(n => n.id === this.resizingNodeId)?.type === 'text')) this.saveHistory();
                 this.isDraggingWorkspace = false;
                 this.draggedNodeId = null;
                 this.isResizing = false;
@@ -985,6 +1192,23 @@
 
             handleKeyDown(e) {
                 if (!this._autoSaveReady) return;
+                const dialog = document.getElementById('layout-change-dialog');
+                if (dialog) {
+                    if (e.key === 'Escape') { e.preventDefault(); dialog.remove(); }
+                    if (e.key === 'Tab') {
+                        const buttons = [...dialog.querySelectorAll('button')];
+                        const index = buttons.indexOf(document.activeElement);
+                        e.preventDefault();
+                        buttons[(index + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus();
+                    }
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    this.pendingFlowShape = null;
+                    if (this.isConnecting) this.toggleConnectMode();
+                    document.querySelectorAll('#flow-shape-menu, #flow-label-menu').forEach(m => m.style.display = 'none');
+                    this.updatePlacementButtons();
+                }
                 if (e.key === 'Escape' && this.alignmentMenu.style.display === 'block') {
                     this.closeAlignmentMenu();
                     document.getElementById('btn-align').focus();
@@ -1001,6 +1225,7 @@
                 }
                 if (e.target.closest('#btn-align') && ['Tab', 'Enter', ' '].includes(e.key)) return;
                 if (e.key === 'Escape' && this.isPlacingText) { this.toggleTextMode(); return; }
+                if (e.target.closest('input, select, textarea, button, #flow-shape-menu, #flow-label-menu')) return;
                 const isEditing = document.activeElement && document.activeElement.classList.contains('node-content');
                 if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
                     e.preventDefault();
@@ -1010,23 +1235,34 @@
                 if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); this.redo(); return; }
                 if (isEditing) return;
                 switch(e.key) {
-                    case 'Tab': e.preventDefault(); this.addChild(); break;
-                    case 'Enter': e.preventDefault(); this.addSibling(); break;
+                    case 'Tab': if (this.currentLayout !== 'flow') { e.preventDefault(); this.addChild(); } break;
+                    case 'Enter': if (this.currentLayout !== 'flow') { e.preventDefault(); this.addSibling(); } break;
                     case 'Delete': case 'Backspace': this.deleteNode(); break;
                 }
             }
 
             render() {
+                this.syncLayoutUI();
                 this.nodesLayer.innerHTML = '';
                 this.updateTransform();
                 this.nodes.forEach(node => {
                     const el = this.createNodeElement(node);
                     this.nodesLayer.appendChild(el);
+                    this.fitFlowSymbol(node);
                 });
                 this.renderConnections();
                 this.updateBoldButton();
                 this.updateAlignmentButton();
                 this.autoSave();
+            }
+
+            fitFlowSymbol(node) {
+                if (this.currentLayout !== 'flow' || node.type === 'text' || node.flowShape !== 'decision') return;
+                const el = document.querySelector(`.node[data-id="${node.id}"]`);
+                const wrapper = el?.querySelector('.flow-content');
+                if (!wrapper) return;
+                const contentHeight = [...wrapper.children].reduce((sum, child) => sum+child.offsetHeight+(child.classList.contains('node-img') ? 5 : 0), 0);
+                wrapper.style.paddingTop = wrapper.style.paddingBottom = Math.max(40, contentHeight/2+12)+'px';
             }
 
             renderNode(node) {
@@ -1036,7 +1272,10 @@
 
             createNodeElement(node) {
                 const el = document.createElement('div');
+                const flow = this.currentLayout === 'flow' && node.type !== 'text';
+                const shape = ['terminator', 'decision', 'data'].includes(node.flowShape) ? node.flowShape : 'process';
                 el.className = `node ${node.id === this.selectedNodeId ? 'selected' : ''} ${node.isRoot ? 'root-node' : ''} ${node.type === 'text' ? 'free-text' : ''}`;
+                if (flow) el.classList.add('flow-node', 'flow-' + shape);
                 
                 if (this.isConnecting && this.connectionSourceId === node.id) el.classList.add('linking-source');
 
@@ -1052,7 +1291,7 @@
                 
                 if (node.type === 'text') {
                     el.style.setProperty('color', this.sanitizeColor(node.color, '#f9fafb'), 'important');
-                } else if (this.currentLayout === 'outline') {
+                } else if (flow || this.currentLayout === 'outline') {
                     el.style.backgroundColor = 'transparent';
                     el.style.color = '#e5e7eb'; 
                 } else {
@@ -1069,10 +1308,18 @@
                 const allowedImgTypes = ['data:image/jpeg', 'data:image/png', 'data:image/gif', 'data:image/webp'];
                 const safeImage = node.image && allowedImgTypes.some(t => String(node.image).startsWith(t)) ? node.image : null;
                 const imgHtml = safeImage ? `<img src="${safeImage}" class="node-img">` : '';
+                const symbols = {
+                    process: '<rect x="1" y="1" width="198" height="118"/>',
+                    terminator: '<rect x="1" y="1" width="198" height="118" rx="59"/>',
+                    decision: '<polygon points="100,1 199,60 100,119 1,60"/>',
+                    data: '<polygon points="28,1 199,1 172,119 1,119"/>'
+                };
+                const symbol = flow ? `<svg class="flow-symbol" viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true" fill="${this.sanitizeColor(node.color, '#374151')}">${symbols[shape]}</svg>` : '';
 
                 // SECURITY: node.text s'escapa amb escapeHTML per evitar XSS via innerHTML
                 el.innerHTML = `
-                    <div class="flex flex-col items-center w-full">
+                    ${symbol}
+                    <div class="flex flex-col items-center w-full ${flow ? 'flow-content' : ''}">
                         ${imgHtml}
                         <div class="node-content" contentEditable="true">${this.escapeHTML(node.text)}</div>
                     </div>
@@ -1080,6 +1327,7 @@
                 `;
 
                 const contentDiv = el.querySelector('.node-content');
+                if (this.isConnecting) contentDiv.style.pointerEvents = 'none';
                 contentDiv.style.textAlign = this.getTextAlignment(node);
                 
                 // KEYDOWN SPECIFIC FOR NODE CONTENT (ENTER / ALT+ENTER)
@@ -1098,15 +1346,16 @@
                 });
 
                 // SECURITY: límit de 2000 caràcters per evitar DoS via texts molt llargs
-                contentDiv.addEventListener('input', () => this.autoSave());
+                contentDiv.addEventListener('input', () => { this.fitFlowSymbol(node); this.renderConnections(); this.autoSave(); });
                 contentDiv.addEventListener('blur', (e) => {
                     const raw = e.target.innerText || '';
                     const newText = raw.length > 2000 ? raw.substring(0, 2000) : raw;
                     if (newText !== node.text) {
                         this.saveHistory();
                         node.text = newText;
-                        if (node.type === 'text') this.saveHistory();
+                        if (node.type === 'text' || this.currentLayout === 'flow') this.saveHistory();
                         if (raw.length > 2000) e.target.innerText = node.text;
+                        this.renderConnections();
                         this.autoSave();
                     }
                 });
@@ -1121,6 +1370,14 @@
 
             renderConnections() {
                 this.svgGroup.innerHTML = '';
+                if (this.currentLayout === 'flow') {
+                    this.extraConnections.forEach(conn => {
+                        const from = this.nodes.find(n => n.id === conn.from && n.type !== 'text');
+                        const to = this.nodes.find(n => n.id === conn.to && n.type !== 'text');
+                        if (from && to) this.drawFlowConnection(conn, from, to);
+                    });
+                    return;
+                }
                 this.nodes.forEach(node => {
                     if (node.parentId && node.type !== 'text') {
                         const parent = this.nodes.find(n => n.id === node.parentId);
@@ -1132,6 +1389,142 @@
                     const to = this.nodes.find(n => n.id === conn.to);
                     if (from && to && from.type !== 'text' && to.type !== 'text') this.drawArrowConnection(conn.id, from, to);
                 });
+            }
+
+            getFlowNodeSize(node) {
+                const el = document.querySelector(`.node[data-id="${node.id}"]`);
+                return { width: el?.offsetWidth || node.width || 180, height: el?.offsetHeight || (node.flowShape === 'decision' ? 130 : 72) };
+            }
+
+            flowRouteKey(from, to) {
+                return JSON.stringify([from, to].map(n => [n.x, n.y, this.getFlowNodeSize(n), n.flowShape]));
+            }
+
+            flowBoundary(node, toward) {
+                const { width: w, height: h } = this.getFlowNodeSize(node);
+                const dx = toward.x - node.x, dy = toward.y - node.y;
+                if (!dx && !dy) return { x: node.x, y: node.y };
+                let vertices;
+                if (node.flowShape === 'decision') vertices = [[0, -h/2], [w/2, 0], [0, h/2], [-w/2, 0]];
+                else if (node.flowShape === 'data') vertices = [[-w*.36, -h/2], [w/2, -h/2], [w*.36, h/2], [-w/2, h/2]];
+                else if (node.flowShape === 'terminator') {
+                    vertices = [];
+                    const rx = w*.295, ry = h*.49;
+                    for (let i = 0; i < 40; i++) {
+                        const angle = i * Math.PI / 20;
+                        vertices.push([(Math.cos(angle) >= 0 ? w/2-rx : -w/2+rx) + rx*Math.cos(angle), ry*Math.sin(angle)]);
+                    }
+                } else vertices = [[-w/2, -h/2], [w/2, -h/2], [w/2, h/2], [-w/2, h/2]];
+                // Interseca el raig amb el contorn, també per als símbols no rectangulars.
+                let nearest = Infinity;
+                vertices.forEach((a, i) => {
+                    const b = vertices[(i+1) % vertices.length];
+                    const sx = b[0]-a[0], sy = b[1]-a[1];
+                    const cross = dx*sy-dy*sx;
+                    if (Math.abs(cross) < 1e-8) return;
+                    const t = (a[0]*sy-a[1]*sx)/cross;
+                    const u = (a[0]*dy-a[1]*dx)/cross;
+                    if (t >= 0 && u >= 0 && u <= 1) nearest = Math.min(nearest, t);
+                });
+                return Number.isFinite(nearest) ? { x: node.x+dx*nearest, y: node.y+dy*nearest } : { x: node.x, y: node.y };
+            }
+
+            flowRoute(conn, from, to) {
+                if (conn.routeKey === this.flowRouteKey(from, to) && conn.points?.length >= 2) return conn.points;
+                const a = this.getFlowNodeSize(from), b = this.getFlowNodeSize(to);
+                let points;
+                if (to.y - from.y > (a.height+b.height)/2+30) {
+                    const midY = (from.y+a.height/2 + to.y-b.height/2)/2;
+                    points = [{x:from.x,y:from.y}, {x:from.x,y:midY}, {x:to.x,y:midY}, {x:to.x,y:to.y}];
+                } else if (Math.abs(to.x-from.x) > (a.width+b.width)/2+30 && Math.abs(to.y-from.y) < 80) {
+                    const midX = (from.x+to.x)/2;
+                    points = [{x:from.x,y:from.y}, {x:midX,y:from.y}, {x:midX,y:to.y}, {x:to.x,y:to.y}];
+                } else {
+                    const side = Math.max(from.x+a.width/2, to.x+b.width/2)+55;
+                    points = [{x:from.x,y:from.y}, {x:side,y:from.y}, {x:side,y:to.y}, {x:to.x,y:to.y}];
+                }
+                return points.filter((p, i) => !i || p.x !== points[i-1].x || p.y !== points[i-1].y);
+            }
+
+            drawFlowConnection(conn, from, to) {
+                const ns = 'http://www.w3.org/2000/svg';
+                const points = this.flowRoute(conn, from, to).map(p => ({...p}));
+                points[0] = this.flowBoundary(from, points[1]);
+                points[points.length-1] = this.flowBoundary(to, points[points.length-2]);
+                const d = points.map((p,i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ');
+                const selected = this.selectedConnectionId === conn.id;
+                const path = document.createElementNS(ns, 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', selected ? '#e879f9' : '#93c5fd');
+                path.setAttribute('stroke-width', selected ? '3' : '2');
+                path.setAttribute('marker-end', `url(#${selected ? 'flow-arrowhead-selected' : 'flow-arrowhead'})`);
+                path.style.pointerEvents = 'none';
+                const select = e => { e.stopPropagation(); this.selectedConnectionId = conn.id; this.selectedNodeId = null; this.render(); };
+                const hit = document.createElementNS(ns, 'path');
+                hit.setAttribute('d', d);
+                hit.setAttribute('fill', 'none');
+                hit.setAttribute('stroke', 'transparent');
+                hit.setAttribute('stroke-width', '20');
+                hit.style.pointerEvents = 'stroke';
+                hit.style.cursor = 'pointer';
+                hit.addEventListener('mousedown', select);
+                this.svgGroup.append(hit, path);
+                if (conn.label) {
+                    const routed = conn.routeKey === this.flowRouteKey(from, to) && conn.labelPosition;
+                    const mid = Math.max(0, Math.floor((points.length-1)/2));
+                    const x = routed ? conn.labelPosition.x : (points[mid].x+points[mid+1].x)/2;
+                    const y = routed ? conn.labelPosition.y : (points[mid].y+points[mid+1].y)/2;
+                    const group = document.createElementNS(ns, 'g');
+                    group.style.pointerEvents = 'all';
+                    group.style.cursor = 'pointer';
+                    const label = document.createElementNS(ns, 'text');
+                    label.setAttribute('x', x);
+                    label.setAttribute('y', y+4);
+                    label.setAttribute('text-anchor', 'middle');
+                    label.setAttribute('fill', '#f9fafb');
+                    label.setAttribute('font-size', '13');
+                    label.textContent = conn.label;
+                    const bg = document.createElementNS(ns, 'rect');
+                    bg.setAttribute('x', x-conn.label.length*3.8-6);
+                    bg.setAttribute('y', y-11);
+                    bg.setAttribute('width', conn.label.length*7.6+12);
+                    bg.setAttribute('height', '22');
+                    bg.setAttribute('rx', '3');
+                    bg.setAttribute('fill', '#111827');
+                    group.append(bg, label);
+                    group.addEventListener('mousedown', select);
+                    this.svgGroup.appendChild(group);
+                }
+            }
+
+            arrangeFlow() {
+                if (!window.dagre) return this.showToast('No s’ha pogut carregar l’ordenació. Torna-ho a provar amb connexió.');
+                const blocks = this.nodes.filter(n => n.type !== 'text');
+                if (!blocks.length) return;
+                const graph = new dagre.graphlib.Graph({ multigraph: true });
+                graph.setGraph({ rankdir: 'TB', nodesep: 90, ranksep: 90, marginx: 40, marginy: 40 });
+                graph.setDefaultEdgeLabel(() => ({}));
+                blocks.forEach(n => graph.setNode(n.id, this.getFlowNodeSize(n)));
+                this.extraConnections.forEach(c => {
+                    if (graph.hasNode(c.from) && graph.hasNode(c.to)) graph.setEdge(c.from, c.to, {width: c.label ? c.label.length*8+16 : 0, height: c.label ? 26 : 0}, c.id);
+                });
+                dagre.layout(graph);
+                this.saveHistory();
+                blocks.forEach(n => { const p = graph.node(n.id); n.x = p.x; n.y = p.y; });
+                this.extraConnections.forEach(c => {
+                    const route = graph.edge({v: c.from, w: c.to, name: c.id});
+                    if (!route) return;
+                    c.points = route.points;
+                    const from = blocks.find(n => n.id === c.from), to = blocks.find(n => n.id === c.to);
+                    c.routeKey = this.flowRouteKey(from, to);
+                    c.labelPosition = Number.isFinite(route.x) ? {x:route.x, y:route.y} : null;
+                });
+                this.saveHistory();
+                this.zoomLevel = 1;
+                this.centerView();
+                this.render();
+                this.showToast('Diagrama ordenat');
             }
 
             drawTreeConnection(parent, child) {
@@ -1228,10 +1621,14 @@
             }
 
             saveToJSON() {
-                const data = { nodes: this.nodes, connections: this.extraConnections };
+                const editor = document.activeElement;
+                const editingNode = editor?.classList.contains('node-content') ? editor.closest('.node') : null;
+                const nodes = this.nodes.map(n => editingNode?.dataset.id === n.id ? {...n, text: (editor.innerText || '').substring(0, 2000)} : n);
+                const data = { nodes, connections: this.extraConnections, layout: this.currentLayout };
                 const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = "mapa_mental.json"; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = this.currentLayout === 'flow' ? 'diagrama_processos.json' : 'mapa_mental.json'; a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
             }
             loadFromJSON(input) {
                 const file = input.files[0];
@@ -1241,17 +1638,20 @@
                 reader.onload = (e) => {
                     try {
                         const data = JSON.parse(e.target.result);
+                        if (!data || !Array.isArray(data.nodes) || (data.connections !== undefined && !Array.isArray(data.connections))) throw new Error('Invalid diagram');
+                        const layout = ['mindmap', 'outline', 'hierarchy', 'flow'].includes(data.layout) ? data.layout : 'mindmap';
                         const safeId = (v) => String(v || '').replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 64);
                         const allowedImg = ['data:image/jpeg', 'data:image/png', 'data:image/gif', 'data:image/webp'];
                         // SECURITY: cada camp del node es valida i saniteja abans d'acceptar-lo
-                        this.nodes = (data.nodes || []).map(n => ({
+                        const nodes = data.nodes.map(n => ({
                             id:       safeId(n.id),
                             type:     n.type === 'text' ? 'text' : 'node',
-                            parentId: n.type !== 'text' && n.parentId ? safeId(n.parentId) : null,
+                            parentId: layout !== 'flow' && n.type !== 'text' && n.parentId ? safeId(n.parentId) : null,
                             text:     String(n.text || '').substring(0, 2000),
-                            x:        Number(n.x) || 0,
-                            y:        Number(n.y) || 0,
-                            isRoot:   n.type !== 'text' && Boolean(n.isRoot),
+                            x:        Number.isFinite(Number(n.x)) ? Number(n.x) : 0,
+                            y:        Number.isFinite(Number(n.y)) ? Number(n.y) : 0,
+                            isRoot:   layout !== 'flow' && n.type !== 'text' && Boolean(n.isRoot),
+                            flowShape: ['terminator', 'process', 'decision', 'data'].includes(n.flowShape) ? n.flowShape : 'process',
                             color:    this.sanitizeColor(n.color, n.type === 'text' ? '#f9fafb' : '#374151'),
                             image:    n.type !== 'text' && n.image && allowedImg.some(t => String(n.image).startsWith(t)) ? n.image : null,
                             width:    n.width ? Math.min(Math.max(Number(n.width) || 200, 50), 1200) : null,
@@ -1259,13 +1659,26 @@
                             bold:     typeof n.bold === 'boolean' ? n.bold : n.type !== 'text' && Boolean(n.isRoot),
                             textAlign: ['left', 'center', 'right', 'justify'].includes(n.textAlign) ? n.textAlign : null
                         }));
-                        this.extraConnections = (data.connections || []).map(c => ({
+                        if (nodes.some(n => !n.id) || new Set(nodes.map(n => n.id)).size !== nodes.length) throw new Error('Invalid node IDs');
+                        const connections = (data.connections || []).map(c => ({
                             id:   safeId(c.id),
                             from: safeId(c.from),
-                            to:   safeId(c.to)
-                        }));
+                            to:   safeId(c.to),
+                            label: String(c.label || '').substring(0, 80)
+                        })).filter(c => c.from !== c.to && nodes.some(n => n.id === c.from && n.type !== 'text') && nodes.some(n => n.id === c.to && n.type !== 'text'));
+                        this.nodes = nodes;
+                        this.extraConnections = connections;
+                        this.currentLayout = layout;
+                        this.selectedNodeId = null;
+                        this.selectedConnectionId = null;
+                        this.resetTools();
+                        this.zoomLevel = 1;
+                        this.centerView();
+                        this.saveHistory();
                         this.render();
-                        this.showToast("Mapa carregat");
+                        this.flushAutoSave();
+                        input.value = '';
+                        this.showToast(layout === 'flow' ? 'Diagrama carregat' : 'Mapa carregat');
                     } catch(err) {
                         this.showToast("Error: fitxer JSON invàlid");
                     }
@@ -1292,6 +1705,11 @@
                     maxX = Math.max(maxX, n.x + (leftAligned ? w : w/2));
                     minY = Math.min(minY, n.y - h/2); maxY = Math.max(maxY, n.y + h/2);
                 });
+                if (this.currentLayout === 'flow' && this.extraConnections.length) {
+                    const bounds = this.svgGroup.getBBox();
+                    minX = Math.min(minX, bounds.x); minY = Math.min(minY, bounds.y);
+                    maxX = Math.max(maxX, bounds.x+bounds.width); maxY = Math.max(maxY, bounds.y+bounds.height);
+                }
                 
                 const padding = 60;
                 const width = maxX - minX + padding * 2;
@@ -1315,7 +1733,7 @@
                             }
                         }
                     });
-                    const link = document.createElement('a'); link.download = 'mapa_mental.png'; link.href = canvas.toDataURL(); link.click();
+                    const link = document.createElement('a'); link.download = this.currentLayout === 'flow' ? 'diagrama_processos.png' : 'mapa_mental.png'; link.href = canvas.toDataURL(); link.click();
                     this.showToast("Imatge PNG descarregada");
                 } catch (err) { console.error(err); this.showToast("Error generant imatge"); }
                 finally {
@@ -1479,23 +1897,30 @@
             }
 
             saveHistory() {
-                this.history = this.history.slice(0, this.historyIndex + 1);
-                this.history.push({
+                const snapshot = {
                     nodes: JSON.parse(JSON.stringify(this.nodes)),
-                    connections: JSON.parse(JSON.stringify(this.extraConnections))
-                });
+                    connections: JSON.parse(JSON.stringify(this.extraConnections)),
+                    layout: this.currentLayout
+                };
+                if (JSON.stringify(snapshot) === JSON.stringify(this.history[this.historyIndex])) return;
+                this.history = this.history.slice(0, this.historyIndex + 1);
+                this.history.push(snapshot);
                 if (this.history.length > this.maxHistory) this.history.shift();
                 else this.historyIndex++;
                 this.updateUndoRedoButtons();
             }
 
             undo() {
+                this.saveHistory();
                 if (this.historyIndex <= 0) return this.showToast("Res a desfer");
                 this.historyIndex--;
                 const state = this.history[this.historyIndex];
                 this.nodes = JSON.parse(JSON.stringify(state.nodes));
                 this.extraConnections = JSON.parse(JSON.stringify(state.connections));
+                this.currentLayout = state.layout || 'mindmap';
                 this.selectedNodeId = null;
+                this.selectedConnectionId = null;
+                this.resetTools();
                 this.render();
                 this.updateUndoRedoButtons();
                 this.showToast("Desfet");
@@ -1507,7 +1932,10 @@
                 const state = this.history[this.historyIndex];
                 this.nodes = JSON.parse(JSON.stringify(state.nodes));
                 this.extraConnections = JSON.parse(JSON.stringify(state.connections));
+                this.currentLayout = state.layout || 'mindmap';
                 this.selectedNodeId = null;
+                this.selectedConnectionId = null;
+                this.resetTools();
                 this.render();
                 this.updateUndoRedoButtons();
                 this.showToast("Refet");
@@ -1518,6 +1946,20 @@
                 const r = document.getElementById('btn-redo');
                 if (u) u.disabled = this.historyIndex <= 0;
                 if (r) r.disabled = this.historyIndex >= this.history.length - 1;
+            }
+
+            resetTools() {
+                this.pendingFlowShape = null;
+                this.isPlacingText = false;
+                this.isConnecting = false;
+                this.connectionSourceId = null;
+                this.draggedNodeId = null;
+                this.isResizing = false;
+                document.getElementById('btn-text').classList.remove('active');
+                document.getElementById('btn-text').setAttribute('aria-pressed', 'false');
+                document.getElementById('btn-connect').classList.remove('active');
+                document.querySelectorAll('.floating-menu').forEach(m => m.style.display = 'none');
+                this.updatePlacementButtons();
             }
 
             autoSave() {
@@ -1552,15 +1994,14 @@
                     const raw = localStorage.getItem('thosmap_autosave');
                     if (!raw) return false;
                     const state = JSON.parse(raw);
-                    if (!Array.isArray(state.nodes) || state.nodes.length === 0) return false;
+                    if (!Array.isArray(state.nodes) || (state.nodes.length === 0 && state.layout !== 'flow')) return false;
                     this.nodes = state.nodes;
-                    this.extraConnections = state.connections || [];
-                    this.currentLayout = state.layout || 'mindmap';
+                    this.extraConnections = Array.isArray(state.connections) ? state.connections : [];
+                    this.currentLayout = ['mindmap', 'outline', 'hierarchy', 'flow'].includes(state.layout) ? state.layout : 'mindmap';
                     this.panX = state.panX ?? window.innerWidth / 2;
                     this.panY = state.panY ?? window.innerHeight / 2;
                     this.zoomLevel = state.zoom ?? 1;
-                    if (this.currentLayout === 'outline') this.workspace.classList.add('mode-outline');
-                    if (this.currentLayout === 'hierarchy') this.workspace.classList.add('mode-hierarchy');
+                    this.syncLayoutUI();
                     return true;
                 } catch(e) { return false; }
             }
