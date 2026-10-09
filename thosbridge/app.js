@@ -1,9 +1,10 @@
-import {levels} from './levels.js?v=20261009-result-headers-v10';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-result-headers-v10';
-import {mountCards} from './cards.js?v=20261009-result-headers-v10';
+import {levels} from './levels.js?v=20261009-pack-names-v11';
+import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor} from './core.js?v=20261009-pack-names-v11';
+import {mountCards} from './cards.js?v=20261009-pack-names-v11';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
+const packNames={old:'No miris',new:'No cau'};
 let saved={version:1,selectedLevel:'new-01',drafts:{},completed:{}},storageOK=true;
 try {const raw=localStorage.getItem(STORAGE);if(raw){const s=JSON.parse(raw);if(s.version===1&&s.drafts&&typeof s.drafts==='object')saved={...saved,...s,completed:s.completed||{}};}}
 catch{storageOK=false;}
@@ -29,10 +30,10 @@ function populateLevels(){
   }
   $('level').value=level.id;
 }
-function changeLevel(id){persist();level=levels.find(l=>l.id===id)||level;bridge=emptyBridge(level);restore();undo=[];redo=[];editMode();populateLevels();fit();persist();status('Nivell '+level.number+' del paquet '+(level.pack==='new'?'New':'Old')+'.');}
+function changeLevel(id){persist();level=levels.find(l=>l.id===id)||level;bridge=emptyBridge(level);restore();undo=[];redo=[];editMode();populateLevels();fit();persist();status('Nivell '+level.number+' del paquet '+packNames[level.pack]+'.');}
 function update(){
   const c=cost(bridge),running=!!simulation;
-  $('levelTitle').textContent=(level.pack==='new'?'New':'Old')+' / '+String(level.number).padStart(2,'0')+' · '+(saved.completed[level.id]?'Superat':'Construcció de ponts');
+  $('levelTitle').textContent=packNames[level.pack]+' / '+String(level.number).padStart(2,'0')+' · '+(saved.completed[level.id]?'Superat':'Construcció de ponts');
   $('mode').textContent=running?(paused?'EN PAUSA':simulation.status==='running'?(simulation.mode==='stress'?'TEST D’ESFORÇOS':'PROVA DEL TREN'):simulation.status==='collapsing'?'COL·LAPSE DEL PONT':simulation.status==='assessed'?'ANÀLISI PRÈVIA':'RESULTAT'):'CONSTRUCCIÓ';
   $('budget').textContent=fmt(c)+' / '+fmt(level.budget);$('budgetBar').style.width=(c/level.budget*100)+'%';
   $('budgetBar').style.background=c===level.budget?'#f4c25c':'#24c0c4';

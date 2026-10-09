@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v10: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió v11: 9 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -22,15 +22,16 @@ Interfície en català, execució al navegador i projectes desats localment. La 
 
 ## Nivells recuperats
 
-- **Old**: `level/01-Old/Level01.lvl` a `Level15.lvl`.
-- **New**: `level/02-New/01-Level.bgl` a `15-Level.bgl`.
+- **No miris** (paquet original Old): `level/01-Old/Level01.lvl` a `Level15.lvl`.
+- **No cau** (paquet original New): `level/02-New/01-Level.bgl` a `15-Level.bgl`.
+- Aquests noms es mostren al selector, al títol del nivell i als missatges. Els identificadors interns `old` i `new` es mantenen perquè els ponts desats, el progrés i els JSON continuïn associats als mateixos nivells.
 - Els 30 nivells es poden seleccionar directament. Superar-los els marca amb un indicador i permet passar al següent.
 - Cada nivell conserva el seu pressupost, l’obertura, el perfil del terreny, la cota de l’aigua i els ancoratges presents al fitxer.
 - Es conserva una franja del relleu que cobreix tota l’obertura i 12 unitats addicionals de graella a cada costat. Els extrems del perfil es prolonguen per dibuixar el terreny fora d’aquesta franja.
 - Les coordenades es normalitzen amb una graella de 4 unitats originals: centre de l’obertura a x = 0 i cota nominal del tauler a y = 0. La unitat de graella **no s’etiqueta com a metre**.
 - Cada registre conserva ruta d’origen, mida i SHA-256 del fitxer aportat, així com la informació de normalització.
 
-| Nivell | Pressupost Old | Ancoratges Old | Pressupost New | Ancoratges New |
+| Nivell | Pressupost No miris | Ancoratges No miris | Pressupost No cau | Ancoratges No cau |
 | --- | ---: | ---: | ---: | ---: |
 | 1 | 2.000 | 4 | 1.000 | 2 |
 | 2 | 3.000 | 6 | 4.000 | 2 |
@@ -67,7 +68,7 @@ La capçalera BGL completa i els tres camps enters finals es conserven com a met
 
 Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Cada tram costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
 
-Amb l’eina **Tauler** es pot dibuixar directament d’una riba a l’altra. El traç es divideix en trams vàlids, reutilitza els nodes existents que hi coincideixen i mostra el nombre de trams i el cost abans de crear-los. A Old · Nivell 1, el traç de 8 unitats es divideix en dos trams de 4 unitats i costa 200. Repassar una cadena de barres amb Tauler les converteix en trams transitables sense duplicar-les ni tornar a cobrar-les. Si falta pressupost, tota l’operació es descarta.
+Amb l’eina **Tauler** es pot dibuixar directament d’una riba a l’altra. El traç es divideix en trams vàlids, reutilitza els nodes existents que hi coincideixen i mostra el nombre de trams i el cost abans de crear-los. A No miris · Nivell 1, el traç de 8 unitats es divideix en dos trams de 4 unitats i costa 200. Repassar una cadena de barres amb Tauler les converteix en trams transitables sense duplicar-les ni tornar a cobrar-les. Si falta pressupost, tota l’operació es descarta.
 
 Un tram no es crea si supera el pressupost, té longitud nul·la o duplica una unió del mateix tipus. Les barres individuals massa llargues es rebutgen; l’eina Tauler les subdivideix. Els ancoratges no es poden moure ni afegir arbitràriament. Aquesta versió no inclou l’arrossegament de nodes ja construïts; es poden esborrar i reconstruir els trams afectats.
 
@@ -167,7 +168,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-result-headers-v10`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-pack-names-v11`.
 
 ### Ordres tècniques
 
@@ -183,7 +184,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 28 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’Old · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 28 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
