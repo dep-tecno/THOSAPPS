@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261009-visual-v19';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261009-visual-v19';
-import {RULES,copy,terrainAt,emptyBridge,cost,addBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261009-visual-v19';
-import {mountCards} from './cards.js?v=20261009-visual-v19';
+import {levels as originalLevels} from './levels.js?v=20261011-noms-v21';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261011-noms-v21';
+import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261011-noms-v21';
+import {mountCards} from './cards.js?v=20261011-noms-v21';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -14,6 +14,7 @@ let undo=[],redo=[],tool='bar',start=null,hover=null,selected=null,simulation=nu
 let view={x:0,y:0,scale:30},width=1,height=1,pointer=null,lastFrame=0,accumulator=0;
 let statsSimulation=null;
 let hoveredCritical=null,focusedCritical=null;
+let strokePreview=null;
 const criticalRows=new Map();
 function status(text){$('status').textContent=text;}
 function persist(){
@@ -23,7 +24,7 @@ function persist(){
 }
 function restore(){try{if(saved.drafts[level.id])bridge=validateBridge(saved.drafts[level.id],level);}catch{bridge=emptyBridge(level);status('No s’ha pogut recuperar el pont d’aquest nivell. Pots obrir-ne un JSON.');}}
 function editMode(){simulation=null;paused=false;accumulator=0;start=null;selected=null;$('result').hidden=true;updateStats();update();}
-function mutate(fn,message){if(simulation)return;const previous=copy(bridge);const result=fn();if(result){status(result);return false;}undo.push(previous);if(undo.length>80)undo.shift();redo=[];selected=null;persist();update();if(message)status(message);return true;}
+function mutate(fn,message){if(simulation)return;const previous=copy(bridge);const result=fn();if(result){status(result);return false;}strokePreview=null;undo.push(previous);if(undo.length>80)undo.shift();redo=[];selected=null;persist();update();if(message)status(message);return true;}
 function selectTool(next){tool=next;start=null;selected=null;canvas.style.cursor=next==='select'?'default':'crosshair';update();}
 function populateLevels(){
   $('pack').value=level.pack;$('level').replaceChildren();
@@ -39,7 +40,7 @@ function update(){
   $('mode').textContent=running?(paused?'EN PAUSA':simulation.status==='running'?(simulation.mode==='stress'?'TEST D’ESFORÇOS':'PROVA DEL TREN'):simulation.status==='collapsing'?'COL·LAPSE DEL PONT':simulation.status==='assessed'?'ANÀLISI PRÈVIA':'RESULTAT'):'CONSTRUCCIÓ';
   $('budget').textContent=fmt(c)+' / '+fmt(level.budget);$('budgetBar').style.width=(c/level.budget*100)+'%';
   $('budgetBar').style.background=c===level.budget?'#f4c25c':'#24c0c4';
-  $('remaining').textContent='Queden '+fmt(level.budget-c)+' · 100 per tram';$('beamCount').textContent=bridge.beams.length;$('span').textContent=fmt(level.right-level.left)+' u';
+  $('remaining').textContent='Queden '+fmt(level.budget-c)+' · unions gratuïtes';$('beamCount').textContent=bridge.beams.length;$('span').textContent=fmt(level.right-level.left)+' u';
   $('demo').hidden=level.number!==1||!['old','new'].includes(level.pack);
   $('levelOrigin').textContent=level.source.author?'Nivell '+level.number+' de '+packNames[level.pack]+' · Original '+level.source.originalLevel+' · Autor: '+level.source.author+' · Conversió al format BBG: '+level.source.convertedBy+'.':'Nivells originals de Bridge Building Game · Alex Austin / Cryptic Sea.';
   for(const b of document.querySelectorAll('[data-tool]')){b.setAttribute('aria-pressed',String(b.dataset.tool===tool));b.disabled=running;}
@@ -49,7 +50,7 @@ function update(){
   $('pause').textContent=paused?'▶':'Ⅱ';$('pause').title=paused?'Continua la prova':'Pausa la prova';$('pause').setAttribute('aria-label',$('pause').title);
   $('stress').setAttribute('aria-pressed',String(stress));
   const e=bridge.beams.find(e=>e.id===selected);$('selection').hidden=!e||running;
-  if(e){const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b);$('selectionInfo').textContent=(e.type==='deck'?'Tauler':'Barra')+' · '+fmt(Math.hypot(a.x-b.x,a.y-b.y))+' u · 100';}
+  if(e){const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b);$('selectionInfo').textContent=(e.type==='deck'?'Via':'Reforç')+' · '+fmt(Math.hypot(a.x-b.x,a.y-b.y))+' u · cost '+fmt(beamCost(e));}
   $('hint').textContent=running?'Observa el pont. Prem Editar per recuperar el disseny.':start?'Escull el segon punt · Esc per cancel·lar.':tool==='erase'?'Clica un tram per esborrar-lo.':tool==='select'?'Clica un tram per veure’n el tipus o esborrar-lo.':tool==='deck'?'Uneix les ribes: el tauler es divideix en trams vàlids · Alt + arrossegar per moure la vista.':'Clica un punt i després un altre · màxim 4,5 u per barra · Alt + arrossegar per moure la vista.';
   cards.refresh();
 }
@@ -79,8 +80,8 @@ function createSegment(end,type=tool){
   if(type==='deck'){
     let result;
     const ok=mutate(()=>{result=addDeckSpan(bridge,a,end,level);if(result.error)return result.error;bridge=result.bridge;});
-    if(ok)status(result.added?'Tauler creat: '+result.added+' trams · cost '+fmt(result.added*RULES.beamCost)+(result.converted?' · '+result.converted+' barres convertides a tauler.':'.'):result.converted?result.converted+' barres convertides a tauler.':'Aquests trams ja són tauler.');
-  }else{const before=cost(bridge),ok=mutate(()=>addBeam(bridge,a,end,type,level));if(ok)status('Barra afegida'+(cost(bridge)-before>RULES.beamCost?' amb unions als trams existents':'')+' · cost '+fmt(cost(bridge)-before)+'.');}
+    if(ok)status(result.added?'Via creada: '+result.added+' trams nous · cost '+fmt(result.costAdded)+(result.converted?' · '+result.converted+' barres convertides a tauler.':'.'):result.converted?result.converted+' barres convertides a tauler sense cost.':'Via reutilitzada · cost 0.');
+  }else{const before=cost(bridge),ok=mutate(()=>addBeam(bridge,a,end,type,level));if(ok)status('Reforç afegit'+(cost(bridge)-before>RULES.beamCost?' amb unions als trams existents':'')+' · cost '+fmt(cost(bridge)-before)+'.');}
   update();
 }
 canvas.addEventListener('pointerdown',e=>{
@@ -310,11 +311,13 @@ function draw(time){
   }
   if(start&&!simulation){const p=screen(start);ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);ctx.strokeStyle='#2bcfca';ctx.lineWidth=2;ctx.stroke();
     if(hover){
-      const length=Math.hypot(hover.x-start.x,hover.y-start.y),plan=tool==='deck'?planDeckSpan(bridge,start,hover):null;
+      const length=Math.hypot(hover.x-start.x,hover.y-start.y),key=[tool,start.x,start.y,hover.x,hover.y].join(':');
+      if(!strokePreview||strokePreview.key!==key||strokePreview.nodes!==bridge.nodes||strokePreview.beams!==bridge.beams)strokePreview={key,nodes:bridge.nodes,beams:bridge.beams,plan:tool==='deck'?planDeckSpan(bridge,start,hover):previewBeam(bridge,start,hover,level)};
+      const plan=strokePreview.plan;
       if(plan?.segments){for(const s of plan.segments){line(s.a,s.b,'#2bcfca',2,true);const p=screen(s.b);ctx.fillStyle='#2bcfca';ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}}
       else line(start,hover,length<=RULES.maxLength?'#2bcfca':'#f17b65',2,true);
       const q=screen(hover);ctx.fillStyle='#b7d8e6';ctx.font='11px Segoe UI';ctx.textAlign='left';
-      ctx.fillText(fmt(length)+' u · '+(plan?.segments?plan.segments.length+' trams · '+fmt(plan.added*RULES.beamCost):'100'),q.x+13,q.y-12);
+      ctx.fillText(fmt(length)+' u · '+(plan.error?'traç no vàlid':(plan.segments?plan.segments.length+' trams · ':'')+'cost '+fmt(plan.costAdded)),q.x+13,q.y-12);
     }
   }
   if(simulation?.mode==='stress'&&stress){for(const e of criticalBeams()){const a=byId.get(e.a),b=byId.get(e.b),p=screen({x:(a.x+b.x)/2,y:(a.y+b.y)/2});ctx.font='11px Segoe UI';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0d1821';ctx.fillStyle='#e8f4fa';const label='Tram '+(Number(e.id.slice(1))+1);ctx.strokeText(label,p.x,p.y-9);ctx.fillText(label,p.x,p.y-9);}}

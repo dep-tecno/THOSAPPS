@@ -78,11 +78,11 @@ La capçalera BGL completa i els tres camps enters finals es conserven com a met
 3. **Seleccionar:** veure longitud i tipus d’un tram, canviar-lo entre barra i tauler o esborrar-lo.
 4. **Esborrar:** eliminar trams i els nodes lliures que quedin sense connexions. Els ancoratges del nivell es conserven.
 
-Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Cada tram costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
+Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Cada tram nou costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
 
-Amb l’eina **Tauler** es pot dibuixar directament d’una riba a l’altra. El traç es divideix en trams vàlids, reutilitza els nodes existents que hi coincideixen i mostra el nombre de trams i el cost abans de crear-los. A No miris · Nivell 1, el traç de 8 unitats es divideix en dos trams de 4 unitats i costa 200. Repassar una cadena de barres amb Tauler les converteix en trams transitables sense duplicar-les ni tornar a cobrar-les. Si falta pressupost, tota l’operació es descarta.
+Amb l’eina **Via** es pot dibuixar directament d’una riba a l’altra. El traç es divideix en trams vàlids, reutilitza els nodes existents que hi coincideixen i mostra el nombre de trams i el cost abans de crear-los. A No miris · Nivell 1, el traç de 8 unitats es divideix en dos trams de 4 unitats i costa 200. Repassar una cadena de barres amb Via les converteix en trams transitables sense duplicar-les ni tornar a cobrar-les. Si falta pressupost, tota l’operació es descarta.
 
-Un tram no es crea si supera el pressupost, té longitud nul·la o duplica una unió del mateix tipus. Les barres individuals massa llargues es rebutgen; l’eina Tauler les subdivideix. Els ancoratges no es poden moure ni afegir arbitràriament. Aquesta versió no inclou l’arrossegament de nodes ja construïts; es poden esborrar i reconstruir els trams afectats.
+Un tram no es crea si supera el pressupost, té longitud nul·la o duplica una unió del mateix tipus. Les barres individuals massa llargues es rebutgen; l’eina Via les subdivideix. Els ancoratges no es poden moure ni afegir arbitràriament. Aquesta versió no inclou l’arrossegament de nodes ja construïts; es poden esborrar i reconstruir els trams afectats.
 
 Desfer i refer conserven fins a 80 estats per al nivell actual. Canviar de nivell manté el seu pont desat, però reinicia l’historial de desfer. Buidar el pont és reversible amb Desfer.
 
@@ -183,7 +183,7 @@ thosbridge/package.json
 THOSBRIDGE.md
 ```
 
-La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261009-visual-v19`.
+La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261011-noms-v21`.
 
 ### Ordres tècniques
 
@@ -199,7 +199,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 43 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 46 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
@@ -221,7 +221,7 @@ Les millores posteriors s’han de decidir a partir d’aquesta revisió. No s�
 
 Començar o acabar una barra o tauler sobre un tram existent crea o reutilitza un node compartit i divideix aquell tram en dos, conservant el seu tipus. Només els extrems explícits creen unions: un creuament sense extrem compartit continua independent. Els punts nous segueixen la graella i la proximitat als nodes existents. No es creen nodes a tots els punts de la graella.
 
-Es manté el cost de 100 per tram resultant: dividir un tram afegeix 100 al pressupost utilitzat. L’operació completa, incloent les divisions als dos extrems, es comprova abans d’aplicar-la. Si supera pressupost o límits, no modifica el pont. Repintar tauler sobre un tram més llarg reutilitza les parts dividides i evita crear un segon tauler superposat.
+A partir de v20, dividir una barra o tauler existent és gratuït: els fragments comparteixen el cost original. Només els trams nous afegeixen 100 al pressupost utilitzat. L’operació completa, incloent les divisions als dos extrems, es comprova abans d’aplicar-la. Si supera pressupost o límits, no modifica el pont. Repintar tauler sobre un tram més llarg reutilitza les parts dividides i evita crear un segon tauler superposat.
 
 Els fitxers desats no es transformen automàticament. Aquesta revisió s’ha comprovat amb construccions noves: transmissió real de càrrega en una unió central, reutilització de nodes, creuaments independents, pressupost atòmic i tauler sense duplicació. Les proves visuals les fa l’usuari.
 
@@ -258,3 +258,15 @@ Previsualització de connexió al punt de la graella: cercle verd amb marca per 
 Els cinc trams més carregats es poden relacionar amb el llenç passant el cursor per la fila o enfocant el botó amb Tab. El tram rep un ressaltat daurat mentre dura la interacció, sense alterar selecció, geometria o prova. Es neteja en canviar de simulació o desaparèixer de la llista.
 
 El tren es dibuixa amb vectors de Canvas: locomotora de vapor amb cabina, caldera, xemeneia, llum frontal, rodes i biela; vagó de carbó i dos vagons amb finestres. Contorns, vidres i franges donen contrast amb el tauler. Les rodes segueixen el desplaçament, els vehicles s’inclinen amb el tram transitable i els enganxalls són només visuals. Les dimensions s’adapten al zoom per evitar que se superposin a escales petites. La física, els quatre punts de càrrega, el pressupost i els nivells no canvien. La preferència de reduir moviment desactiva la rotació decorativa de les rodes.
+
+### Unions sense penalització de pressupost (v20)
+
+Crear un node sobre una barra o tauler conserva el cost total d’aquell material, també en divisions repetides i desiguals. Es reparteix proporcionalment a la longitud dels fragments amb el camp opcional costShare; sense aquest camp un tram costa 100. Afegir una barra nova costa 100 encara que divideixi material als dos extrems. Repassar material existent amb Tauler o dividir-lo no torna a cobrar-lo.
+
+Eliminar un fragment retorna només la seva part proporcional de cost. El total es normalitza per evitar errors d’arrodoniment en el pressupost. La importació conserva les quotes vàlides i rebutja valors no finits, nuls, negatius, superiors a 1 o inferiors a la quota mínima compatible amb la longitud màxima original. Els fitxers anteriors sense costShare mantenen el seu cost declarat de 100 per tram; no s’inventa la procedència de les seves divisions.
+
+La previsualització i els missatges mostren el cost del material que realment s’afegeix, i la selecció mostra la quota del fragment. El càlcul de la previsualització es desa temporalment mentre el punt no canviï. Les comprovacions inclouen unions als dos extrems, pressupost atòmic, divisions amb pressupost complet, cost conservat, eliminació proporcional, exportació/importació i quotes incorrectes. Aquest canvi no demostra per si sol que tots els nivells siguin superables.
+
+### Noms de les eines (v21)
+
+Les eines es mostren com a Reforç (abans Barra) i Via (abans Tauler). Reforç crea elements estructurals; Via crea el camí transitable del tren. Els botons, la selecció, els missatges i l’ajuda utilitzen aquests noms. Es mantenen les dreceres B i T, els identificadors interns bar/deck i el format dels ponts desats.

@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
 import {assessBridge,stressHeatColor,didacticIndicators} from '../core.js';
-import {RULES,copy,emptyBridge,demo,Simulation,cost,addBeam,nodeAt,connectionPreview,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
+import {RULES,copy,emptyBridge,demo,Simulation,cost,beamCost,addBeam,previewBeam,nodeAt,connectionPreview,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
@@ -93,7 +93,7 @@ test('an endpoint on a deck makes a shared joint that carries the train load',()
   const joint=b.nodes.find(n=>n.x===0&&n.y===0);
   assert.equal(b.beams.filter(e=>e.a===joint.id||e.b===joint.id).length,3);
   assert.equal(b.beams.filter(e=>e.type==='deck').length,2);
-  assert.equal(cost(b),300);assert.equal(deckRoute(level,b).length,2);
+  assert.equal(cost(b),200);assert.equal(deckRoute(level,b).length,2);
   assert.equal(simulate(level,b).status,'passed');assert.deepEqual(validateBridge(b,level),b);
   const count=b.nodes.length;
   assert.equal(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',level),null);
@@ -108,23 +108,44 @@ test('geometric crossings stay separate unless an endpoint explicitly creates a 
   const joint=nodeAt(b,{x:0,y:0});
   assert.equal(b.beams.filter(e=>e.a===joint.id||e.b===joint.id).length,5);
 });
-test('junction cost is checked atomically, including splits at both endpoints',()=>{
+test('junctions at both endpoints are free and only the new bar needs budget',()=>{
   const level={...copy(first),budget:2000},b=emptyBridge(level);
   addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level);
   addBeam(b,{x:-2,y:2},{x:2,y:2},'bar',level);
   const before=copy(b);
-  assert.match(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',{...level,budget:400}),/pressupost/);
+  assert.match(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',{...level,budget:250}),/pressupost/);
   assert.deepEqual(b,before);
-  assert.equal(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',{...level,budget:500}),null);
-  assert.equal(cost(b),500);
+  assert.equal(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',{...level,budget:300}),null);
+  assert.equal(cost(b),300);
 });
 test('drawing deck over a longer existing deck splits it without laying a second deck',()=>{
   const level={...copy(first),budget:1000},b=emptyBridge(level);
   addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level);
   const r=addDeckSpan(b,{x:-2,y:0},{x:0,y:0},level);
-  assert.equal(r.error,undefined);assert.equal(r.added,1);assert.equal(r.bridge.beams.length,2);
+  assert.equal(r.error,undefined);assert.equal(r.added,0);assert.equal(r.costAdded,0);assert.equal(cost(r.bridge),100);assert.equal(r.bridge.beams.length,2);
   const again=addDeckSpan(r.bridge,{x:-2,y:0},{x:0,y:0},level);
   assert.equal(again.added,0);assert.deepEqual(again.bridge,r.bridge);
+});
+test('repeated uneven splits preserve material cost at a full budget and round-trip through JSON',()=>{
+  const level={...copy(first),budget:100},b=emptyBridge(level);
+  assert.equal(addBeam(b,{x:0,y:2},{x:4,y:2},'bar',level),null);
+  const firstSplit=addDeckSpan(b,{x:0,y:2},{x:1,y:2},level);assert.equal(firstSplit.costAdded,0);assert.equal(cost(firstSplit.bridge),100);
+  const next=addDeckSpan(firstSplit.bridge,{x:1,y:2},{x:3,y:2},level);assert.equal(next.error,undefined);assert.equal(next.costAdded,0);assert.equal(cost(next.bridge),100);
+  assert.deepEqual(next.bridge.beams.map(beamCost).sort((a,b)=>a-b),[25,25,50]);
+  assert.deepEqual(validateBridge(JSON.parse(JSON.stringify(next.bridge)),level),next.bridge);
+  const selected=next.bridge.beams.find(e=>beamCost(e)===25);removeBeam(next.bridge,selected.id);assert.equal(cost(next.bridge),75);
+});
+test('cost preview includes only new material and never changes the saved bridge',()=>{
+  const level={...copy(first),budget:1000},b=emptyBridge(level);
+  addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level);const before=copy(b);
+  assert.equal(previewBeam(b,{x:0,y:0},{x:0,y:2},level).costAdded,100);
+  assert.equal(previewBeam(b,{x:-2,y:0},{x:0,y:0},level).costAdded,0);
+  assert.equal(planDeckSpan(b,{x:-2,y:0},{x:0,y:0}).costAdded,0);
+  assert.deepEqual(b,before);
+});
+test('import rejects impossible cost shares instead of accepting free or discounted new material',()=>{
+  const level={...copy(first),budget:1000},b=emptyBridge(level);addBeam(b,{x:0,y:2},{x:4,y:2},'bar',level);
+  for(const invalid of [0,-1,NaN,Infinity,2,.1]){const forged=copy(b);forged.beams[0].costShare=invalid;assert.throws(()=>validateBridge(forged,level),/cost/);}
 });
 test('30 source files, two ordered packs, finite coordinates and exact provenance',()=>{
   assert.equal(levels.length,30);assert.equal(new Set(levels.map(l=>l.id)).size,30);

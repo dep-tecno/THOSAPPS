@@ -39,7 +39,8 @@ export function terrainAt(level,x) {
 export function emptyBridge(level) {
   return {nodes:level.anchors.map((p,i)=>({id:'a'+i,...p,fixed:true})),beams:[]};
 }
-export const cost = bridge => bridge.beams.length * RULES.beamCost;
+export const beamCost = beam => (beam.costShare??1)*RULES.beamCost;
+export const cost = bridge => Math.round(bridge.beams.reduce((sum,e)=>sum+beamCost(e),0)*1e6)/1e6;
 export function nodeAt(bridge,p) {return bridge.nodes.find(n=>Math.hypot(n.x-p.x,n.y-p.y)<0.025);}
 function insideBeam(bridge,e,p){
   const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b),dx=b.x-a.x,dy=b.y-a.y;
@@ -58,14 +59,16 @@ function connectPoint(bridge,p){
   for(const edge of [...bridge.beams]){
     if(edge.a===node.id||edge.b===node.id)continue;
     if(!insideBeam(bridge,edge,node))continue;
-    const oldEnd=edge.b;edge.b=node.id;
+    const a=bridge.nodes.find(n=>n.id===edge.a),b=bridge.nodes.find(n=>n.id===edge.b);
+    const oldShare=edge.costShare??1,firstShare=oldShare*Math.hypot(node.x-a.x,node.y-a.y)/Math.hypot(b.x-a.x,b.y-a.y);
+    const oldEnd=edge.b;edge.b=node.id;edge.costShare=firstShare;
     if(!bridge.beams.some(e=>(e.a===node.id&&e.b===oldEnd)||(e.a===oldEnd&&e.b===node.id)))
-      bridge.beams.push({id:nextId(bridge.beams,'b'),a:node.id,b:oldEnd,type:edge.type});
+      bridge.beams.push({id:nextId(bridge.beams,'b'),a:node.id,b:oldEnd,type:edge.type,costShare:oldShare-firstShare});
   }
   return node;
 }
 function constructionLimit(bridge,level){
-  if(cost(bridge)>level.budget)return 'No queda prou pressupost. Cada tram costa 100; crear una unió també pot dividir trams existents.';
+  if(cost(bridge)>level.budget)return 'No queda prou pressupost. Cada tram nou costa 100; dividir trams existents és gratuït.';
   if(bridge.nodes.length>RULES.maxNodes||bridge.beams.length>RULES.maxBeams)return 'Has arribat al límit d’elements.';
   return null;
 }
@@ -87,6 +90,10 @@ export function addBeam(bridge,a,b,type='bar',level) {
 export function removeBeam(bridge,id) {
   bridge.beams=bridge.beams.filter(e=>e.id!==id);
   bridge.nodes=bridge.nodes.filter(n=>n.fixed||bridge.beams.some(e=>e.a===n.id||e.b===n.id));
+}
+export function previewBeam(bridge,a,b,level){
+  const draft=copy(bridge),error=addBeam(draft,a,b,'bar',{...level,budget:Infinity});
+  return {error,costAdded:error?0:Math.round((cost(draft)-cost(bridge))*1e6)/1e6};
 }
 export function planDeckSpan(bridge,a,b) {
   const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
@@ -119,7 +126,8 @@ export function planDeckSpan(bridge,a,b) {
     const existing=na&&nb&&draft.beams.find(e=>(e.a===na.id&&e.b===nb.id)||(e.a===nb.id&&e.b===na.id));
     segments.push({a,b,existing:existing?.id,type:existing?.type});
   }
-  return {segments,draft,added:draft.beams.length-bridge.beams.length+segments.filter(s=>!s.existing).length,converted:segments.filter(s=>s.type==='bar').length};
+  const added=segments.filter(s=>!s.existing).length;
+  return {segments,draft,added,costAdded:added*RULES.beamCost,converted:segments.filter(s=>s.type==='bar').length};
 }
 export function addDeckSpan(bridge,a,b,level) {
   const bound=Math.max(150,level.right-level.left+50);
@@ -131,7 +139,7 @@ export function addDeckSpan(bridge,a,b,level) {
     const error=addBeam(draft,segment.a,segment.b,'deck',level);if(error)return {error};
   }
   const error=constructionLimit(draft,level);if(error)return {error};
-  return {bridge:draft,added:plan.added,converted:plan.converted};
+  return {bridge:draft,added:plan.added,costAdded:Math.round((cost(draft)-cost(bridge))*1e6)/1e6,converted:plan.converted};
 }
 export function makeDeck(level,bridge) {
   let draft=copy(bridge);
@@ -175,7 +183,8 @@ export function validateBridge(input,level) {
     const a=result.nodes.find(n=>n.id===e.a),b=result.nodes.find(n=>n.id===e.b);
     const length=Math.hypot(a.x-b.x,a.y-b.y);
     if(length<0.1||length>RULES.maxLength+1e-6)throw Error('Hi ha un tram amb longitud incorrecta.');
-    edges.add(key);beamIds.add(e.id);result.beams.push({id:e.id,a:e.a,b:e.b,type:e.type});
+    if(e.costShare!==undefined&&(!Number.isFinite(e.costShare)||e.costShare<=0||e.costShare>1||e.costShare<length/RULES.maxLength-1e-6))throw Error('Hi ha un cost de tram incorrecte.');
+    edges.add(key);beamIds.add(e.id);result.beams.push({id:e.id,a:e.a,b:e.b,type:e.type,...(e.costShare===undefined?{}:{costShare:e.costShare})});
   }
   if(cost(result)>level.budget)throw Error('El pont supera el pressupost del nivell.');
   return result;
@@ -220,7 +229,7 @@ export class Simulation {
     this.deckNodeIds=new Set(this.beams.filter(e=>e.type==='deck').flatMap(e=>[e.a,e.b]));
     this.maxDeckDrop=null;
     this.route=deckRoute(level,bridge);this.trainX=level.left-5;this.trainY=0;this.status='running';this.reason='';this.peak=0;this.broken=0;
-    if(this.mode==='train'&&!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Tauler o fes servir Construir tauler horitzontal.';}
+    if(this.mode==='train'&&!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Via o fes servir Construir via horitzontal.';}
     if(this.mode==='stress'&&!this.beams.length){this.status='failed';this.failureKind='structure';this.reason='Construeix algun tram abans de fer la prova d’esforços.';}
     this.trainMass=Math.max(4,Math.min(24,(level.source.trainWeight||40000)/5000))*weight;
   }
