@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261011-noms-v21';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261011-noms-v21';
-import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261011-noms-v21';
-import {mountCards} from './cards.js?v=20261011-noms-v21';
+import {levels as originalLevels} from './levels.js?v=20261013-motor-v22';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261013-motor-v22';
+import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261013-motor-v22';
+import {mountCards} from './cards.js?v=20261013-motor-v22';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);

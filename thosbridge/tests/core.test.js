@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
-import {assessBridge,stressHeatColor,didacticIndicators} from '../core.js';
+import {assessBridge,stressHeatColor,didacticIndicators,solveTrussEquilibrium} from '../core.js';
 import {RULES,copy,emptyBridge,demo,Simulation,cost,beamCost,addBeam,previewBeam,nodeAt,connectionPreview,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
@@ -59,12 +59,10 @@ test('arrow smoothing follows a changing load without changing raw stress or rec
   assert.equal(didacticIndicators(source)[0].kind,'tension');
   source.beams[0].visualStress=-.2;assert.equal(didacticIndicators(source)[0].kind,'compression');
 });
-test('canvas deck drop retains its measured position and excludes collapse and non-deck nodes',()=>{
-  const b=demo(first),s=new Simulation(first,b),n=s.nodes.find(n=>!n.fixed&&s.deckNodeIds.has(n.id)),other=s.nodes.find(n=>!n.fixed&&!s.deckNodeIds.has(n.id));
-  n.y=n.y0-.2;other.y=other.y0-2;s.step(0);
-  assert.ok(Math.abs(s.maxDeckDrop.amount-.2)<1e-9);assert.equal(s.maxDeckDrop.node,n.id);
-  const measured=copy(s.maxDeckDrop);n.y=n.y0+.1;s.step(0);assert.deepEqual(s.maxDeckDrop,measured);
-  s.fail('test');n.y=n.y0-10;s.step(0);assert.deepEqual(s.maxDeckDrop,measured);
+test('canvas deck drop retains the static solver measurement and excludes non-deck nodes',()=>{
+  const b=demo(first),s=assessBridge(first,b),deckIds=new Set(b.beams.filter(e=>e.type==='deck').flatMap(e=>[e.a,e.b]));
+  assert.ok(s.maxDeckDrop.amount>0);assert.ok(deckIds.has(s.maxDeckDrop.node));
+  assert.ok(s.nodes.every(n=>n.x===n.x0&&n.y===n.y0));
   assert.equal(new Simulation(first,b).maxDeckDrop,null);
 });
 test('the stationary pretest preserves measured drop without moving the displayed bridge',()=>{
@@ -73,17 +71,13 @@ test('the stationary pretest preserves measured drop without moving the displaye
   assert.ok(s.beams.some(e=>e.peakCompression>0));
   for(const n of s.nodes){assert.equal(n.x,n.x0);assert.equal(n.y,n.y0);}
 });
-test('maximum tension remains visible when the same bar later has a larger compression peak',()=>{
-  const level={...copy(first),budget:1000},b=emptyBridge(level);
-  assert.equal(addBeam(b,{x:0,y:2},{x:2,y:2},'bar',level),null);
-  const s=new Simulation(level,b,1,{mode:'stress'}),edge=s.beams[0],end=s.byId.get(edge.b);
-  end.x=2.01;s.step(0);const tension=edge.peakTension;
-  assert.ok(tension>0);assert.equal(edge.peakStress,tension);
-  end.x=1.98;s.step(0);
-  assert.ok(edge.peakStress<0);assert.ok(Math.abs(edge.peakStress)>tension);
-  assert.equal(edge.peakTension,tension);
-  const fresh=new Simulation(level,b,1,{mode:'stress'});
-  assert.equal(fresh.beams[0].peakTension,0);
+test('static truss equilibrium returns finite displacements and axial forces',()=>{
+  const nodes=[{id:'a',x0:-2,y0:0,fixed:true},{id:'b',x0:2,y0:0,fixed:true},{id:'c',x0:0,y0:2,fixed:false}];
+  const beams=[{id:'base',a:'a',b:'b'},{id:'left',a:'a',b:'c'},{id:'right',a:'b',b:'c'}];
+  const result=solveTrussEquilibrium(nodes,beams,new Map([['c',{x:0,y:-10}]]));
+  assert.equal(result.stable,true);assert.ok(result.displacements.get('c').y<0);
+  assert.ok(result.forces.get('left')<0&&result.forces.get('right')<0);
+  assert.ok([...result.displacements.values()].every(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)));
 });
 test('an endpoint on a deck makes a shared joint that carries the train load',()=>{
   const level={...copy(first),left:-2,right:2,budget:1000,terrain:[{x:-10,y:-10},{x:10,y:-10}],anchors:[{x:-2,y:0},{x:2,y:0},{x:0,y:-2}]};

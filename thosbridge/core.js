@@ -216,6 +216,55 @@ export function deckRoute(level,bridge) {
   }
   return null;
 }
+// Linear static truss solve with a preconditioned conjugate-gradient method.
+// Pin joints transmit only axial force; fixed level anchors have zero displacement.
+export function solveTrussEquilibrium(nodes,beams,loads,stiffness=RULES.stiffness){
+  const free=nodes.filter(n=>!n.fixed),dof=new Map(free.map((n,i)=>[n.id,2*i])),size=free.length*2;
+  if(!size)return {stable:true,displacements:new Map(),forces:new Map(),iterations:0};
+  const elements=[];
+  for(const e of beams){if(e.broken)continue;const a=nodes.find(n=>n.id===e.a),b=nodes.find(n=>n.id===e.b);if(!a||!b)continue;
+    const dx=b.x0-a.x0,dy=b.y0-a.y0,length=Math.hypot(dx,dy);if(length<.1)continue;
+    elements.push({e,a,b,length,c:dx/length,s:dy/length,k:stiffness});
+  }
+  let maxDiagonal=0;
+  const apply=(x,out)=>{
+    out.fill(0);
+    for(const q of elements){const ia=dof.get(q.a.id),ib=dof.get(q.b.id),ax=ia===undefined?0:x[ia],ay=ia===undefined?0:x[ia+1],bx=ib===undefined?0:x[ib],by=ib===undefined?0:x[ib+1];
+      const extension=q.c*(bx-ax)+q.s*(by-ay),fx=q.k*extension*q.c,fy=q.k*extension*q.s;
+      if(ia!==undefined){out[ia]-=fx;out[ia+1]-=fy;}if(ib!==undefined){out[ib]+=fx;out[ib+1]+=fy;}
+    }
+    // The tiny diagonal spring also belongs in the operator; using it only
+    // in the preconditioner leaves mechanisms singular and CG can diverge.
+    if(maxDiagonal)for(let i=0;i<size;i++)out[i]+=x[i]*maxDiagonal*1e-3;
+  };
+  const diagonal=new Float64Array(size),rhs=new Float64Array(size);
+  for(const q of elements){const ia=dof.get(q.a.id),ib=dof.get(q.b.id),xx=q.k*q.c*q.c,xy=q.k*q.c*q.s,yy=q.k*q.s*q.s;
+    if(ia!==undefined){diagonal[ia]+=xx;diagonal[ia+1]+=yy;}if(ib!==undefined){diagonal[ib]+=xx;diagonal[ib+1]+=yy;}
+  }
+  for(const n of free){const i=dof.get(n.id),f=loads.get(n.id);if(f){rhs[i]=f.x;rhs[i+1]=f.y;}}
+  for(const d of diagonal)maxDiagonal=Math.max(maxDiagonal,d);
+  if(!(maxDiagonal>0))return {stable:false,reason:'mechanism',displacements:new Map(),forces:new Map(),iterations:0};
+  const regularizer=maxDiagonal*1e-3;for(let i=0;i<size;i++){diagonal[i]+=regularizer;if(!Number.isFinite(diagonal[i]))return {stable:false,reason:'numeric',displacements:new Map(),forces:new Map(),iterations:0};}
+  const x=new Float64Array(size),r=Float64Array.from(rhs),z=new Float64Array(size),p=new Float64Array(size),ap=new Float64Array(size),ax=new Float64Array(size);
+  let rz=0,normB=0;for(let i=0;i<size;i++){z[i]=r[i]/diagonal[i];p[i]=z[i];rz+=r[i]*z[i];normB+=rhs[i]*rhs[i];}
+  normB=Math.sqrt(normB);if(normB<1e-12)return {stable:true,displacements:new Map(free.map(n=>[n.id,{x:0,y:0}])),forces:new Map(),iterations:0};
+  const tolerance=normB*1e-8,maxIterations=Math.min(1200,Math.max(120,size*2));let converged=false,iterations=0;
+  for(;iterations<maxIterations;iterations++){
+    apply(p,ap);let pap=0;for(let i=0;i<size;i++)pap+=p[i]*ap[i];
+    if(!(pap>1e-24)||!Number.isFinite(pap))break;
+    const alpha=rz/pap;let residual=0;
+    for(let i=0;i<size;i++){x[i]+=alpha*p[i];r[i]-=alpha*ap[i];residual+=r[i]*r[i];}
+    if(Math.sqrt(residual)<=tolerance){converged=true;iterations++;break;}
+    let nextRz=0;for(let i=0;i<size;i++){z[i]=r[i]/diagonal[i];nextRz+=r[i]*z[i];}
+    const beta=nextRz/rz;for(let i=0;i<size;i++)p[i]=z[i]+beta*p[i];rz=nextRz;
+  }
+  const displacements=new Map(free.map(n=>{const i=dof.get(n.id);return[n.id,{x:x[i],y:x[i+1]}];}));
+  const forces=new Map(elements.map(q=>{const ua=displacements.get(q.a.id)||{x:0,y:0},ub=displacements.get(q.b.id)||{x:0,y:0};return[q.e.id,q.k*(q.c*(ub.x-ua.x)+q.s*(ub.y-ua.y))];}));
+  apply(x,ax);let residual=0;for(let i=0;i<size;i++)residual+=(rhs[i]-ax[i])**2;
+  const residualNorm=Math.sqrt(residual),maxDisplacement=Math.max(...Array.from(x,Math.abs));
+  const stable=converged&&residualNorm<=Math.max(tolerance,1e-7)&&Number.isFinite(maxDisplacement)&&maxDisplacement<100;
+  return {stable,reason:stable?undefined:converged?'mechanism':'not-converged',displacements,forces,iterations,residualNorm,tolerance,maxDisplacement};
+}
 export class Simulation {
   constructor(level,bridge,weight=1,options={}) {
     this.mode=options.mode==='stress'?'stress':'train';
@@ -253,25 +302,9 @@ export class Simulation {
   step(dt=RULES.step) {
     if(!this.active)return;
     this.time+=dt;
-    for(const n of this.nodes){n.fx=0;n.fy=-RULES.gravity*n.mass;}
-    if(this.mode==='stress'){
-      this.loadFactor=Math.max(0,Math.min(1,(this.time-.8)/3));
-      const deck=this.beams.filter(e=>e.type==='deck'&&!e.broken),total=deck.reduce((s,e)=>s+e.length,0);
-      for(const e of deck){const load=total?this.trainMass*RULES.gravity*this.loadFactor*e.length/total/2:0;this.byId.get(e.a).fy-=load;this.byId.get(e.b).fy-=load;}
-    }
-    if(this.mode==='train'&&this.status==='running'&&this.time>0.8){
-      this.trainX+=(this.level.right-this.level.left+10)/12*dt;
-      for(const offset of [0,1.3,2.6,3.9]) {
-        const x=this.trainX-offset;
-        if(x<this.level.left||x>this.level.right)continue;
-        const rail=this.railAt(x);
-        if(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag){this.fail('El pont no ha aguantat el pas del tren. Reforça’l amb triangles.');break;}
-        if(!rail.ground&&rail.a){const load=this.trainMass*RULES.gravity/4;rail.a.fy-=load*(1-rail.t);rail.b.fy-=load*rail.t;}
-      }
-      const front=this.railAt(this.trainX);if(!front.broken)this.trainY=front.y;
-    }
     if(this.status==='collapsing'){
       this.collapseTime+=dt;
+      for(const n of this.nodes){if(n.fixed)continue;n.vy-=RULES.gravity*dt;n.x+=n.vx*dt;n.y+=n.vy*dt;const floor=terrainAt(this.level,n.x);if(n.y<floor){n.y=floor;n.vy=0;n.vx*=Math.exp(-8*dt);}}
       for(const car of this.cars||[]){
         const rail=this.railAt(car.x);
         if(!car.falling&&(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag)){
@@ -282,37 +315,43 @@ export class Simulation {
           const floor=terrainAt(this.level,car.x);if(car.y<floor){car.y=floor;car.vy=0;car.vx*=Math.exp(-8*dt);}
         }else{
           car.y=rail.y;
-          if(!rail.ground&&rail.a){const load=this.trainMass*RULES.gravity/4;rail.a.fy-=load*(1-rail.t);rail.b.fy-=load*rail.t;}
         }
       }
+      if(this.collapseTime>=8)this.status='failed';return;
     }
-    for(const e of this.beams){if(e.broken)continue;const a=this.byId.get(e.a),b=this.byId.get(e.b);
-      const dx=b.x-a.x,dy=b.y-a.y,len=Math.max(.001,Math.hypot(dx,dy)),nx=dx/len,ny=dy/len;
-      const extension=len-e.length,relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
-      const force=RULES.stiffness*extension+RULES.damping*relative;
-      const strength=RULES.strength/(1+e.length*e.length/30);
-      e.stress=RULES.stiffness*extension/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
-      // Smooth only the arrows; forces, breakage and numerical results use raw stress.
-      e.visualStress+=(e.stress-e.visualStress)*(1-Math.exp(-dt/.2));
-      e.peakTension=Math.max(e.peakTension,e.stress);
-      e.peakCompression=Math.max(e.peakCompression,-e.stress);
-      if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;
-      if(Math.abs(e.stress)>1){e.broken=true;this.broken++;continue;}
-      a.fx+=force*nx;a.fy+=force*ny;b.fx-=force*nx;b.fy-=force*ny;
-    }
-    for(const n of this.nodes){if(n.fixed)continue;
-      n.vx=(n.vx+n.fx/n.mass*dt)*Math.exp(-1.5*dt);n.vy=(n.vy+n.fy/n.mass*dt)*Math.exp(-1.5*dt);
-      n.x+=n.vx*dt;n.y+=n.vy*dt;
-      const floor=terrainAt(this.level,n.x);
-      // Ground contact also makes overhang and single-anchor levels playable.
-      if(n.y<floor&&n.y0>=terrainAt(this.level,n.x0)-0.1){n.y=floor;n.vy=Math.max(0,-n.vy*.05);n.vx*=.85;}
-      if(!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>1000||Math.abs(n.y)>1000){
-        n.x=n.x0;n.y=n.y0;n.vx=0;n.vy=0;this.status='failed';this.reason='La construcció és inestable. Torna a editar el pont.';return;
+    if(this.mode==='train'&&this.time>0.8)this.trainX+=(this.level.right-this.level.left+10)/12*dt;
+    if(this.mode==='stress')this.loadFactor=Math.max(0,Math.min(1,(this.time-.8)/3));
+    const loads=new Map(this.nodes.filter(n=>!n.fixed).map(n=>[n.id,{x:0,y:-RULES.gravity*n.mass}]));
+    if(this.mode==='stress'){
+      const deck=this.beams.filter(e=>e.type==='deck'&&!e.broken),total=deck.reduce((sum,e)=>sum+e.length,0);
+      for(const e of deck){const load=total?this.trainMass*RULES.gravity*this.loadFactor*e.length/total/2:0;for(const id of [e.a,e.b])if(loads.has(id))loads.get(id).y-=load;}
+    }else if(this.time>.8){
+      for(const offset of [0,1.3,2.6,3.9]){const x=this.trainX-offset;if(x<this.level.left||x>this.level.right)continue;const rail=this.railAt(x);
+        if(rail.broken){this.fail('El tauler s’ha trencat sota el tren. Reforça’l amb triangles.');break;}
+        if(!rail.ground&&rail.a){const load=this.trainMass*RULES.gravity/4;for(const [id,fraction] of [[rail.a.id,1-rail.t],[rail.b.id,rail.t]])if(loads.has(id))loads.get(id).y-=load*fraction;}
       }
     }
-    if(this.status==='running')for(const n of this.nodes)if(this.deckNodeIds.has(n.id)&&!n.fixed){
-      const amount=n.y0-n.y;
-      if(amount>(this.maxDeckDrop?.amount||0))this.maxDeckDrop={node:n.id,x:n.x,y:n.y,y0:n.y0,amount};
+    if(this.status!=='running')return;
+    const solved=solveTrussEquilibrium(this.nodes,this.beams,loads);
+    if(!solved.stable){this.fail('L’estructura no forma un conjunt estable. Reforça-la amb triangles.',this.mode==='train');return;}
+    for(const n of this.nodes){const u=solved.displacements.get(n.id)||{x:0,y:0},oldX=n.x,oldY=n.y;n.x=n.x0+u.x;n.y=n.y0+u.y;n.vx=(n.x-oldX)/Math.max(dt,1e-6);n.vy=(n.y-oldY)/Math.max(dt,1e-6);
+      if(!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(u.x)>50||Math.abs(u.y)>50){this.fail('L’estructura no forma un conjunt estable. Reforça-la amb triangles.',this.mode==='train');return;}
+      if(this.deckNodeIds.has(n.id)&&!n.fixed){const amount=n.y0-n.y;if(amount>(this.maxDeckDrop?.amount||0))this.maxDeckDrop={node:n.id,x:n.x,y:n.y,y0:n.y0,amount};}
+    }
+    for(const e of this.beams){if(e.broken)continue;const force=solved.forces.get(e.id)||0,strength=RULES.strength/(1+e.length*e.length/30);e.stress=force/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
+      // A deck can be geometrically unstable before its axial-force model
+      // reports force (for example, an unbraced horizontal chain). Show that
+      // failure through the measured sag limit instead of leaving a blank map.
+      if(this.mode==='stress'&&e.type==='deck'&&Math.abs(e.stress)<1e-12&&this.maxDeckDrop?.amount>RULES.maxSag){
+        const a=this.byId.get(e.a),b=this.byId.get(e.b),drop=Math.max(a.y0-a.y,b.y0-b.y);
+        e.stress=Math.max(0,drop/RULES.maxSag);this.peak=Math.max(this.peak,e.stress);
+      }
+      e.visualStress+=(e.stress-e.visualStress)*(1-Math.exp(-dt/.2));e.peakTension=Math.max(e.peakTension,e.stress);e.peakCompression=Math.max(e.peakCompression,-e.stress);if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;
+      if(Math.abs(e.stress)>1){e.broken=true;this.broken++;}
+    }
+    if(this.mode==='train'&&this.time>.8){
+      for(const offset of [0,1.3,2.6,3.9]){const x=this.trainX-offset;if(x<this.level.left||x>this.level.right)continue;const rail=this.railAt(x);if(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag){this.fail('El pont no ha aguantat el pas del tren. Reforça’l amb triangles.');break;}}
+      const front=this.railAt(this.trainX);if(!front.broken)this.trainY=front.y;
     }
     if(this.mode==='stress'&&this.status==='running'){
       if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-RULES.maxSag))this.fail('La càrrega prèvia indica una estructura feble. Reforça els trams més carregats.',false);
@@ -320,7 +359,6 @@ export class Simulation {
     }
     if(this.mode==='train'&&this.status==='running'&&this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
     if(this.status==='running'&&this.time>20)this.fail('El tren no ha pogut completar el recorregut.');
-    if(this.status==='collapsing'&&this.collapseTime>=8)this.status='failed';
   }
 }
 // Calculate on an isolated copy, then return a heat map on the undeformed design.
