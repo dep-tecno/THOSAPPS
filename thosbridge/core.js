@@ -1,6 +1,6 @@
 // Independent educational simulation for THOSBRIDGE; not the BBG executable engine.
 export const RULES = Object.freeze({beamCost:100, maxLength:4.5, stiffness:1800,
-  gravity:10, strength:260, maxSagRatio:0.022, minMaxSag:0.25, maxMaxSag:4.5,
+  gravity:10, strength:260, maxSagRatio:0.03, minMaxSag:0.25, maxMaxSag:4.5,
   step:1/240, damping:5, maxNodes:700, maxBeams:1500});
 export function maxSagForLevel(level){
   const span=Number(level?.right)-Number(level?.left);
