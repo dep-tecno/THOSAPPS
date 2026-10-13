@@ -332,3 +332,25 @@ test('heat colors range from yellow to orange to red for both tension and compre
   assert.equal(stressHeatColor(1),'rgb(239,68,44)');assert.equal(stressHeatColor(2),stressHeatColor(1));
   assert.equal(stressHeatColor(-.75),stressHeatColor(.75));
 });
+
+test('only No miris 15 uses a bascule and a ground joint stays movable',()=>{
+  const level=levels.find(l=>l.id==='old-15');assert.deepEqual(level.bascule,{landingX:2});
+  assert.equal(levels.filter(l=>l.bascule).length,1);
+  const b=makeDeck(level,emptyBridge(level)).bridge;const s=new Simulation(level,b);
+  assert.ok(s.nodes.filter(n=>!n.id.startsWith('a')).every(n=>!n.fixed));
+  assert.equal(s.nodes.filter(n=>n.fixed).length,1);
+  assert.match(addDeckSpan(b,{x:-8,y:0},{x:2,y:1},level).error,/horitzontal/);
+});
+test('the bascule rotates with torque and the bank cannot latch it permanently',()=>{
+  const l=levels.find(l=>l.id==='old-15'),b=makeDeck(l,emptyBridge(l)).bridge,s=new Simulation(l,b);
+  const loads=new Map(s.nodes.filter(n=>!n.fixed).map(n=>[n.id,{x:0,y:0}]));
+  loads.get(s.landing.id).y=100;s.basculeEquilibrium(loads,1);
+  assert.equal(s.angle,s.landingAngle);assert.equal(s.seated,true);
+  loads.get(s.landing.id).y=-100;s.basculeEquilibrium(loads,.1);
+  assert.ok(s.angle<s.landingAngle);assert.equal(s.landing.fixed,false);
+});
+test('inclined legacy bascule designs remain importable but require adaptation',()=>{
+  const l=levels.find(l=>l.id==='old-15'),b=makeDeck({...l,bascule:undefined},emptyBridge(l)).bridge;
+  for(const n of b.nodes)if(!n.fixed)n.y=(n.x+8)/10;
+  const original=copy(b),s=new Simulation(l,b);assert.equal(s.status,'failed');assert.match(s.reason,/horitzontal/);assert.deepEqual(b,original);
+});

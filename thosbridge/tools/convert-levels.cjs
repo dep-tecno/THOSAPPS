@@ -39,7 +39,8 @@ for (const [folder, pack] of [['01-Old', 'old'], ['02-New', 'new']]) {
       water:(float(old ? 0 : 12)-road)/4, anchors,
       // Old level 13's left bank is 0.25 grid units below the rail;
       // the independent web motor does not treat that gap as ground contact.
-      ...(old && number===13 ? {extraAnchors:[{x:-20,y:0}]} : {}), terrain,
+      ...(old && number===13 ? {extraAnchors:[{x:-20,y:0}]} : {}),
+      ...(old && number===15 ? {bascule:{landingX:2}} : {}), terrain,
       source:{file:'level/'+folder+'/'+file, sha256:crypto.createHash('sha256').update(b).digest('hex'),
         bytes:b.length, grid:4, originX:origin, roadY:road,
         header: old ? null : Array.from({length:11},(_,i)=>int(i*4)),

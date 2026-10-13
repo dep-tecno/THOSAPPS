@@ -1,6 +1,6 @@
-import {levels as originalLevels} from './levels.js?v=20261013-left-anchor-v28';
+import {levels as originalLevels} from './levels.js?v=20261013-bascule-v29';
 import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261013-collapse-v25';
-import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261013-left-anchor-v28';
+import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261013-bascule-v29';
 import {mountCards} from './cards.js?v=20261013-collapse-v25';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
@@ -33,7 +33,7 @@ function populateLevels(){
   }
   $('level').value=level.id;
 }
-function changeLevel(id){persist();level=levels.find(l=>l.id===id)||level;bridge=emptyBridge(level);restore();undo=[];redo=[];editMode();populateLevels();fit();persist();status('Nivell '+level.number+' del paquet '+packNames[level.pack]+'.');}
+function changeLevel(id){persist();level=levels.find(l=>l.id===id)||level;bridge=emptyBridge(level);restore();undo=[];redo=[];editMode();populateLevels();fit();persist();status(level.bascule?'Pont basculant: via horitzontal fins a x = 2, reforços i contrapès a l’esquerra de l’ancoratge.':'Nivell '+level.number+' del paquet '+packNames[level.pack]+'.');}
 function update(){
   const c=cost(bridge),running=!!simulation;
   $('levelTitle').textContent=packNames[level.pack]+' / '+String(level.number).padStart(2,'0')+' · '+(saved.completed[level.id]?'Superat':'Construcció de ponts');
@@ -51,7 +51,7 @@ function update(){
   $('stress').setAttribute('aria-pressed',String(stress));
   const e=bridge.beams.find(e=>e.id===selected);$('selection').hidden=!e||running;
   if(e){const a=bridge.nodes.find(n=>n.id===e.a),b=bridge.nodes.find(n=>n.id===e.b);$('selectionInfo').textContent=(e.type==='deck'?'Via':'Reforç')+' · '+fmt(Math.hypot(a.x-b.x,a.y-b.y))+' u · cost '+fmt(beamCost(e));}
-  $('hint').textContent=running?'Observa el pont. Prem Editar per recuperar el disseny.':start?'Escull el segon punt · Esc per cancel·lar.':tool==='erase'?'Clica un tram per esborrar-lo.':tool==='select'?'Clica un tram per veure’n el tipus o esborrar-lo.':tool==='deck'?'Uneix les ribes: el tauler es divideix en trams vàlids · Alt + arrossegar per moure la vista.':'Clica un punt i després un altre · màxim 4,5 u per barra · Alt + arrossegar per moure la vista.';
+  $('hint').textContent=running?'Observa el pont. Prem Editar per recuperar el disseny.':start?'Escull el segon punt · Esc per cancel·lar.':tool==='erase'?'Clica un tram per esborrar-lo.':tool==='select'?'Clica un tram per veure’n el tipus o esborrar-lo.':level.bascule?'Via horitzontal de x −8 a 2 · reforça-la i construeix el contrapès a l’esquerra.':tool==='deck'?'Uneix les ribes: el tauler es divideix en trams vàlids · Alt + arrossegar per moure la vista.':'Clica un punt i després un altre · màxim 4,5 u per barra · Alt + arrossegar per moure la vista.';
   cards.refresh();
 }
 function fit(){
@@ -325,7 +325,7 @@ function draw(time){
       for(let d=6;d<len;d+=12){const x=p.x+dx*d/len,y=p.y+dy*d/len;ctx.beginPath();ctx.moveTo(x-dy/len*3,y+dx/len*3);ctx.lineTo(x+dy/len*3,y-dx/len*3);ctx.stroke();}
     }
   }
-  for(const n of nodes){const p=screen(n),support=n.fixed||(!simulation&&Math.abs(n.y-terrainAt(level,n.x))<=.05);ctx.fillStyle=support?'#f4c25c':'#91b3c8';ctx.strokeStyle=support?'#fbe1a1':'#122635';ctx.lineWidth=1.5;
+  for(const n of nodes){const p=screen(n),support=n.fixed||(!level.bascule&&!simulation&&Math.abs(n.y-terrainAt(level,n.x))<=.05);ctx.fillStyle=support?'#f4c25c':'#91b3c8';ctx.strokeStyle=support?'#fbe1a1':'#122635';ctx.lineWidth=1.5;
     ctx.beginPath();if(support){ctx.moveTo(p.x,p.y-6);ctx.lineTo(p.x+6,p.y);ctx.lineTo(p.x,p.y+6);ctx.lineTo(p.x-6,p.y);ctx.closePath();}else ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();ctx.stroke();
   }
   if(hover&&!simulation&&['bar','deck'].includes(tool)){

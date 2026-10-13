@@ -82,6 +82,7 @@ function constructionLimit(bridge,level){
 export function addBeam(bridge,a,b,type='bar',level) {
   const bound=Math.max(150,level.right-level.left+50);
   if(!['bar','deck'].includes(type)||[a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return 'Escull punts dins l’àrea de construcció.';
+  if(level.bascule&&type==='deck'&&(Math.abs(a.y)>0.025||Math.abs(b.y)>0.025||Math.min(a.x,b.x)<level.anchors[0].x-.025||Math.max(a.x,b.x)>level.bascule.landingX+.025))return 'En aquest pont basculant, construeix la via horitzontal a l’altura de l’ancoratge. El contrapès l’aixecarà durant la prova.';
   const length=Math.hypot(a.x-b.x,a.y-b.y);
   if(length<0.1) return 'Escull dos punts diferents.';
   if(length>RULES.maxLength+1e-6) return 'La longitud màxima és de 4,5 unitats de graella.';
@@ -139,6 +140,7 @@ export function planDeckSpan(bridge,a,b) {
 export function addDeckSpan(bridge,a,b,level) {
   const bound=Math.max(150,level.right-level.left+50);
   if([a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return {error:'Escull punts dins l’àrea de construcció.'};
+  if(level.bascule&&(Math.abs(a.y)>0.025||Math.abs(b.y)>0.025||Math.min(a.x,b.x)<level.anchors[0].x-.025||Math.max(a.x,b.x)>level.bascule.landingX+.025))return {error:'En aquest pont basculant, construeix la via horitzontal a l’altura de l’ancoratge. El contrapès l’aixecarà durant la prova.'};
   const plan=planDeckSpan(bridge,a,b);if(plan.error)return plan;
   const draft=plan.draft;
   for(const segment of plan.segments){
@@ -150,6 +152,7 @@ export function addDeckSpan(bridge,a,b,level) {
 }
 export function makeDeck(level,bridge) {
   let draft=copy(bridge);
+  if(level.bascule)return addDeckSpan(draft,level.anchors[0],{x:level.bascule.landingX,y:0},level);
   // Follow the level's nominal rail height. Existing solid ground forms the approaches.
   for(let x=level.left;x<level.right-0.01;x+=2) {
     const end=Math.min(level.right,x+2);
@@ -278,19 +281,35 @@ export class Simulation {
     this.level=level;this.design=copy(bridge);this.time=0;this.weight=weight;this.loadFactor=0;this.maxAllowedSag=maxSagForLevel(level);
     this.nodes=bridge.nodes.map(n=>{
       // A drawn joint placed on the level terrain is a real support in the solve.
-      const groundSupport=!n.fixed&&Math.abs(n.y-terrainAt(level,n.x))<=0.05;
+      const groundSupport=!level.bascule&&!n.fixed&&Math.abs(n.y-terrainAt(level,n.x))<=0.05;
       return {...n,fixed:n.fixed||groundSupport,groundSupport,x0:n.x,y0:n.y,vx:0,vy:0,mass:0.35,fx:0,fy:0};
     });
     this.byId=new Map(this.nodes.map(n=>[n.id,n]));
     this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
       if(!a.fixed)a.mass+=length*.08;if(!b.fixed)b.mass+=length*.08;
       return {...e,length,stress:0,visualStress:0,peakStress:0,peakTension:0,peakCompression:0,broken:false};});
+    if(level.bascule){
+      this.pivot=this.nodes.find(n=>n.fixed);this.angle=0;this.angularVelocity=0;
+      this.landing=this.nodes.filter(n=>!n.fixed&&bridge.beams.some(e=>e.type==='deck'&&(e.a===n.id||e.b===n.id))).sort((a,b)=>b.x-a.x)[0];
+      this.landingAngle=this.landing?Math.asin(Math.max(-1,Math.min(1,(terrainAt(level,this.landing.x0)-this.pivot.y0)/Math.hypot(this.landing.x0-this.pivot.x0,this.landing.y0-this.pivot.y0)))):0;
+    }
     this.edgeMap=new Map(this.beams.map(e=>[e.id,e]));
     this.deckNodeIds=new Set(this.beams.filter(e=>e.type==='deck').flatMap(e=>[e.a,e.b]));
     this.maxDeckDrop=null;
     this.route=deckRoute(level,bridge);this.trainX=level.left-5;this.trainY=0;this.status='running';this.reason='';this.peak=0;this.broken=0;
     if(this.mode==='train'&&!this.route?.length){this.status='failed';this.failureKind='route';this.reason='Falta un tauler continu entre les dues ribes. Completa el camí amb l’eina Via o fes servir Construir via horitzontal.';}
     if(this.mode==='stress'&&!this.beams.length){this.status='failed';this.failureKind='structure';this.reason='Construeix algun tram abans de fer la prova d’esforços.';}
+    if(level.bascule&&this.beams.some(e=>e.type==='deck'&&[e.a,e.b].some(id=>Math.abs(this.byId.get(id).y0)>0.025))){
+      this.status='failed';this.failureKind='route';this.reason='Aquest nivell és basculant: conserva els reforços i adapta la via perquè sigui horitzontal a l’altura de l’ancoratge. Cal un contrapès a l’esquerra.';
+    }
+    if(level.bascule&&this.status==='running'&&(!this.landing||Math.abs(this.landing.x0-level.bascule.landingX)>.025)){
+      this.status='failed';this.failureKind='route';this.reason='Completa la via horitzontal des de l’ancoratge fins a x = '+level.bascule.landingX+'. El contrapès l’aixecarà fins a la riba.';
+    }
+    if(level.bascule){
+      const connected=new Set([this.pivot.id]);let grew=true;
+      while(grew){grew=false;for(const e of this.beams){if(connected.has(e.a)&&!connected.has(e.b)){connected.add(e.b);grew=true;}if(connected.has(e.b)&&!connected.has(e.a)){connected.add(e.a);grew=true;}}}
+      if(this.nodes.some(n=>!connected.has(n.id))){this.status='failed';this.failureKind='structure';this.reason='Uneix tots els reforços i el contrapès a l’ancoratge: els elements solts no equilibren el pont.';}
+    }
     this.trainMass=Math.max(4,Math.min(24,(level.source.trainWeight||40000)/5000))*weight;
   }
   get active(){return this.status==='running'||this.status==='collapsing';}
@@ -311,12 +330,46 @@ export class Simulation {
     }
   }
   railAt(x){
-    const s=this.route?.find(s=>{const a=this.byId.get(s.a),b=this.byId.get(s.b);return x>=a.x0-0.001&&x<=b.x0+0.001;});
-    if(!s)return {y:0,ground:true};
+    const s=this.route?.find(s=>{const a=this.byId.get(s.a),b=this.byId.get(s.b);return x>=(this.pivot?a.x:a.x0)-0.001&&x<=(this.pivot?b.x:b.x0)+0.001;});
+    if(!s)return {y:this.pivot?Math.max(0,terrainAt(this.level,x)):0,ground:true};
     const a=this.byId.get(s.a),b=this.byId.get(s.b),e=this.edgeMap.get(s.beam);
     if(e?.broken)return {y:-100,broken:true};
-    const t=Math.max(0,Math.min(1,(x-a.x0)/(b.x0-a.x0)));
-    return {a,b,t,y:a.y*(1-t)+b.y*t,ground:!s.beam,designY:a.y0*(1-t)+b.y0*t};
+    const t=Math.max(0,Math.min(1,(x-(this.pivot?a.x:a.x0))/((this.pivot?b.x:b.x0)-(this.pivot?a.x:a.x0))));
+    return {a,b,t,y:a.y*(1-t)+b.y*t,ground:!s.beam,designY:(a.refY??a.y0)*(1-t)+(b.refY??b.y0)*t};
+  }
+  basculeEquilibrium(loads,dt){
+    const p=this.pivot;
+    let torque=0,inertia=0;
+    for(const n of this.nodes){if(n.fixed)continue;const f=loads.get(n.id)||{x:0,y:0};
+      torque+=(n.x-p.x)*f.y-(n.y-p.y)*f.x;inertia+=n.mass*((n.x0-p.x0)**2+(n.y0-p.y0)**2);
+    }
+    this.angularVelocity=(this.angularVelocity+torque/Math.max(inertia,.1)*dt)*Math.exp(-1.8*dt);
+    const previousAngle=this.angle;
+    this.angle+=this.angularVelocity*dt;
+    // Unilateral seat: the bank stops the rising tip but cannot hold it up
+    // when the train overcomes the counterweight.
+    if(this.angle>=this.landingAngle){this.angle=this.landingAngle;this.angularVelocity=Math.min(0,this.angularVelocity);}
+    const collides=angle=>this.nodes.some(n=>{
+      if(n.fixed||n.y0<terrainAt(this.level,n.x0)-.05)return false;
+      const dx=n.x0-p.x0,dy=n.y0-p.y0,c=Math.cos(angle),s=Math.sin(angle);
+      return p.y0+dx*s+dy*c<terrainAt(this.level,p.x0+dx*c-dy*s)-.02;
+    });
+    if(collides(this.angle)&&!collides(previousAngle)){
+      let clear=previousAngle,blocked=this.angle;
+      for(let i=0;i<20;i++){const mid=(clear+blocked)/2;if(collides(mid))blocked=mid;else clear=mid;}
+      this.angle=clear;this.angularVelocity=0;
+    }
+    this.seated=this.angle>=this.landingAngle-.004;
+    const c=Math.cos(this.angle),s=Math.sin(this.angle);
+    const frame=this.nodes.map(n=>{
+      const dx=n.x0-p.x0,dy=n.y0-p.y0;
+      n.refX=p.x0+dx*c-dy*s;n.refY=p.y0+dx*s+dy*c;
+      return {...n,x0:n.refX,y0:n.refY,fixed:n.fixed||n.id===this.landing?.id};
+    });
+    // Corotated elastic solve, separate from the intended rigid-body rotation.
+    // The temporary tip restraint supplies a balancing reaction for the axial
+    // approximation; global rotational acceleration is integrated above.
+    return solveTrussEquilibrium(frame,this.beams,loads);
   }
   step(dt=RULES.step) {
     if(!this.active)return;
@@ -356,29 +409,30 @@ export class Simulation {
       }
     }
     if(this.status!=='running')return;
-    const solved=solveTrussEquilibrium(this.nodes,this.beams,loads);
+    const solved=this.pivot?this.basculeEquilibrium(loads,dt):solveTrussEquilibrium(this.nodes,this.beams,loads);
     if(!solved.stable){this.fail('L’estructura no forma un conjunt estable. Reforça-la amb triangles.',this.mode==='train');return;}
-    for(const n of this.nodes){const u=solved.displacements.get(n.id)||{x:0,y:0},oldX=n.x,oldY=n.y;n.x=n.x0+u.x;n.y=n.y0+u.y;n.vx=(n.x-oldX)/Math.max(dt,1e-6);n.vy=(n.y-oldY)/Math.max(dt,1e-6);
+    for(const n of this.nodes){const u=solved.displacements.get(n.id)||{x:0,y:0},oldX=n.x,oldY=n.y;n.x=(n.refX??n.x0)+u.x;n.y=(n.refY??n.y0)+u.y;n.vx=(n.x-oldX)/Math.max(dt,1e-6);n.vy=(n.y-oldY)/Math.max(dt,1e-6);
       if(!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(u.x)>50||Math.abs(u.y)>50){this.fail('L’estructura no forma un conjunt estable. Reforça-la amb triangles.',this.mode==='train');return;}
-      if(this.deckNodeIds.has(n.id)&&!n.fixed){const amount=n.y0-n.y;if(amount>(this.maxDeckDrop?.amount||0))this.maxDeckDrop={node:n.id,x:n.x,y:n.y,y0:n.y0,amount};}
+      if(this.deckNodeIds.has(n.id)&&!n.fixed){const amount=(n.refY??n.y0)-n.y;if(amount>(this.maxDeckDrop?.amount||0))this.maxDeckDrop={node:n.id,x:n.x,y:n.y,y0:n.y0,amount};}
     }
     for(const e of this.beams){if(e.broken)continue;const force=solved.forces.get(e.id)||0,strength=RULES.strength/(1+e.length*e.length/30);e.stress=force/strength;this.peak=Math.max(this.peak,Math.abs(e.stress));
       // A deck can be geometrically unstable before its axial-force model
       // reports force (for example, an unbraced horizontal chain). Show that
       // failure through the measured sag limit instead of leaving a blank map.
       if(this.mode==='stress'&&e.type==='deck'&&Math.abs(e.stress)<1e-12&&this.maxDeckDrop?.amount>this.maxAllowedSag){
-        const a=this.byId.get(e.a),b=this.byId.get(e.b),drop=Math.max(a.y0-a.y,b.y0-b.y);
+        const a=this.byId.get(e.a),b=this.byId.get(e.b),drop=Math.max((a.refY??a.y0)-a.y,(b.refY??b.y0)-b.y);
         e.stress=Math.max(0,drop/this.maxAllowedSag);this.peak=Math.max(this.peak,e.stress);
       }
       e.visualStress+=(e.stress-e.visualStress)*(1-Math.exp(-dt/.2));e.peakTension=Math.max(e.peakTension,e.stress);e.peakCompression=Math.max(e.peakCompression,-e.stress);if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;
       if(Math.abs(e.stress)>1){e.broken=true;this.broken++;}
     }
     if(this.mode==='train'&&this.time>.8){
+      if(this.pivot&&this.trainX>=this.pivot.x0&&this.trainX-3.9<=this.landing?.x0&&!this.seated){this.fail('El contrapès no manté la via a l’altura de la riba. Afegeix pes estructural a l’esquerra de l’ancoratge.');return;}
       for(const offset of [0,1.3,2.6,3.9]){const x=this.trainX-offset;if(x<this.level.left||x>this.level.right)continue;const rail=this.railAt(x);if(rail.broken||rail.y<(rail.designY??0)-this.maxAllowedSag){this.fail('El pont no ha aguantat el pas del tren. Reforça’l amb triangles.');break;}}
       const front=this.railAt(this.trainX);if(!front.broken)this.trainY=front.y;
     }
     if(this.mode==='stress'&&this.status==='running'){
-      if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-this.maxAllowedSag))this.fail('La càrrega prèvia indica una estructura feble. Reforça els trams més carregats.',false);
+      if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<(n.refY??n.y0)-this.maxAllowedSag)||(this.pivot&&!this.seated&&this.time>=3.8))this.fail('La càrrega prèvia indica una estructura feble. Reforça els trams més carregats.',false);
       else if(this.time>=6){this.status='assessed';this.reason='Prova prèvia completada. Observa els trams més carregats i fes passar el tren.';}
     }
     if(this.mode==='train'&&this.status==='running'&&this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}
@@ -393,7 +447,7 @@ export function assessBridge(level,bridge,weight=1){
   assessment.analysisWarning=assessment.status!=='assessed';
   assessment.reason=assessment.analysisWarning?'Mapa d’esforços: s’han detectat trams febles o una deformació excessiva. Reforça el pont abans de provar el tren.':'Mapa d’esforços calculat. Del groc al vermell: de menys a més esforç. Pots reforçar el pont o fer passar el tren.';
   assessment.status='assessed';
-  for(const n of assessment.nodes){n.x=n.x0;n.y=n.y0;n.vx=0;n.vy=0;}
+  for(const n of assessment.nodes){n.x=n.x0;n.y=n.y0;n.vx=0;n.vy=0;delete n.refX;delete n.refY;}
   return assessment;
 }
 export function stressHeatColor(effort){
