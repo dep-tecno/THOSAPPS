@@ -21,7 +21,7 @@ Podeu utilitzar les aplicacions directament des del següent enllaç:
 Aquest projecte està sota una **Llicència Creative Commons Reconeixement-NoComercial-SenseObraDerivada 4.0 Internacional (CC BY-NC-ND 4.0)**.
 
 **Condicions d'ús:**
-* **BY (Reconeixement):** Cal citar l'autor (Jacob Yerga).
+* **BY (Reconeixement):** Cal citar l'autor (J.Yerga).
 * **NC (No Comercial):** No se'n permet l'ús per a finalitats comercials.
 * **ND (Sense Obra Derivada):** No es permet la modificació, transformació o creació d'obres derivades a partir d'aquest codi.
 
