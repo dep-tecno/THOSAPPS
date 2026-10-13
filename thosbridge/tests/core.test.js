@@ -6,12 +6,19 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {levels} from '../levels.js';
 import {clampCardPosition,initialCardPosition} from '../cards.js';
-import {assessBridge,stressHeatColor,didacticIndicators,solveTrussEquilibrium} from '../core.js';
+import {assessBridge,stressHeatColor,didacticIndicators,solveTrussEquilibrium,maxSagForLevel} from '../core.js';
 import {RULES,copy,emptyBridge,demo,Simulation,cost,beamCost,addBeam,previewBeam,nodeAt,connectionPreview,planDeckSpan,addDeckSpan,removeBeam,makeDeck,validateBridge,terrainAt,deckRoute} from '../core.js';
 const root=process.env.BBG_SOURCE||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const sourcesAvailable=fs.existsSync(path.join(root,'level/01-Old/Level01.lvl'));
 const first=levels.find(l=>l.id==='new-01');
 function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
+test('the allowed deck drop scales uniformly with the opening span and remains bounded',()=>{
+  assert.equal(maxSagForLevel({left:-4,right:4}),RULES.minMaxSag);
+  assert.equal(maxSagForLevel({left:-16,right:16}),.64);
+  assert.equal(maxSagForLevel({left:-32,right:32}),1.28);
+  assert.equal(maxSagForLevel({left:-200,right:200}),RULES.maxMaxSag);
+  assert.equal(maxSagForLevel({left:1,right:1}),.7);
+});
 test('connection preview agrees with actual junction creation and does not alter the bridge',()=>{
   const level={...copy(first),budget:1000},b=emptyBridge(level);
   addBeam(b,{x:-2,y:0},{x:2,y:0},'deck',level);const before=copy(b);
@@ -92,6 +99,24 @@ test('an endpoint on a deck makes a shared joint that carries the train load',()
   const count=b.nodes.length;
   assert.equal(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',level),null);
   assert.equal(b.nodes.length,count+1);
+});
+test('nodes built on the terrain act as supports during the standard train simulation',()=>{
+  const level={...copy(first),left:-2,right:2,budget:1000,anchors:[],terrain:[
+    {x:-4,y:0},{x:-2,y:0},{x:-1,y:-2},{x:0,y:-2},{x:1,y:-2},{x:2,y:0},{x:4,y:0}
+  ]};
+  const b=emptyBridge(level),deck=makeDeck(level,b).bridge;
+  assert.ok(deck);
+  for(const [a,z,type] of [
+    [{x:-2,y:0},{x:0,y:2},'bar'],
+    [{x:2,y:0},{x:0,y:2},'bar'],
+    [{x:0,y:0},{x:0,y:2},'bar']
+  ])assert.equal(addBeam(deck,a,z,type,level),null);
+  const sim=new Simulation(level,deck);
+  assert.ok(sim.nodes.some(n=>n.groundSupport&&n.x0===-2));
+  assert.ok(sim.nodes.some(n=>n.groundSupport&&n.x0===2));
+  assert.ok(sim.nodes.some(n=>!n.fixed&&n.x0===0&&n.y0===0));
+  const result=simulate(level,deck);
+  assert.equal(result.status,'passed');assert.equal(result.broken,0);
 });
 test('geometric crossings stay separate unless an endpoint explicitly creates a junction',()=>{
   const level={...copy(first),budget:2000},b=emptyBridge(level);

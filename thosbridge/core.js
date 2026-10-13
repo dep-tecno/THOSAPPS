@@ -1,6 +1,12 @@
 // Independent educational simulation for THOSBRIDGE; not the BBG executable engine.
 export const RULES = Object.freeze({beamCost:100, maxLength:4.5, stiffness:1800,
-  gravity:10, strength:260, maxSag:0.7, step:1/240, damping:5, maxNodes:700, maxBeams:1500});
+  gravity:10, strength:260, maxSagRatio:0.02, minMaxSag:0.25, maxMaxSag:4.5,
+  step:1/240, damping:5, maxNodes:700, maxBeams:1500});
+export function maxSagForLevel(level){
+  const span=Number(level?.right)-Number(level?.left);
+  if(!Number.isFinite(span)||span<=0)return 0.7;
+  return Math.max(RULES.minMaxSag,Math.min(RULES.maxMaxSag,span*RULES.maxSagRatio));
+}
 export const copy = value => JSON.parse(JSON.stringify(value));
 export function didacticIndicators(simulation,previous=[]){
   if(!simulation)return [];
@@ -268,8 +274,12 @@ export function solveTrussEquilibrium(nodes,beams,loads,stiffness=RULES.stiffnes
 export class Simulation {
   constructor(level,bridge,weight=1,options={}) {
     this.mode=options.mode==='stress'?'stress':'train';
-    this.level=level;this.design=copy(bridge);this.time=0;this.weight=weight;this.loadFactor=0;
-    this.nodes=bridge.nodes.map(n=>({...n,x0:n.x,y0:n.y,vx:0,vy:0,mass:0.35,fx:0,fy:0}));
+    this.level=level;this.design=copy(bridge);this.time=0;this.weight=weight;this.loadFactor=0;this.maxAllowedSag=maxSagForLevel(level);
+    this.nodes=bridge.nodes.map(n=>{
+      // A drawn joint placed on the level terrain is a real support in the solve.
+      const groundSupport=!n.fixed&&Math.abs(n.y-terrainAt(level,n.x))<=0.05;
+      return {...n,fixed:n.fixed||groundSupport,groundSupport,x0:n.x,y0:n.y,vx:0,vy:0,mass:0.35,fx:0,fy:0};
+    });
     this.byId=new Map(this.nodes.map(n=>[n.id,n]));
     this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
       if(!a.fixed)a.mass+=length*.08;if(!b.fixed)b.mass+=length*.08;
@@ -307,7 +317,7 @@ export class Simulation {
       for(const n of this.nodes){if(n.fixed)continue;n.vy-=RULES.gravity*dt;n.x+=n.vx*dt;n.y+=n.vy*dt;const floor=terrainAt(this.level,n.x);if(n.y<floor){n.y=floor;n.vy=0;n.vx*=Math.exp(-8*dt);}}
       for(const car of this.cars||[]){
         const rail=this.railAt(car.x);
-        if(!car.falling&&(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag)){
+        if(!car.falling&&(rail.broken||rail.y<(rail.designY??0)-this.maxAllowedSag)){
           car.falling=true;car.vx=(this.level.right-this.level.left+10)/24;
         }
         if(car.falling){
@@ -342,19 +352,19 @@ export class Simulation {
       // A deck can be geometrically unstable before its axial-force model
       // reports force (for example, an unbraced horizontal chain). Show that
       // failure through the measured sag limit instead of leaving a blank map.
-      if(this.mode==='stress'&&e.type==='deck'&&Math.abs(e.stress)<1e-12&&this.maxDeckDrop?.amount>RULES.maxSag){
+      if(this.mode==='stress'&&e.type==='deck'&&Math.abs(e.stress)<1e-12&&this.maxDeckDrop?.amount>this.maxAllowedSag){
         const a=this.byId.get(e.a),b=this.byId.get(e.b),drop=Math.max(a.y0-a.y,b.y0-b.y);
-        e.stress=Math.max(0,drop/RULES.maxSag);this.peak=Math.max(this.peak,e.stress);
+        e.stress=Math.max(0,drop/this.maxAllowedSag);this.peak=Math.max(this.peak,e.stress);
       }
       e.visualStress+=(e.stress-e.visualStress)*(1-Math.exp(-dt/.2));e.peakTension=Math.max(e.peakTension,e.stress);e.peakCompression=Math.max(e.peakCompression,-e.stress);if(Math.abs(e.stress)>Math.abs(e.peakStress))e.peakStress=e.stress;
       if(Math.abs(e.stress)>1){e.broken=true;this.broken++;}
     }
     if(this.mode==='train'&&this.time>.8){
-      for(const offset of [0,1.3,2.6,3.9]){const x=this.trainX-offset;if(x<this.level.left||x>this.level.right)continue;const rail=this.railAt(x);if(rail.broken||rail.y<(rail.designY??0)-RULES.maxSag){this.fail('El pont no ha aguantat el pas del tren. Reforça’l amb triangles.');break;}}
+      for(const offset of [0,1.3,2.6,3.9]){const x=this.trainX-offset;if(x<this.level.left||x>this.level.right)continue;const rail=this.railAt(x);if(rail.broken||rail.y<(rail.designY??0)-this.maxAllowedSag){this.fail('El pont no ha aguantat el pas del tren. Reforça’l amb triangles.');break;}}
       const front=this.railAt(this.trainX);if(!front.broken)this.trainY=front.y;
     }
     if(this.mode==='stress'&&this.status==='running'){
-      if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-RULES.maxSag))this.fail('La càrrega prèvia indica una estructura feble. Reforça els trams més carregats.',false);
+      if(this.broken||this.nodes.some(n=>!n.fixed&&n.y<n.y0-this.maxAllowedSag))this.fail('La càrrega prèvia indica una estructura feble. Reforça els trams més carregats.',false);
       else if(this.time>=6){this.status='assessed';this.reason='Prova prèvia completada. Observa els trams més carregats i fes passar el tren.';}
     }
     if(this.mode==='train'&&this.status==='running'&&this.trainX-3.9>this.level.right+1){this.status='passed';this.reason='El tren ha travessat el pont!';}

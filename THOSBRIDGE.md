@@ -1,6 +1,6 @@
 # THOSBRIDGE
 
-Especificació de la versió web educativa per a THOSAPPS. Revisió v12: 9 d’octubre de 2026.
+Especificació de la versió web educativa per a THOSAPPS. Revisió de calibratge: 13 d’octubre de 2026.
 
 ## Origen i reconeixement del creador
 
@@ -26,7 +26,7 @@ Interfície en català, execució al navegador i projectes desats localment. La 
 
 S’incorpora una família cada vegada i l’usuari en fa les proves visuals i de joc abans de continuar amb la següent. **No badis** és la primera família addicional: **24 nivells**, procedents de [BB Classics Map Pack 01](https://www.indiedb.com/games/bridge-builder/addons/bb-classics-map-pack-01). L’app ofereix ara **54 nivells**: No miris (15), No cau (15) i No badis (24).
 
-Els 11 fitxers MP01 són de **Schlumpfine** i els 13 MP02 de **Thomas McGuire**. **Captain Smith** els va convertir al format de Bridge Building Game. El readme del paquet explica que n’exclou sis abans de distribuir-lo: MP01L10–13, MP02L01 i MP02L05. THOSBRIDGE incorpora els 24 fitxers disponibles, ordenats pel nom original i numerats de l’1 al 24 dins de No badis; no inventa els sis nivells absents. Es conserva el nom original, l’autor, la geometria, el pressupost, els hashes i la procedència de cada fitxer. Els crèdits del nivell seleccionat es poden consultar a l’Ajuda.
+Els 11 fitxers MP01 són de **Schlumpfine** i els 13 MP02 de **Thomas McGuire**. **Captain Smith** els va convertir al format de Bridge Building Game. El readme del paquet explica que n’exclou sis abans de distribuir-lo: MP01L10–13, MP02L01 i MP02L05. THOSBRIDGE incorpora els 24 fitxers disponibles, ordenats pel nom original i numerats de l’1 al 24 dins de No badis; no inventa els sis nivells absents. Es conserva el nom original, l’autor, la geometria, el pressupost, els hashes i la procedència de cada fitxer. Al nivell 17 s’han trobat dos registres d’ancoratge sentinella molt fora del mapa; no es fan servir com a suports, però se’n conserva la posició a les metadades d’origen. Els crèdits del nivell seleccionat es poden consultar a l’Ajuda.
 
 Les dades es publiquen a `thosbridge/families/no-badis.js`, separades dels 30 nivells inicials. Els identificadors nous són `no-badis-01` a `no-badis-24`; els identificadors `old-*` i `new-*` es mantenen. La família nova no inclou un botó d’exemple triangular, perquè aquest exemple només està preparat per al primer nivell de No miris i No cau. Els originals descarregats i les altres 13 famílies addicionals continuen locals, pendents de la seva incorporació i revisió.
 
@@ -78,7 +78,7 @@ La capçalera BGL completa i els tres camps enters finals es conserven com a met
 3. **Seleccionar:** veure longitud i tipus d’un tram, canviar-lo entre barra i tauler o esborrar-lo.
 4. **Esborrar:** eliminar trams i els nodes lliures que quedin sense connexions. Els ancoratges del nivell es conserven.
 
-Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Cada tram nou costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
+Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Si es dibuixa a prop del terreny, el punt s’ajusta al perfil i actua com a suport fix durant la simulació. Cada tram nou costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
 
 Amb l’eina **Via** es pot dibuixar directament d’una riba a l’altra. El traç es divideix en trams vàlids, reutilitza els nodes existents que hi coincideixen i mostra el nombre de trams i el cost abans de crear-los. A No miris · Nivell 1, el traç de 8 unitats es divideix en dos trams de 4 unitats i costa 200. Repassar una cadena de barres amb Via les converteix en trams transitables sense duplicar-les ni tornar a cobrar-les. Si falta pressupost, tota l’operació es descarta.
 
@@ -98,7 +98,7 @@ El botó **◈ Test d’esforços** mostra un mapa sobre el disseny quiet, sense
 
 Totes les barres i el centre dels trams de tauler es pinten amb una escala **groc → taronja → vermell**, segons el valor absolut del màxim esforç relatiu: groc a 0%, taronja a 50% i vermell a 100% o més. La tracció i la compressió comparteixen aquesta escala de càrrega; el seu signe es descriu a la targeta de prova. Es destaquen els cinc trams més carregats amb identificador i percentatge del límit. Les vores turqueses del tauler es conserven.
 
-Internament es reutilitza el motor numèric sobre la còpia, fins a 6 segons de temps de càlcul simulat, executats seguits sense animació: 0,8 segons de pes propi i 3 segons d’augment gradual de càrrega, seguits d’estabilització. No és un nou resolutor estàtic. Si supera el límit d’un tram o un node lliure baixa més de 0,7 unitats, el càlcul s’atura amb avís abans d’arribar necessàriament a tota la càrrega. Per presentar el mapa, es restitueixen les coordenades originals i es retenen els màxims d’esforç; no es dibuixen trams trencats ni una caiguda.
+Internament es reutilitza el motor numèric sobre la còpia, fins a 6 segons de temps de càlcul simulat, executats seguits sense animació: 0,8 segons de pes propi i 3 segons d’augment gradual de càrrega, seguits d’estabilització. No és un nou resolutor estàtic. Si supera el límit d’un tram o un node lliure baixa més que el límit de descens del nivell, el càlcul s’atura amb avís abans d’arribar necessàriament a tota la càrrega. Per presentar el mapa, es restitueixen les coordenades originals i es retenen els màxims d’esforç; no es dibuixen trams trencats ni una caiguda.
 
 Completar el test no marca el nivell com a superat. Des del resultat es pot prémer **Fer passar el tren**, que inicia una prova nova sobre el disseny original, o **Millorar el pont**. La càrrega repartida és una aproximació didàctica pròpia: no equival al test del programa original i no garanteix resistir una càrrega mòbil. Una estructura formada només per barres es prova sota el seu pes propi, perquè no té tauler on repartir la càrrega.
 
@@ -126,13 +126,13 @@ El motor web modela nodes amb massa i barres elàstiques articulades. Primer dei
 | Massa afegida a cada extrem lliure | 0,08 × longitud del tram |
 | Amortiment axial | 5 |
 | Amortiment de velocitat | factor exp(−1,5 × dt) |
-| Límit de descens del tauler per a la prova | 0,7 unitats sota el disseny |
+| Límit de descens del tauler per a la prova | 2% de la llum del nivell, limitat entre 0,25 i 4,5 unitats de graella |
 
 La força axial depèn de l’allargament del tram i de la velocitat relativa dels seus extrems. El límit de resistència es redueix amb la longitud segons `260 / (1 + longitud² / 30)`. Un tram es trenca si el valor absolut de l’esforç relatiu supera 1.
 
 Per als BGL, el valor recuperat a l’offset 28 s’escala com `pes / 5.000`, limitat entre 4 i 24 unitats de massa. Per als LVL, sense aquest camp, s’utilitza una referència de 40.000 i per tant una massa web base de 8. El selector de pes aplica factors del 50%, 100%, 150% o 200%. Aquest escalat és una decisió de THOSBRIDGE, **no una equivalència demostrada amb el tren original**.
 
-Els nodes lliures construïts sobre el terreny poden recolzar-hi quan hi contacten. L’aigua es representa com a context del nivell i no aplica flotabilitat ni forces hidrodinàmiques. Les barres treballen axialment: no es modelen flexió de bigues, moments als nusos, vinclament específic ni propietats de materials reals.
+Durant el càlcul, un node lliure dibuixat a menys de 0,05 unitats de graella del terreny actua com a suport fix; cal dibuixar-hi el node i connectar-hi l’estructura. No s’afegeixen suports invisibles ni punts arbitraris. El límit de descens és comú a totes les famílies i s’adapta a la llum del nivell: `clamp(0,02 × (right − left), 0,25, 4,5)` unitats de graella. És un llindar didàctic del motor web, no una propietat física ni una garantia que el nivell tingui una solució. L’aigua es representa com a context del nivell i no aplica flotabilitat ni forces hidrodinàmiques. Les barres treballen axialment: no es modelen flexió de bigues, moments als nusos, vinclament específic ni propietats de materials reals.
 
 ### Recorregut i resultat
 
@@ -140,7 +140,7 @@ Els nodes lliures construïts sobre el terreny poden recolzar-hi quan hi contact
 - El recorregut avança en x i admet taulers inclinats amb pendent absoluta màxima 1. El terreny que arriba a la cota nominal pot connectar els accessos i els trams separats per sòl sòlid.
 - L’aproximació sobre terreny es representa a la cota nominal, sense calcular la circulació del tren sobre totes les irregularitats del relleu. Per aquest motiu cal revisar especialment els nivells amb desnivells i regles especials.
 - La càrrega es reparteix entre els extrems del tram sota cada punt de càrrega.
-- La prova falla si falta el camí, es trenca un tram sota el tren, el tauler baixa més de 0,7 unitats respecte del disseny o el càlcul esdevé inestable.
+- La prova falla si falta el camí, es trenca un tram sota el tren, el tauler supera el límit de descens del nivell o el càlcul esdevé inestable. El límit es calcula amb una regla comuna: `clamp(0,02 × (right − left), 0,25, 4,5)` unitats de graella. És un criteri didàctic de THOSBRIDGE, no una equivalència amb un criteri d’enginyeria real.
 - La prova passa quan la part posterior del tren supera l’arribada. Pot haver-hi trams trencats que ja no impedeixin el pas; el resultat informa dels trencaments.
 - Una prova al 50% de pes no marca el nivell com a superat. Cal superar-la com a mínim al 100%.
 - Pausa atura l’avanç del càlcul. **Editar** recupera les coordenades originals del pont; la deformació i la ruptura de la prova no modifiquen el projecte.
@@ -199,9 +199,11 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 46 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents i estabilitat numèrica. La revisió v2 afegeix regressions per al traç directe entre les ribes d’No miris · Nivell 1, el dibuix en els dos sentits, la reutilització de nodes, la conversió de barres a tauler, el pressupost atòmic i els trams inclinats. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 48 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents, estabilitat numèrica, el límit de descens proporcional a la llum i el suport de nodes en contacte amb el terreny. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
+
+Abans de donar una família per validada, cada nivell haurà de tenir una estructura de referència que respecti el pressupost, completi el recorregut i superi el tren al 100% sense trencaments. Com a objectiu didàctic inicial, la càrrega màxima hauria de quedar per sota del 85% de la resistència i la fletxa per sota del 75% del límit del nivell. Aquests marges encara s’han de contrastar amb dissenys de referència; un resultat fallit d’una armadura genèrica no demostra que el nivell sigui impossible.
 
 **Comprovacions visuals i d’interacció web: a càrrec de l’usuari**, segons la seva indicació. No s’han executat proves al navegador en aquesta fase.
 
@@ -211,7 +213,7 @@ Aspectes per a la seva revisió:
 2. Carregar l’exemple del primer nivell, provar, pausar i tornar a editar.
 3. Comprovar colors, deformació i missatges de fallada.
 4. Desar i reobrir un JSON; recarregar i recuperar els ponts de diversos nivells.
-5. Recórrer els 30 escenaris, especialment els nivells amb desnivells, un sol ancoratge i obstacles alts.
+5. Recórrer els 54 escenaris, especialment els nivells amb desnivells, un sol ancoratge i obstacles alts.
 6. Contrastar amb l’executable original la geometria visible i identificar les regles especials que calgui reproduir en una iteració posterior.
 7. Moure i plegar les targetes, comprovar la barra superior i fer **Test d’esforços → Tren**. Contrastar els identificadors dels trams amb la targeta de prova.
 

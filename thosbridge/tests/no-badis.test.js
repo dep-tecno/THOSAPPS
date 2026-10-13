@@ -20,10 +20,13 @@ test('No badis contains exactly the supplied 24 levels with stable IDs and origi
 test('No badis source hashes, geometry and budget match each downloaded BGL',{skip:!filesAvailable},()=>{
   for(const l of levels){const data=fs.readFileSync(path.join(root,l.source.file));
     assert.equal(crypto.createHash('sha256').update(data).digest('hex'),l.source.sha256);assert.equal(data.length,l.source.bytes);
-    assert.equal(l.budget,data.readInt32LE(24));assert.equal(l.anchors.length,data.readInt32LE(2092));
+    assert.equal(l.budget,data.readInt32LE(24));assert.equal(l.source.rawAnchorCount,data.readInt32LE(2092));
     assert.equal(l.right-l.left,(data.readFloatLE(20)-data.readFloatLE(16))/4);
     assert.equal(l.water,(data.readFloatLE(12)-data.readFloatLE(8))/4);
-    for(const [i,n] of l.anchors.entries()){assert.equal(n.x,(data.readFloatLE(2100+i*12)-l.source.originX)/4);assert.equal(n.y,(data.readFloatLE(2104+i*12)-l.source.roadY)/4);}
+    const rawAnchors=Array.from({length:l.source.rawAnchorCount},(_,i)=>({index:i,x:(data.readFloatLE(2100+i*12)-l.source.originX)/4,y:(data.readFloatLE(2104+i*12)-l.source.roadY)/4}));
+    const isUsable=p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=l.left-16&&p.x<=l.right+16&&Math.abs(p.y)<=128;
+    assert.deepEqual(l.anchors,rawAnchors.filter(isUsable).map(({x,y})=>({x,y})));
+    assert.deepEqual(l.source.ignoredAnchors,rawAnchors.filter(p=>!isUsable(p)));
     for(const n of l.terrain){const index=Math.round(n.x+l.source.originX/4);assert.equal(n.y,(data.readFloatLE(44+index*4)-l.source.roadY)/4);}
   }
 });

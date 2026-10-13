@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261013-motor-v22';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261013-motor-v22';
-import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261013-motor-v22';
-import {mountCards} from './cards.js?v=20261013-motor-v22';
+import {levels as originalLevels} from './levels.js?v=20261013-calibratge-v23';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261013-calibratge-v23';
+import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261013-calibratge-v23';
+import {mountCards} from './cards.js?v=20261013-calibratge-v23';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -65,7 +65,10 @@ function world(x,y){return {x:view.x+(x-width/2)/view.scale,y:view.y-(y-height/2
 function pointerPosition(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
 function snap(p){
   const near=bridge.nodes.find(n=>Math.hypot(n.x-p.x,n.y-p.y)*view.scale<11);
-  return near?{x:near.x,y:near.y}:{x:Math.round(p.x),y:Math.round(p.y)};
+  if(near)return {x:near.x,y:near.y};
+  const x=Math.round(p.x),ground={x,y:terrainAt(level,x)};
+  if(Math.hypot(ground.x-p.x,ground.y-p.y)*view.scale<11)return ground;
+  return {x,y:Math.round(p.y)};
 }
 function hitBeam(p){
   let found=null,best=10/view.scale;
@@ -299,8 +302,8 @@ function draw(time){
       for(let d=6;d<len;d+=12){const x=p.x+dx*d/len,y=p.y+dy*d/len;ctx.beginPath();ctx.moveTo(x-dy/len*3,y+dx/len*3);ctx.lineTo(x+dy/len*3,y-dx/len*3);ctx.stroke();}
     }
   }
-  for(const n of nodes){const p=screen(n);ctx.fillStyle=n.fixed?'#f4c25c':'#91b3c8';ctx.strokeStyle=n.fixed?'#fbe1a1':'#122635';ctx.lineWidth=1.5;
-    ctx.beginPath();if(n.fixed){ctx.moveTo(p.x,p.y-6);ctx.lineTo(p.x+6,p.y);ctx.lineTo(p.x,p.y+6);ctx.lineTo(p.x-6,p.y);ctx.closePath();}else ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();ctx.stroke();
+  for(const n of nodes){const p=screen(n),support=n.fixed||(!simulation&&Math.abs(n.y-terrainAt(level,n.x))<=.05);ctx.fillStyle=support?'#f4c25c':'#91b3c8';ctx.strokeStyle=support?'#fbe1a1':'#122635';ctx.lineWidth=1.5;
+    ctx.beginPath();if(support){ctx.moveTo(p.x,p.y-6);ctx.lineTo(p.x+6,p.y);ctx.lineTo(p.x,p.y+6);ctx.lineTo(p.x-6,p.y);ctx.closePath();}else ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();ctx.stroke();
   }
   if(hover&&!simulation&&['bar','deck'].includes(tool)){
     const preview=connectionPreview(bridge,hover),p=screen(preview.point),connected=preview.kind!=='new';

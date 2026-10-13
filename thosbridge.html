@@ -6,7 +6,7 @@
   <meta name="description" content="Construeix ponts amb un pressupost i comprova si suporten el pas del tren. THOSBRIDGE, inspirat en Bridge Building Game d’Alex Austin.">
   <title>THOSBRIDGE · Estructures i ponts</title>
   <link rel="icon" href="thosbridge-card.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="thosbridge/app.css?v=20261013-motor-v22">
+  <link rel="stylesheet" href="thosbridge/app.css?v=20261013-calibratge-v23">
 </head>
 <body>
   <header>
@@ -71,19 +71,19 @@
           <div class="card-body"><p id="resultText"></p><button id="resultEdit">✎ Millorar el pont</button><button id="resultRun" hidden>▶ Fer passar el tren</button><button id="next" hidden>Següent nivell →</button></div>
         </article>
       </div>
-      <div class="stage-bottom"><span id="hint">Clica un ancoratge groc i després un punt de la graella.</span><span id="coords"></span></div>
+      <div class="stage-bottom"><span id="hint">Clica un ancoratge groc o un punt del terreny i després el final del tram.</span><span id="coords"></span></div>
     </section>
   </main>
   <footer><span id="status" role="status" aria-live="polite">Preparat per construir.</span><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Inspirat en Bridge Building Game · Alex Austin / Cryptic Sea</a></footer>
   <input id="file" type="file" accept=".json,application/json" hidden>
   <dialog id="trainDialog" aria-labelledby="trainDialogTitle"><div class="dialog-heading"><h2 id="trainDialogTitle">Opcions del tren</h2><button id="closeTrainSettings" aria-label="Tanca les opcions del tren">×</button></div><label for="weight">Pes del tren <select id="weight"><option value="0.5">50%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label><label for="speed">Velocitat de la simulació <select id="speed"><option value="1">Normal</option><option value="2">×2</option><option value="4">×4</option></select></label></dialog>
   <dialog id="helpDialog"><div class="dialog-heading"><h2>THOSBRIDGE · Ajuda i crèdits</h2><button id="closeHelp" aria-label="Tanca l’ajuda">×</button></div>
-    <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria una família i un dels 54 nivells. Els punts grocs són ancoratges fixos.</li><li>Amb <b>Via</b>, uneix els punts del camí del tren. Pots dibuixar d’una riba a l’altra: es divideix automàticament en trams de fins a 4,5 unitats. Si repasses barres existents amb Via, passen a ser transitables.</li><li>Amb <b>Reforç</b>, afegeix reforços. Clica dos punts o arrossega entre ells. Cada tram nou costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Si comences o acabes una barra sobre un tram existent, es crea una unió real i el tram es divideix. Dividir una barra o un tauler existent per crear una unió és gratuït: només pagues els trams nous. Dues barres que només es creuen no s’uneixen. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Tren</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
+    <h3>Un pont, un pressupost i un tren</h3><ol><li>Tria una família i un dels 54 nivells. Els punts grocs són ancoratges fixos o unions dibuixades sobre el terreny, que també fan de suport.</li><li>Amb <b>Via</b>, uneix els punts del camí del tren. Pots dibuixar d’una riba a l’altra: es divideix automàticament en trams de fins a 4,5 unitats. Si repasses barres existents amb Via, passen a ser transitables.</li><li>Amb <b>Reforç</b>, afegeix reforços. Clica dos punts o arrossega entre ells. Cada tram nou costa <b>100</b> i pot fer fins a <b>4,5 unitats de graella</b>. Si comences o acabes una barra sobre un tram existent, es crea una unió real i el tram es divideix. Dividir una barra o un tauler existent per crear una unió és gratuït: només pagues els trams nous. Dues barres que només es creuen no s’uneixen. Els triangles ajuden a evitar que l’estructura es deformi.</li><li>Prem <b>▶ Tren</b>. Observa la deformació, els esforços i el pas del tren.</li><li>Prem <b>Editar</b> per recuperar el disseny, reforçar-lo i tornar a provar.</li></ol>
     <p>Al primer nivell de No miris i No cau pots carregar un <b>exemple triangular</b> i provar-lo directament. El tauler automàtic és horitzontal: als nivells amb desnivells, completa o adapta el camí manualment.</p>
     <p>Si el pont no aguanta, la simulació continua perquè puguis observar com cau. Pots <b>pausar</b> la caiguda o prémer <b>Editar</b> per recuperar el disseny i reforçar-lo.</p>
     <p><b>Opcions del tren:</b> prem ⚙ al costat de ▶ Tren per ajustar el pes i la velocitat de la simulació. La targeta Prova i esforços només mostra dades.</p><p><b>Test d’esforços:</b> mostra un mapa immediat sobre el pont quiet, sota el pes propi i una càrrega repartida pel tauler. <b>Groc → taronja → vermell</b> indica de menys a més esforç, tant a les barres com al tauler. Els trams més carregats s’identifiquen també a la targeta de prova. Pots millorar el pont o fer passar el tren; la deformació i la caiguda es veuen quan prems <b>▶ Tren</b>.</p>
     <h3>Llegenda: símbols i colors</h3><p><b>Fletxes didàctiques:</b> blau cap enfora = tracció; vermell cap endins = compressió; lila vertical = fletxa màxima registrada del tauler (deformació, no esforç de flexió); groc lateral discontinu = vinclament orientatiu en una barra llarga comprimida, sense càlcul físic. Se’n mostra com a màxim una indicació de cada tipus quan hi ha dades. Al llenç només hi ha fletxes, sense textos ni percentatges. S’actualitzen mentre avança el tren amb canvis suavitzats; al mapa previ i al resultat es mostren els pics registrats. ◉ permet mostrar o amagar les fletxes i els colors.</p>
-    <div class="legend"><p><i class="anchor-dot"></i> Punt groc: ancoratge fix</p><p><i class="deck-line"></i> Dues vores turqueses: tauler per on passa el tren</p><p><i class="bar-line"></i> Barra: reforç estructural</p>
+    <div class="legend"><p><i class="anchor-dot"></i> Punt groc: ancoratge del nivell o suport sobre el terreny</p><p><i class="deck-line"></i> Dues vores turqueses: tauler per on passa el tren</p><p><i class="bar-line"></i> Barra: reforç estructural</p>
       <p><b>Test d’esforços:</b> groc → taronja → vermell, de poc esforç a prop del límit, tant en tracció com en compressió.</p><div class="stress-scale heat-scale"></div><div class="scale-labels"><span>Poc esforç</span><span>Al límit</span></div>
       <p><b>Durant el pas del tren:</b> vermell indica compressió i blau indica tracció. El color s’intensifica prop del límit; al tauler es veu entre les vores turqueses.</p><div class="stress-scale"></div><div class="scale-labels"><span>Compressió</span><span>Tracció</span></div>
     </div>
@@ -98,6 +98,6 @@
     <p>La interfície i el motor web s’han escrit de nou per a THOSAPPS. La simulació utilitza masses i barres elàstiques amb ruptura. <b>Els resultats no són equivalents als del motor original</b>: hi ha regles web pròpies per a longituds, càrregues, contacte amb el terreny i recorregut del tren. La resistència mostrada és relativa i didàctica.</p>
     <p><a href="https://crypticsea.com/bridgebuilding/" target="_blank" rel="noopener">Web del creador i del joc original ↗</a> · <a href="THOSBRIDGE.md" target="_blank">Especificació del projecte ↗</a></p>
   </dialog>
-  <script type="module" src="thosbridge/app.js?v=20261013-motor-v22"></script>
+  <script type="module" src="thosbridge/app.js?v=20261013-calibratge-v23"></script>
 </body>
 </html>

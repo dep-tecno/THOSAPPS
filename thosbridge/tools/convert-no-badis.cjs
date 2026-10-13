@@ -9,11 +9,16 @@ function decode(data,filename,number,archiveSha256){
   const originalPack=Number(match[1]),originalNumber=Number(match[2]);
   const author={1:'Schlumpfine',2:'Thomas McGuire'}[originalPack];if(!author)throw Error('Unknown level author');
   const left=float(16),right=float(20),road=float(8),origin=(left+right)/2;
-  const anchors=Array.from({length:count},(_,i)=>({x:(float(2100+i*12)-origin)/4,y:(float(2104+i*12)-road)/4}));
+  const rawAnchors=Array.from({length:count},(_,i)=>({index:i,x:(float(2100+i*12)-origin)/4,y:(float(2104+i*12)-road)/4}));
+  const levelLeft=(left-origin)/4,levelRight=(right-origin)/4;
+  // BBG reserves a few out-of-map records as sentinels; keep provenance but do not expose them as usable anchors.
+  const isUsableAnchor=p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=levelLeft-16&&p.x<=levelRight+16&&Math.abs(p.y)<=128;
+  const anchors=rawAnchors.filter(isUsableAnchor).map(({x,y})=>({x,y}));
+  const ignoredAnchors=rawAnchors.filter(p=>!isUsableAnchor(p));
   const first=Math.max(0,Math.floor(left/4)-12),last=Math.min(511,Math.ceil(right/4)+12);
   const terrain=Array.from({length:last-first+1},(_,i)=>({x:first+i-origin/4,y:(float(44+(first+i)*4)-road)/4}));
-  const level={id:'no-badis-'+String(number).padStart(2,'0'),pack:'no-badis',number,name:'Nivell '+number,budget:int(24),left:(left-origin)/4,right:(right-origin)/4,road:0,water:(float(12)-road)/4,anchors,terrain,
-    source:{file:SOURCE+'/'+filename,sha256:crypto.createHash('sha256').update(data).digest('hex'),bytes:data.length,grid:4,originX:origin,roadY:road,header:Array.from({length:11},(_,i)=>int(i*4)),trainWeight:int(28),rawFlags:[int(32),int(36),int(40)],archive:'BB_Classics_Map_Pack_01.zip',archiveSha256,originalLevel:filename.slice(0,-4),originalPack,originalNumber,author,convertedBy:'Captain Smith'}};
+  const level={id:'no-badis-'+String(number).padStart(2,'0'),pack:'no-badis',number,name:'Nivell '+number,budget:int(24),left:levelLeft,right:levelRight,road:0,water:(float(12)-road)/4,anchors,terrain,
+    source:{file:SOURCE+'/'+filename,sha256:crypto.createHash('sha256').update(data).digest('hex'),bytes:data.length,grid:4,originX:origin,roadY:road,header:Array.from({length:11},(_,i)=>int(i*4)),trainWeight:int(28),rawFlags:[int(32),int(36),int(40)],rawAnchorCount:count,ignoredAnchors,archive:'BB_Classics_Map_Pack_01.zip',archiveSha256,originalLevel:filename.slice(0,-4),originalPack,originalNumber,author,convertedBy:'Captain Smith'}};
   if(!Number.isFinite(level.water)||level.budget<=0||!(level.right>level.left)||terrain.length<2||[...anchors,...terrain].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))throw Error('Invalid geometry: '+filename);
   return level;
 }
