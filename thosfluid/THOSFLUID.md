@@ -7,7 +7,7 @@
 **Públic:** ESO, batxillerat i formació professional  
 **Estat:** el simulador publicat incorpora la biblioteca per famílies, els recorreguts de conductes, la unió en T, eines d'edició, la simulació pneumàtica i una primera família electroneumàtica. La barra segueix el patró d'icones de THOSLAB i permet descarregar una imatge PNG. El mode pas a pas s'ha incorporat al codi; resta la comprovació interactiva i docent abans de considerar-lo acceptat.
 
-**Font única del projecte:** el repositori `dep-tecno/THOSAPPS` a GitHub. L'especificació `THOSFLUID.md`, el codi, els símbols propis, els circuits d'exemple i les versions lliurades han de quedar versionats en aquest repositori.
+**Font única del projecte:** el repositori `dep-tecno/THOSAPPS` a GitHub. L'especificació `thosfluid/THOSFLUID.md`, el codi, els símbols propis, els circuits d'exemple i les versions lliurades han de quedar versionats en aquest repositori.
 
 ## 1. Propòsit i decisió de producte
 
@@ -33,17 +33,17 @@ No s'hi calculen bar, cabals reals, forces, diàmetres, velocitats físiques, p�
 
 THOSFLUID ha de seguir el disseny de treball de **THOSLAB v2.0**: capçalera pròpia de la suite, barra d'eines compacta amb accions agrupades, fons fosc, llenç central amb quadrícula discreta, components dibuixats sobre l'esquema i controls clars de zoom, fitxer i simulació. La biblioteca ocupa el costat esquerre i agrupa els components en famílies plegables: alimentació i preparació de l'aire, distribuïdors, actuadors, accionaments i sensors, regulació i pas, lògica i temporització, i electroneumàtica. Les famílies apareixen quan hi ha almenys un component disponible. **No hi ha un inspector fix a la dreta:** en seleccionar un component apareix una finestra petita de propietats sobre el llenç, que es pot moure i tancar; les opcions generals del circuit s'obren amb el botó «Circuit». Mantenir la jerarquia visual, la mida dels controls i el llenguatge de la resta de Tecno-Apps. La semblança és d'interfície; el motor de THOSFLUID continua sent lògic i no adopta els càlculs elèctrics de THOSLAB.
 
-La portada ha d'incloure una **targeta activa THOSFLUID** amb el mateix format 16:9, etiqueta de categoria, títol, descripció i botó «Obrir aplicació» que les altres targetes. La imatge pròpia `thosfluid.svg` ha de mostrar visualment una font, una vàlvula, conductes i un cilindre sobre un fons fosc, d'acord amb les imatges de la suite. La targeta obre `thosfluid.html` i aquesta ruta ha d'oferir una app funcional.
+La portada ha d'incloure una **targeta activa THOSFLUID** amb el mateix format 16:9, etiqueta de categoria, títol, descripció i botó «Obrir aplicació» que les altres targetes. La imatge pròpia `thosfluid/thosfluid.svg` ha de mostrar visualment una font, una vàlvula, conductes i un cilindre sobre un fons fosc, d'acord amb les imatges de la suite. La targeta obre `thosfluid.html` i aquesta ruta ha d'oferir una app funcional.
 
 ### MVP incorporat al repositori
 
-La versió publicada inclou `thosfluid.html`, `thosfluid-app.html`, `thosfluid/app.css`, `thosfluid/refinements.css`, `thosfluid/app.js` i `thosfluid.svg`. L'editor ofereix famílies de components, recorreguts manuals, unió en T, anotacions, copiar/enganxar, simulació pneumàtica qualitativa, una primera xarxa electroneumàtica, exportació PNG i un mode pas a pas per moure cilindres i avançar retards amb passos lògics. Els circuits de l'alumnat continuen guardant-se al dispositiu. La comprovació visual i didàctica del mode pas a pas continua pendent.
+La versió publicada inclou `thosfluid.html`, `thosfluid/index.html`, `thosfluid/app.css`, `thosfluid/refinements.css`, `thosfluid/app.js` i `thosfluid/thosfluid.svg`. L'editor ofereix famílies de components, recorreguts manuals, unió en T, anotacions, copiar/enganxar, simulació pneumàtica qualitativa, una primera xarxa electroneumàtica, exportació PNG i un mode pas a pas per moure cilindres i avançar retards amb passos lògics. Els circuits de l'alumnat continuen guardant-se al dispositiu. La comprovació visual i didàctica del mode pas a pas continua pendent.
 
 **Límits actuals:** cada port admet una connexió; per repartir una xarxa cal inserir una unió en T amb tres ports. Els creuaments visuals dels recorreguts no creen connexió. No hi ha rotació. El mode pas a pas representa el moviment del cilindre i els retards amb passos lògics; les fuites, senyals i cabals continuen sent qualitatius. L'electrovàlvula inclosa és monoestable; encara cal ampliar i revisar els circuits de referència, incloses les variants elèctriques, amb criteri docent.
 
 El repositori actual publica pàgines HTML a l'arrel. `index.html` conté la navegació i les targetes de les eines; `thosdruino.html` és la pàgina d'entrada que carrega `thosdruino/index.html` en un `iframe`; `thosvincle.html` és una pàgina d'entrada que integra `thosvincle/index.html` en un `iframe`. `sitemap.xml` enumera URL públiques. **Abans de programar, Codex ha de tornar a inspeccionar el repositori**, perquè la seva estructura pot haver canviat.
 
-La ruta pública publicada és **[tecno-apps.cat/thosfluid.html](https://tecno-apps.cat/thosfluid.html)**. `thosfluid.html` és la pàgina d'entrada amb la capçalera i la navegació compartides. L'editor viu a `thosfluid-app.html`, amb CSS i JavaScript propis i camins relatius compatibles amb l'allotjament estàtic. Conservar aquesta ruta en futures ampliacions.
+La ruta pública publicada és **[tecno-apps.cat/thosfluid.html](https://tecno-apps.cat/thosfluid.html)**. `thosfluid.html` és la pàgina d'entrada amb la capçalera i la navegació compartides. L'editor viu a `thosfluid/index.html`, amb CSS i JavaScript propis i camins relatius compatibles amb l'allotjament estàtic. Conservar aquesta ruta en futures ampliacions.
 
 Integració publicada, que cal conservar en les versions següents:
 
@@ -57,7 +57,7 @@ No afegir una targeta «Pròximament» com a substitut de l'app funcional. No re
 
 ### Còpies i historial a GitHub
 
-- Incorporar aquest document com a `THOSFLUID.md` al repositori, perquè Codex i qualsevol col·laborador parteixin de la mateixa especificació.
+- Incorporar aquest document com a `thosfluid/THOSFLUID.md` al repositori, perquè Codex i qualsevol col·laborador parteixin de la mateixa especificació.
 - Mantenir al repositori tots els fitxers necessaris per reproduir l'app i tots els circuits de referència. Cap còpia local ha de ser l'única versió d'una entrega acabada.
 - Fer servir l'historial de commits de GitHub per conservar les versions. Per a canvis grans, treballar en una branca i obrir una sol·licitud de canvis; crear etiquetes de versió quan hi hagi una entrega estable.
 - Tecno-Apps es publica des del mateix projecte de GitHub. Després de cada publicació, comprovar que la versió visible a `tecno-apps.cat` correspon al contingut versionat.
@@ -333,10 +333,15 @@ En el MVP, el codi és a `thosfluid/app.js` i els estils a `thosfluid/app.css`; 
 THOSAPPS/
   index.html                 # navegació i targeta THOSFLUID
   sitemap.xml                # URL pública de THOSFLUID
-  thosfluid.html             # entrada pròpia i capçalera compartida
-  thosfluid-app.html         # editor i vista de simulació
-  thosfluid.svg              # imatge de la targeta, si s'escull SVG
+  thosfluid.html             # entrada pública de l’aplicació
   thosfluid/
+    README.md                # guia de l’aplicació
+    THOSFLUID.md             # especificació i evolució
+    index.html               # editor i vista de simulació
+    app.css
+    refinements.css
+    app.js
+    thosfluid.svg            # imatge de la targeta
     ui/                      # llenç, biblioteca, propietats, controls
     model/                   # components, ports, connexions i serialització
     engine/                  # graf, planificador, pneumàtica i electricitat
