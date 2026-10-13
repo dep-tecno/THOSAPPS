@@ -36,7 +36,7 @@ Els exemples `Traça · biela-manovella` i `Traça · cremallera i lleva` carreg
 
 ## Noves famílies de components
 
-La biblioteca incorpora vuit conjunts o components, cadascun amb un exemple al grup «Noves famílies» del selector:
+La biblioteca incorpora vuit conjunts o components, cadascun amb un exemple al selector, al mateix nivell que els exemples anteriors:
 
 | Família | Model i límits |
 |---|---|
