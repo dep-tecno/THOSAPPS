@@ -41,7 +41,7 @@ La versió publicada inclou `thosfluid.html`, `thosfluid-app.html`, `thosfluid/a
 
 **Límits actuals:** cada port admet una connexió; per repartir una xarxa cal inserir una unió en T amb tres ports. Els creuaments visuals dels recorreguts no creen connexió. No hi ha rotació. El mode pas a pas representa el moviment del cilindre i els retards amb passos lògics; les fuites, senyals i cabals continuen sent qualitatius. L'electrovàlvula inclosa és monoestable; encara cal ampliar i revisar els circuits de referència, incloses les variants elèctriques, amb criteri docent.
 
-El repositori actual publica pàgines HTML a l'arrel. `index.html` conté la navegació i les targetes de les eines; `thosdruino.html` és una aplicació en una sola pàgina; `thosvincle.html` és una pàgina d'entrada que integra `thosvincle-app.html` en un `iframe`. `sitemap.xml` enumera URL públiques. **Abans de programar, Codex ha de tornar a inspeccionar el repositori**, perquè la seva estructura pot haver canviat.
+El repositori actual publica pàgines HTML a l'arrel. `index.html` conté la navegació i les targetes de les eines; `thosdruino.html` és la pàgina d'entrada que carrega `thosdruino/index.html` en un `iframe`; `thosvincle.html` és una pàgina d'entrada que integra `thosvincle-app.html` en un `iframe`. `sitemap.xml` enumera URL públiques. **Abans de programar, Codex ha de tornar a inspeccionar el repositori**, perquè la seva estructura pot haver canviat.
 
 La ruta pública publicada és **[tecno-apps.cat/thosfluid.html](https://tecno-apps.cat/thosfluid.html)**. `thosfluid.html` és la pàgina d'entrada amb la capçalera i la navegació compartides. L'editor viu a `thosfluid-app.html`, amb CSS i JavaScript propis i camins relatius compatibles amb l'allotjament estàtic. Conservar aquesta ruta en futures ampliacions.
 
@@ -348,7 +348,7 @@ Si el repositori continua fent servir pàgines HTML autònomes, THOSFLUID pot te
 
 ## 13. Instruccions de partida per a Codex
 
-1. Obre el repositori `dep-tecno/THOSAPPS` i comprova l'estat actual d'`index.html`, la navegació de `thosdruino.html` i `thosvincle.html`, `sitemap.xml`, els estils i els requisits de desplegament.
+1. Obre el repositori `dep-tecno/THOSAPPS` i comprova l'estat actual d'`index.html`, la navegació de `thosdruino/index.html` i `thosvincle.html`, `sitemap.xml`, els estils i els requisits de desplegament.
 2. Parteix del MVP publicat. Extreu el motor de `app.js` mantenint compatibles els JSON v1 i resol els pendents de la fase 1 abans d'ampliar el catàleg.
 3. Fes que l'editor i la simulació comparteixin només el model de circuit; el motor no ha de dependre del DOM ni dels dibuixos SVG.
 4. Documenta la posició de repòs, les connexions internes, la memòria i les ordres simultànies de cada vàlvula concreta. En cas de dubte, deixa una decisió explícita al registre del component.
@@ -359,7 +359,7 @@ Si el repositori continua fent servir pàgines HTML autònomes, THOSFLUID pot te
 
 - [Repositori THOSAPPS](https://github.com/dep-tecno/THOSAPPS)
 - [Índex i targetes](https://github.com/dep-tecno/THOSAPPS/blob/main/index.html)
-- [THOSDRUINO](https://github.com/dep-tecno/THOSAPPS/blob/main/thosdruino.html)
+- [THOSDRUINO](https://github.com/dep-tecno/THOSAPPS/blob/main/thosdruino/index.html)
 - [THOSLAB, referència visual](https://github.com/dep-tecno/THOSAPPS/blob/main/thoslab.html)
 - [Patró de pàgina d'entrada de THOSVINCLE](https://github.com/dep-tecno/THOSAPPS/blob/main/thosvincle.html)
 - [Mapa del web](https://github.com/dep-tecno/THOSAPPS/blob/main/sitemap.xml)
