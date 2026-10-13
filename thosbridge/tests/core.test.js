@@ -14,8 +14,8 @@ const first=levels.find(l=>l.id==='new-01');
 function simulate(level,bridge,weight=1){const s=new Simulation(level,bridge,weight);for(let i=0;i<8000&&s.active;i++)s.step();return s;}
 test('the allowed deck drop scales uniformly with the opening span and remains bounded',()=>{
   assert.equal(maxSagForLevel({left:-4,right:4}),RULES.minMaxSag);
-  assert.equal(maxSagForLevel({left:-16,right:16}),.704);
-  assert.equal(maxSagForLevel({left:-32,right:32}),1.408);
+  assert.equal(maxSagForLevel({left:-16,right:16}),.96);
+  assert.equal(maxSagForLevel({left:-32,right:32}),1.92);
   assert.equal(maxSagForLevel({left:-200,right:200}),RULES.maxMaxSag);
   assert.equal(maxSagForLevel({left:1,right:1}),.7);
 });
