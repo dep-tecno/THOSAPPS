@@ -47,8 +47,9 @@
  };
  M.fourBarOutputVelocity=(c,position,omega)=>{const delta=1e-5,a=M.fourBarState(c,position-delta),b=M.fourBarState(c,position+delta);if(!a||!b)return 0;const difference=b.outputAngle-a.outputAngle;return Math.atan2(Math.sin(difference),Math.cos(difference))/(2*delta)*omega;};
  M.differentialSpeeds=(c,rpm)=>({a:rpm*c.properties.split||0,b:rpm*(2-c.properties.split)||0});
+ M.familyMeasurementValid=(c,kind,position)=>c.type!=='fourBar'||!['fourBarOutputAngle','fourBarOutputSpeed','linearSpeed','displacement'].includes(kind)||M.fourBarState(c,position)!==null;
  M.tracePoint=(c,kind,position)=>{
-  if(c.type==='fourBar'&&['couplerPoint','rockerPoint'].includes(kind)){const geometry=M.fourBarState(c,position);return geometry?(kind==='couplerPoint'?geometry.mid:geometry.B):{x:0,y:0};}
+  if(c.type==='fourBar'&&['couplerPoint','rockerPoint'].includes(kind)){const geometry=M.fourBarState(c,position);return geometry?(kind==='couplerPoint'?geometry.mid:geometry.B):null;}
   if(c.type==='lever'&&kind==='leverTip')return {x:c.properties.outputArm*Math.cos(position),y:M.familyLinearPosition(c,position)};
   if(['fixedPulley','movablePulley','hoist'].includes(c.type)&&kind==='loadPoint')return {x:c.type==='fixedPulley'?c.properties.radius:2*c.properties.radius*(c.type==='hoist'?c.properties.pairs:1),y:c.properties.height+M.familyLinearPosition(c,position)+30};
   return oldTracePoint(c,kind,position);
@@ -63,7 +64,7 @@
   if(c.type==='lever')detail=`Braç entrada = ${p.inputArm} mm\nBraç sortida = ${p.outputArm} mm\nAvantatge mecànic ideal = ${number(p.inputArm/p.outputArm)}\nDesplaçament vertical sortida / entrada = −${number(p.outputArm/p.inputArm)}\nAcciona-la amb una manovella manual.`;
   if(['fixedPulley','movablePulley','hoist'].includes(c.type)){const strands=M.ropeStrands(c);detail=`${strands} trams sostenen la càrrega\nAvantatge mecànic ideal = ${strands}\nCorda recollida = ${number(position*p.radius)} mm\nAlçament càrrega = ${number(-M.familyLinearPosition(c,position))} mm\nEntrada: torn ideal · corda inextensible\nRecorregut sense topalls al model.`;}
   if(c.type==='differential'){const outputs=M.differentialSpeeds(c,n);detail=`Entrada = ${number(n)} rpm\nSortida A = ${number(outputs.a)} rpm\nSortida B = ${number(outputs.b)} rpm\n(A + B) / 2 = entrada\nRepartiment imposat pel factor A.\nSortides internes; sense càrregues ni parell.`;}
-  const motion=linearTypes.includes(c.type)?`\ns vertical = ${number(M.familyLinearPosition(c,position))} mm\nv vertical = ${number(M.familyLinearVelocity(c,position,omega))} mm/s`:'';
+  const motion=!M.familyMeasurementValid(c,'displacement',position)?'\nSortida no disponible: geometria incompatible.':linearTypes.includes(c.type)?`\ns vertical = ${number(M.familyLinearPosition(c,position))} mm\nv vertical = ${number(M.familyLinearVelocity(c,position,omega))} mm/s`:'';
   return `${M.library[c.type].label}\n${detail}${c.type==='differential'?'':`\nn entrada = ${number(n)} rpm`}${motion}\n${s.conflict?'Bloquejat':n===0?'Aturat':'En moviment'}`;
  }
  const line=(el,parent,color='#91a9ba',width=4)=>el('line',{stroke:color,'stroke-width':width,'stroke-linecap':'round'},parent);
