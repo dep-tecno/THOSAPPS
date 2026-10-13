@@ -164,16 +164,16 @@ Els projectes de l’alumnat no s’envien a un servidor ni es publiquen al repo
 
 ## Integració a THOSAPPS
 
-Ruta pública prevista: `thosbridge.html`. La targeta THOSBRIDGE existent s’activa per obrir aquesta ruta, mantenint el seu SVG. No es crea una segona targeta.
+Ruta pública prevista: `thosbridge.html`, que es conserva com a entrada a l’arrel i carrega `thosbridge/index.html`. La targeta THOSBRIDGE existent s’activa per obrir aquesta ruta, mantenint el seu SVG. No es crea una segona targeta.
 
 Fitxers de l’aplicació:
 
 ```text
-thosbridge.html
+thosbridge.html (entrada pública)
+thosbridge/index.html
 thosbridge/app.css
 thosbridge/app.js
 thosbridge/core.js
-thosbridge/cards.js
 thosbridge/cards.js
 thosbridge/levels.js
 thosbridge/thosbridge-card.svg
