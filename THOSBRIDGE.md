@@ -119,7 +119,7 @@ El motor web modela nodes amb massa i barres elàstiques articulades. Primer dei
 | Paràmetre web | Valor inicial |
 | --- | ---: |
 | Pas de càlcul | 1/240 s |
-| Rigidesa axial | 1.800 |
+| Rigidesa axial | 3.600 |
 | Gravetat relativa | 10 |
 | Resistència de referència | 260 |
 | Massa base de node lliure | 0,35 |
