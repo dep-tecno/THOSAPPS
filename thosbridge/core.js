@@ -43,7 +43,8 @@ export function terrainAt(level,x) {
   }
 }
 export function emptyBridge(level) {
-  return {nodes:level.anchors.map((p,i)=>({id:'a'+i,...p,fixed:true})),beams:[]};
+  const anchors=[...level.anchors,...(level.extraAnchors||[])];
+  return {nodes:anchors.map((p,i)=>({id:'a'+i,...p,fixed:true})),beams:[]};
 }
 export const beamCost = beam => (beam.costShare??1)*RULES.beamCost;
 export const cost = bridge => Math.round(bridge.beams.reduce((sum,e)=>sum+beamCost(e),0)*1e6)/1e6;

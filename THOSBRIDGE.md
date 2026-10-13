@@ -39,6 +39,7 @@ Les dades es publiquen a `thosbridge/families/no-badis.js`, separades dels 30 ni
 - Aquests noms es mostren al selector, al títol del nivell i als missatges. Els identificadors interns `old` i `new` es mantenen perquè els ponts desats, el progrés i els JSON continuïn associats als mateixos nivells.
 - Els 30 nivells es poden seleccionar directament. Superar-los els marca amb un indicador i permet passar al següent.
 - Cada nivell conserva el seu pressupost, l’obertura, el perfil del terreny, la cota de l’aigua i els ancoratges presents al fitxer.
+- **Ajust web de No miris 13:** s’hi afegeix un suport fix a l’extrem esquerre de la via (`x = −20, y = 0`). No és al fitxer original: és una adaptació explícita perquè el motor web no reconeix com a suport la riba, situada 0,25 unitats per sota de la via. Els ancoratges originals i el hash del fitxer es mantenen intactes.
 - Es conserva una franja del relleu que cobreix tota l’obertura i 12 unitats addicionals de graella a cada costat. Els extrems del perfil es prolonguen per dibuixar el terreny fora d’aquesta franja.
 - Les coordenades es normalitzen amb una graella de 4 unitats originals: centre de l’obertura a x = 0 i cota nominal del tauler a y = 0. La unitat de graella **no s’etiqueta com a metre**.
 - Cada registre conserva ruta d’origen, mida i SHA-256 del fitxer aportat, així com la informació de normalització.

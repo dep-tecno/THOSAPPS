@@ -174,6 +174,14 @@ test('30 source files, two ordered packs, finite coordinates and exact provenanc
     assert.deepEqual(validateBridge(emptyBridge(l),l),emptyBridge(l));
   }
 });
+test('Old level 13 adds a web-only left-bank support without altering source anchors',()=>{
+  const l=levels.find(level=>level.id==='old-13');
+  assert.deepEqual(l.anchors,[{x:20,y:0},{x:-4,y:0}]);
+  assert.deepEqual(l.extraAnchors,[{x:-20,y:0}]);
+  const bridge=emptyBridge(l);
+  assert.deepEqual(bridge.nodes.at(-1),{id:'a2',x:-20,y:0,fixed:true});
+  assert.deepEqual(validateBridge({nodes:bridge.nodes.slice(0,2),beams:[]},l),bridge);
+});
 test('source hashes, budgets, terrain and anchors are decoded directly from both layouts',{skip:!sourcesAvailable},()=>{
   for(const l of levels){const b=fs.readFileSync(path.join(root,l.source.file)),old=l.pack==='old';
     assert.equal(crypto.createHash('sha256').update(b).digest('hex'),l.source.sha256);assert.equal(b.length,l.source.bytes);
