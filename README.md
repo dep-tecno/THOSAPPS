@@ -1,7 +1,7 @@
 # THOSAPPS 🛠️
 ### Aplicacions per ús educatiu a l'aula de Tecnologia i Digitalització
 
-**Autor:** Jacob Yerga 
+**Autor:** J.Yerga 
 
 ## 🚀 Descripció del Projecte
 THOSAPPS és una suite d'eines i simuladors interactius dissenyats específicament per facilitar l'aprenentatge dels continguts de l'àrea de Tecnologia a l'Educació Secundària i Batxillerat. 
