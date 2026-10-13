@@ -34,6 +34,16 @@ Els exemples `Traça · biela-manovella` i `Traça · cremallera i lleva` carreg
 
 «Exporta PNG» genera una imatge a doble resolució de la vista actual del llenç. Inclou el muntatge, les traces, les dades visibles i les formes dels instruments, però omet els botons de zero i tancament perquè la captura quedi neta.
 
+## Ajudes educatives
+
+Durant l’arrossegament, el feedback ressalta les dues peces implicades i indica contacte correcte, ajust possible, interferència o mòdul incompatible. Les toleràncies són les mateixes que al snap. En preparar una corretja, cadena o connexió cargol-corona, passar el ratolí sobre la segona peça mostra si es pot connectar i què cal corregir.
+
+El botó ⇄ activa les fletxes de rotació i moviment lineal instantani. Les fletxes de la corredera i del seguidor canvien de sentit amb el moviment alternatiu i desapareixen en els punts de velocitat zero. Un conjunt bloquejat no mostra fletxes de moviment. Les propietats i el hover identifiquen conductor o conduït respecte de la font, inclosa la manovella manual.
+
+Els avisos del panell dret expliquen els conjunts sense font activa, motors desactivats i conflictes. Un petit símbol ! o × identifica les peces afectades. Clicar repetidament un avís selecciona les peces del seu conjunt. Els altres conjunts poden continuar funcionant. Les ajudes són temporals i no canvien el JSON del projecte; les fletxes visibles s’inclouen al PNG.
+
+`education.js` concentra la lògica de feedback, rols i sentits de les ajudes, separada del solver. Executa `node --test thosmotion/solver.test.cjs thosmotion/education.test.cjs` per comprovar els dos blocs.
+
 `model.js`: biblioteca, unitats i validació; `connections.js`: geometria, snap i revalidació; `solver.js`: graf, propagació i conflictes; `renderer.js`: SVG i fases de les dents; `app.js`: interacció, historial, persistència i animació.
 
 El solver es recalcula en editar; l'animació només integra les velocitats amb requestAnimationFrame. Cada conjunt amb conflicte queda aturat; els altres poden funcionar. Les dents tenen perfil simplificat i fase inicial de contacte coherent; no són perfils industrials.
@@ -50,4 +60,4 @@ Comprovació manual: carrega el reductor, simula, observa 120 i −60 rpm; pausa
 
 La fita de reptes encara no està implementada. No hi ha càlcul de forces, parell ni inèrcia.
 
-Verificació tècnica actual: 43 tests del model i el solver superats, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
+Verificació tècnica: tests del model, solver i ajudes educatives, més comprovació de sintaxi dels fitxers JavaScript. La revisió visual i interactiva al navegador la fa l'usuari. El motor coaxial es representa desplaçat amb una línia discontínua fins al centre compartit per evitar superposicions.
