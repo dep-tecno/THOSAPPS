@@ -176,6 +176,8 @@ thosbridge/core.js
 thosbridge/cards.js
 thosbridge/cards.js
 thosbridge/levels.js
+thosbridge/thosbridge-card.svg
+thosbridge/bridge.jpg (imatge conservada, sense referències actives)
 thosbridge/families/no-badis.js
 thosbridge/tests/core.test.js
 thosbridge/tests/no-badis.test.js
@@ -183,14 +185,14 @@ thosbridge/tools/convert-levels.cjs
 thosbridge/tools/convert-no-badis.cjs
 thosbridge/tools/serve.cjs
 thosbridge/package.json
-THOSBRIDGE.md
+thosbridge/THOSBRIDGE.md
 ```
 
 La publicació inicial inclou també l’enllaç de la targeta a `index.html` i la ruta al `sitemap.xml`. Les revisions posteriors només modifiquen fitxers de THOSBRIDGE. No incorpora biblioteques externes ni depèn d’un backend. Les importacions web utilitzen el marcador de versió `20261011-noms-v21`.
 
 ### Ordres tècniques
 
-Des de l’arrel de la carpeta de l’app o del repositori:
+Des de l’arrel del repositori:
 
 ```sh
 node --test thosbridge/tests/*.test.js
