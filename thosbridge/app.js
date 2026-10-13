@@ -1,7 +1,7 @@
-import {levels as originalLevels} from './levels.js?v=20261013-calibratge-v24';
-import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261013-calibratge-v24';
-import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261013-calibratge-v24';
-import {mountCards} from './cards.js?v=20261013-calibratge-v24';
+import {levels as originalLevels} from './levels.js?v=20261013-collapse-v25';
+import {family as noBadisFamily,levels as noBadisLevels} from './families/no-badis.js?v=20261013-collapse-v25';
+import {RULES,copy,terrainAt,emptyBridge,cost,beamCost,addBeam,previewBeam,planDeckSpan,addDeckSpan,removeBeam,makeDeck,demo,validateBridge,Simulation,assessBridge,stressHeatColor,didacticIndicators,connectionPreview} from './core.js?v=20261013-collapse-v25';
+import {mountCards} from './cards.js?v=20261013-collapse-v25';
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const cards=mountCards(canvas.parentElement);
 const STORAGE='thosbridge:projects:v1',fmt=n=>new Intl.NumberFormat('ca-ES',{maximumFractionDigits:1}).format(n);
@@ -196,6 +196,24 @@ document.addEventListener('keydown',e=>{
   const mapping={b:'bar',t:'deck',v:'select',e:'erase'};if(mapping[e.key.toLowerCase()])selectTool(mapping[e.key.toLowerCase()]);
 },true);
 function line(a,b,color,widthPx=2,dashed=false){const p=screen(a),q=screen(b);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle=color;ctx.lineWidth=widthPx;ctx.setLineDash(dashed?[5,5]:[]);ctx.stroke();ctx.setLineDash([]);}
+function collapseFragments(a,b,alpha){
+  const p=screen(a),q=screen(b),dx=q.x-p.x,dy=q.y-p.y,length=Math.hypot(dx,dy);
+  if(length<2||alpha<=0)return;
+  const stub=Math.min(15,length*.2),ux=dx/length,uy=dy/length;
+  ctx.save();ctx.globalAlpha=alpha;ctx.lineCap='round';ctx.strokeStyle='#f07a69';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+ux*stub,p.y+uy*stub);
+  ctx.moveTo(q.x,q.y);ctx.lineTo(q.x-ux*stub,q.y-uy*stub);ctx.stroke();ctx.restore();
+}
+function drawCollapseBurst(){
+  if(!simulation?.collapsePoint||simulation.mode!=='train'||!['collapsing','failed'].includes(simulation.status))return;
+  const age=simulation.collapseTime||0;if(age>1.1)return;
+  const progress=age/1.1,p=screen(simulation.collapsePoint);
+  ctx.save();ctx.globalAlpha=1-progress;ctx.strokeStyle='#ff8a70';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(p.x,p.y,6+progress*27,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#ffd47b';for(let i=0;i<5;i++){const angle=i*Math.PI*2/5-progress*.45,distance=10+progress*16;
+    const x=p.x+Math.cos(angle)*distance,y=p.y+Math.sin(angle)*distance;ctx.fillRect(x-1.5,y-1.5,3,3);}
+  ctx.restore();
+}
 function drawTrainCar(p,size,index,angle,rotation){
   ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.scale(size,size);
   ctx.lineWidth=1.2/size;ctx.strokeStyle='#07111c';
@@ -289,13 +307,18 @@ function draw(time){
   line({x:level.left,y:0},{x:level.right,y:0},'#526d7b60',1,true);
   for(const [x,label] of [[level.left,'SORTIDA'],[level.right,'ARRIBADA']]){const p=screen({x,y:0});ctx.font='9px Segoe UI';ctx.fillStyle='#82a3b3';ctx.textAlign='center';ctx.fillText(label,p.x,p.y+22);}
   const nodes=simulation?.nodes||bridge.nodes,edges=simulation?.beams||bridge.beams,byId=new Map(nodes.map(n=>[n.id,n]));
+  const collapsing=simulation?.mode==='train'&&simulation.failureKind==='structure'&&['collapsing','failed'].includes(simulation.status);
   for(const e of edges){const a=byId.get(e.a),b=byId.get(e.b);let color=e.type==='deck'?'#142c34':'#789ab3';
     const effort=simulation?.mode==='stress'?e.peakStress:e.stress;
     if(simulation?.mode==='stress'&&stress)color=stressHeatColor(effort);
     else if(simulation&&stress&&Math.abs(effort)>.035){const v=Math.min(1,Math.abs(effort));color=effort>0?`rgb(${Math.round(120-55*v)},${Math.round(157+10*v)},${Math.round(181+65*v)})`:`rgb(${Math.round(120+123*v)},${Math.round(157-61*v)},${Math.round(181-82*v)})`;}
     if(e.id===selected)line(a,b,'#29d5cf',9);
     if(e.id===(hoveredCritical||focusedCritical))line(a,b,'#f2d78c',9,e.broken);
-    if(e.broken&&simulation?.mode!=='stress'){line(a,b,'#e16d6155',2,true);continue;}
+    if(e.broken&&simulation?.mode!=='stress'){
+      if(collapsing)collapseFragments(a,b,Math.max(0,1-(simulation.collapseTime||0)/3));
+      else line(a,b,'#e16d6155',2,true);
+      continue;
+    }
     if(e.type==='deck')line(a,b,'#35d4c4',7);
     line(a,b,color,e.type==='deck'?3:simulation?.mode==='stress'&&stress?4:2.5);
     if(e.type==='deck'){const p=screen(a),q=screen(b),dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy);ctx.strokeStyle='#0e2334';ctx.lineWidth=1;
@@ -333,6 +356,7 @@ function draw(time){
     for(let i=1;i<4;i++)if(!cars[i].falling&&!cars[i-1].falling){ctx.beginPath();ctx.moveTo(cars[i].p.x+size*.48,cars[i].p.y-size*.25);ctx.lineTo(cars[i-1].p.x-size*.48,cars[i-1].p.y-size*.25);ctx.stroke();}
     for(let i=3;i>=0;i--)drawTrainCar(cars[i].p,size,i,cars[i].angle,reducedMotion.matches?0:cars[i].x*view.scale/(size*.14));
   }
+  drawCollapseBurst();
   drawIndicators(time);
 }
 function frame(time){

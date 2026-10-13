@@ -296,10 +296,18 @@ export class Simulation {
   fail(reason,animate=true){
     if(this.status!=='running')return;
     this.reason=reason;this.failureKind='structure';this.status=animate?'collapsing':'failed';this.collapseTime=0;
-    if(animate&&this.mode==='train')this.cars=[0,1.3,2.6,3.9].map(offset=>{
-      const x=this.trainX-offset,rail=this.railAt(x);
-      return {x,y:rail.broken?this.trainY:rail.y,vx:0,vy:0,falling:false};
-    });
+    if(animate&&this.mode==='train'){
+      const rail=this.railAt(this.trainX);
+      this.collapsePoint={x:this.trainX,y:rail.broken?this.trainY:rail.y};
+      // The equilibrium solver's per-frame displacement is elastic, not
+      // physical momentum. Do not turn that numerical change into a violent
+      // sideways launch when the structure loses support.
+      for(const n of this.nodes)if(!n.fixed){n.vx=0;n.vy=0;}
+      this.cars=[0,1.3,2.6,3.9].map(offset=>{
+        const x=this.trainX-offset,carRail=this.railAt(x);
+        return {x,y:carRail.broken?this.trainY:carRail.y,vx:0,vy:0,falling:false};
+      });
+    }
   }
   railAt(x){
     const s=this.route?.find(s=>{const a=this.byId.get(s.a),b=this.byId.get(s.b);return x>=a.x0-0.001&&x<=b.x0+0.001;});
@@ -315,6 +323,11 @@ export class Simulation {
     if(this.status==='collapsing'){
       this.collapseTime+=dt;
       for(const n of this.nodes){if(n.fixed)continue;n.vy-=RULES.gravity*dt;n.x+=n.vx*dt;n.y+=n.vy*dt;const floor=terrainAt(this.level,n.x);if(n.y<floor){n.y=floor;n.vy=0;n.vx*=Math.exp(-8*dt);}}
+      // Members that stretch far beyond their designed length visibly snap,
+      // so the collapse reads as separate falling pieces instead of giant
+      // unbroken lines dragged across the canvas.
+      for(const e of this.beams){if(e.broken)continue;const a=this.byId.get(e.a),b=this.byId.get(e.b);
+        if(Math.hypot(b.x-a.x,b.y-a.y)>e.length*1.35){e.broken=true;this.broken++;}}
       for(const car of this.cars||[]){
         const rail=this.railAt(car.x);
         if(!car.falling&&(rail.broken||rail.y<(rail.designY??0)-this.maxAllowedSag)){

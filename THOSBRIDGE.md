@@ -272,3 +272,9 @@ La previsualització i els missatges mostren el cost del material que realment s
 ### Noms de les eines (v21)
 
 Les eines es mostren com a Reforç (abans Barra) i Via (abans Tauler). Reforç crea elements estructurals; Via crea el camí transitable del tren. Els botons, la selecció, els missatges i l’ajuda utilitzen aquests noms. Es mantenen les dreceres B i T, els identificadors interns bar/deck i el format dels ponts desats.
+
+### Col·lapse visual (v20)
+
+Quan una prova del tren falla, la fase de col·lapse no reutilitza com a velocitat física el desplaçament elàstic calculat al pas anterior. Durant la caiguda, els trams que s’allarguen més d’1,35 vegades respecte de la seva longitud inicial es trenquen. Al llenç es dibuixen com fragments curts de color coral que s’esvaeixen, amb un senyal breu al punt de fallada, en comptes de mantenir línies llargues entre extrems separats.
+
+La fase continua durant 8 segons. Aquest tractament només actua després de detectar una fallada: no modifica els criteris per superar el nivell, el pressupost ni el pont guardat.

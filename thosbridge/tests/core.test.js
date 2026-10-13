@@ -194,8 +194,10 @@ test('a horizontal deck with no triangular reinforcement fails under the standar
 test('an under-reinforced bridge continues falling after losing train support',()=>{
   const b=makeDeck(first,emptyBridge(first)).bridge,s=new Simulation(first,b),design=copy(b);
   for(let i=0;i<6000&&s.status==='running';i++)s.step();assert.equal(s.status,'collapsing');assert.equal(s.active,true);
+  assert.ok(s.nodes.filter(n=>!n.fixed).every(n=>n.vx===0&&n.vy===0),'elastic solver updates must not launch the collapse sideways');
   const time=s.time,positions=s.nodes.map(n=>n.y),cars=s.cars.map(c=>c.y);
-  for(let i=0;i<240;i++)s.step();assert.ok(s.time>time);assert.ok(s.nodes.some((n,i)=>Math.abs(n.y-positions[i])>.01));assert.ok(s.cars.some((c,i)=>c.y<cars[i]-.1));
+  const broken=s.broken;for(let i=0;i<240;i++)s.step();assert.ok(s.time>time);assert.ok(s.nodes.some((n,i)=>Math.abs(n.y-positions[i])>.01));assert.ok(s.cars.some((c,i)=>c.y<cars[i]-.1));
+  assert.ok(s.broken>broken,'overstretched members should snap as the bridge falls');
   for(let i=0;i<2400&&s.active;i++)s.step();assert.equal(s.status,'failed');assert.ok(s.nodes.every(n=>Number.isFinite(n.x)&&Number.isFinite(n.y)));assert.deepEqual(b,design);
 });
 test('missing and disconnected decks fail instead of awarding success',()=>{
