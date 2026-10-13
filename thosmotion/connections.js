@@ -3,6 +3,15 @@
  const distance=(a,b)=>Math.hypot(a.position.x-b.position.x,a.position.y-b.position.y);
  function relation(a,b){
   const d=distance(a,b);
+  if((a.type==='internalGear'&&b.type==='gear')||(b.type==='internalGear'&&a.type==='gear')){
+   const ring=a.type==='internalGear'?a:b,gear=ring===a?b:a;
+   if(Math.abs(ring.properties.module-gear.properties.module)>M.EPS||ring.properties.teeth<=gear.properties.teeth)return {state:'INCOMPATIBLE'};
+   const target=M.radius(ring)-M.radius(gear);return {type:'internalMesh',target,state:Math.abs(d-target)<=M.CONTACT?'VALID_CONTACT':d>target&&d<M.radius(ring)+M.radius(gear)?'INTERFERENCE':'SEPARATED'};
+  }
+  if(a.type==='bevelGear'&&b.type==='bevelGear'){
+   if(Math.abs(a.properties.module-b.properties.module)>M.EPS||Math.abs(a.properties.axis-b.properties.axis)!==90)return {state:'INCOMPATIBLE'};
+   const target=M.radius(a)+M.radius(b);return {type:'bevelMesh',target,state:Math.abs(d-target)<=M.CONTACT?'VALID_CONTACT':d<target?'INTERFERENCE':'SEPARATED'};
+  }
   if(a.type==='gear'&&b.type==='gear'){
    if(Math.abs(a.properties.module-b.properties.module)>M.EPS)return {state:'INCOMPATIBLE'};
    const target=M.radius(a)+M.radius(b);
@@ -19,14 +28,14 @@
    const state=overhang>M.CONTACT?'SEPARATED':verticalError<=M.CONTACT?'VALID_CONTACT':Math.abs(dy)<target?'INTERFERENCE':'SEPARATED';
    return {type:'rack',target,state,side,error:verticalError+overhang,gear,rack};
   }
-  const supportable=['shaft','gear','manualCrank','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower'];
+  const supportable=['shaft','gear','manualCrank','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower',...(M.extraRotary||[])];
   if((a.type==='support'&&supportable.includes(b.type))||(b.type==='support'&&supportable.includes(a.type)))return {type:'support',target:0,state:d<=M.CONTACT?'VALID_CONTACT':'SEPARATED'};
-  const rotary=['gear','motor','manualCrank','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower'],driven=['gear','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower'];const shaftCompatible=(a.type==='shaft'&&rotary.includes(b.type))||(b.type==='shaft'&&rotary.includes(a.type))||(['motor','manualCrank'].includes(a.type)&&driven.includes(b.type))||(['motor','manualCrank'].includes(b.type)&&driven.includes(a.type));
+  const rotary=['gear','motor','manualCrank','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower',...(M.extraRotary||[])],driven=['gear','pulley','frictionWheel','sprocket','worm','wormWheel','crankSlider','camFollower',...(M.extraRotary||[])];const shaftCompatible=(a.type==='shaft'&&rotary.includes(b.type))||(b.type==='shaft'&&rotary.includes(a.type))||(['motor','manualCrank'].includes(a.type)&&driven.includes(b.type))||(['motor','manualCrank'].includes(b.type)&&driven.includes(a.type));
   if(shaftCompatible)return {type:'shaft',target:0,state:d<=M.CONTACT?'VALID_CONTACT':'SEPARATED'};
   return {state:'INCOMPATIBLE'};
  }
  function revalidate(p){const map=new Map(p.components.map(c=>[c.id,c]));p.connections=p.connections.filter(e=>{const a=map.get(e.a),b=map.get(e.b);if(!a||!b)return false;if(e.type==='belt')return a.type==='pulley'&&b.type==='pulley'&&distance(a,b)>M.radius(a)+M.radius(b);if(e.type==='chain')return a.type==='sprocket'&&b.type==='sprocket'&&Math.abs(a.properties.pitch-b.properties.pitch)<=M.EPS&&distance(a,b)>M.radius(a)+M.radius(b);if(e.type==='worm')return ((a.type==='worm'&&b.type==='wormWheel')||(a.type==='wormWheel'&&b.type==='worm'))&&Math.abs(a.properties.module-b.properties.module)<=M.EPS&&distance(a,b)>M.radius(a)+M.radius(b);const r=relation(a,b);return r.state==='VALID_CONTACT'&&r.type===e.type;});}
- function ratio(e,a,b){if(e.type==='mesh')return -a.properties.teeth/b.properties.teeth;if(e.type==='friction')return -a.properties.diameter/b.properties.diameter;if(e.type==='belt')return (e.crossed?-1:1)*a.properties.diameter/b.properties.diameter;if(e.type==='chain')return a.properties.teeth/b.properties.teeth;if(e.type==='worm')return a.type==='worm'?a.properties.starts/b.properties.teeth:a.properties.teeth/b.properties.starts;return 1;}
+ function ratio(e,a,b){if(e.type==='internalMesh')return a.properties.teeth/b.properties.teeth;if(['mesh','bevelMesh'].includes(e.type))return -a.properties.teeth/b.properties.teeth;if(e.type==='friction')return -a.properties.diameter/b.properties.diameter;if(e.type==='belt')return (e.crossed?-1:1)*a.properties.diameter/b.properties.diameter;if(e.type==='chain')return a.properties.teeth/b.properties.teeth;if(e.type==='worm')return a.type==='worm'?a.properties.starts/b.properties.teeth:a.properties.teeth/b.properties.starts;return 1;}
  function snap(p,c){
   let best=null;
   for(const b of p.components){if(c===b)continue;const r=relation(c,b);if(!r.type)continue;const d=distance(c,b),error=r.error??Math.abs(d-r.target);if(error<=M.SNAP&&(!best||error<best.error))best={b,r,d,error};}

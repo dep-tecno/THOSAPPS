@@ -1,6 +1,6 @@
-# THOSMOTION — primera fita
+# THOSMOTION
 
-Prototip del document THOSMOTION.md amb motor ideal, manovella manual, eixos i suports explícits, engranatges rectes, trens compostos, politges, corretges, rodes de fricció, pinyons de cadena, cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor. Obre `../thosmotion.html` en un navegador; no necessita dependències ni servidor. També es pot servir en un allotjament estàtic amb la carpeta `thosmotion/` al costat del fitxer HTML.
+Simulador didàctic amb motor ideal, manovella manual, eixos, suports, transmissions i mecanismes de transformació. L’APP i tots els seus recursos són dins `thosmotion/`; `../thosmotion.html` conserva l’entrada pública i carrega `index.html`. No necessita dependències ni servidor per a l’ús local.
 
 ## Model
 
@@ -34,7 +34,30 @@ Els exemples `Traça · biela-manovella` i `Traça · cremallera i lleva` carreg
 
 «Exporta PNG» genera una imatge a doble resolució de la vista actual del llenç. Inclou el muntatge, les traces, les dades visibles i les formes dels instruments, però omet els botons de zero i tancament perquè la captura quedi neta.
 
-## Ajudes educatives
+## Noves famílies de components
+
+La biblioteca incorpora vuit conjunts o components, cadascun amb un exemple al grup «Noves famílies» del selector:
+
+| Família | Model i límits |
+|---|---|
+| Engranatge interior | Corona i engranatge recte del mateix mòdul; distància de centres `rCorona − rPinyó` i relació positiva `n2/n1 = Z1/Z2`. La corona ha de tenir més dents. El perfil és simplificat i no analitza interferències industrials de dentat. |
+| Engranatge cònic | Parell amb mòdul igual, un eix a 0° i l’altre a 90°, i relació per dents; connexió per contacte en una projecció didàctica 2D. Els signes representen la convenció angular del model. No és un model geomètric 3D. |
+| Quatre barres | Conjunt manovella-biela-balancí amb dos pivots fixos. La intersecció de dues circumferències determina l’articulació de sortida i conserva les quatre longituds. Exigeix volta completa de la manovella sense punts singulars; dimensions impossibles bloquegen només el conjunt connectat. |
+| Palanca | Barra rígida amb fulcre, braços d’entrada i sortida editables. Relació de desplaçaments verticals `−braçSortida/braçEntrada` i avantatge mecànic ideal recíproc. L’exemple s’acciona arrossegant la nansa de la manovella manual. |
+| Politja fixa | Conjunt amb torn ideal d’entrada i un tram portant: alçament de càrrega igual a la corda recollida, avantatge ideal 1. |
+| Politja mòbil | Conjunt amb torn i politja mòbil; dos trams portants: la càrrega recorre la meitat de la corda recollida, avantatge ideal 2. |
+| Polispast | Entre dues i quatre parelles de politges: `N = 2 × parelles`, càrrega `s/N`, avantatge ideal `N`. El nombre de politges dibuixades correspon a les parelles. |
+| Diferencial simplificat | Entrada i dues sortides internes amb repartiment imposat: `nA = nEntrada × factorA`, `nB = nEntrada × (2 − factorA)`, amb factor entre 0 i 2. Conserva `(nA+nB)/2 = nEntrada`. No resol el repartiment segons càrregues i no permet connectar externament les dues sortides. |
+
+Les politges d’elevació utilitzen corda ideal inextensible i un torn de radi `R` que recull `s = Rθ`. La separació inicial situa la càrrega; és un model de relacions sense topalls de recorregut, pesos, tensions ni col·lisions. Els exemples giren lentament i cal pausar o reiniciar en arribar a l’extrem de la representació. La politja de transmissió ja existent continua disponible a la família «Transmissió».
+
+El menú de rotació afegeix tacòmetres per a les sortides A/B del diferencial i per al balancí de quatre barres; el menú d’angle permet mesurar el balancí respecte de la posició inicial o posar-lo a zero. Els instruments lineals mostren el desplaçament vertical del punt mig de la biela, l’extrem de sortida de la palanca i la càrrega de les politges. La traça permet seguir el punt mig de la biela, l’articulació del balancí, l’extrem de la palanca o la càrrega.
+
+`families.js` registra les definicions, propietats, geometries i dibuixos de les noves famílies. Els projectes JSON anteriors continuen sent vàlids; les noves connexions interiors i còniques es revaliden amb les mateixes regles de contacte que el solver.
+
+Referències de les relacions ideals: [engranatges interiors, KHK](https://khkgears.net/pdf/internal-tech.pdf) i [cinemàtica de quatre barres, Mechanical Reference](https://www.mechref.org/dyn/four_bar_linkages_applications/). El solver comprova les longituds geomètriques del conjunt concret, a més de les relacions de transmissió.
+
+## Feedback, instruments i avisos
 
 Durant l’arrossegament, el feedback ressalta les dues peces implicades i indica contacte correcte, ajust possible, interferència o mòdul incompatible. Les toleràncies són les mateixes que al snap. En preparar una corretja, cadena o connexió cargol-corona, passar el ratolí sobre la segona peça mostra si es pot connectar i què cal corregir.
 
@@ -52,7 +75,7 @@ Desa/Obre utilitza JSON versionat local. La recuperació automàtica conserva un
 
 ## Verificació
 
-Executa `node --test thosmotion/solver.test.cjs` des de la carpeta principal. Els tests cobreixen relacions, eix motor, manovella manual, suport estructural, desconnexió, propietats, mòduls, conflictes, cicles, components independents, importació, politges i corretges, rodes de fricció, pinyons i cadenes, cargol sense fi i corona, pinyó-cremallera, biela-manovella i lleva-seguidor.
+Executa `node --test thosmotion/solver.test.cjs thosmotion/education.test.cjs thosmotion/families.test.cjs` des de la carpeta del repositori. Les proves cobreixen les transmissions, fonts, geometria, connexions, conflictes, importació, ajudes educatives i les noves famílies.
 
 Comprovació manual: carrega el reductor, simula, observa 120 i −60 rpm; pausa; separa Z40 (0 rpm); desfés; canvia les dents; desa i torna a obrir. Roda per fer zoom, arrossega el fons per fer pan i prem Ajusta. Navega als components amb Tab i usa fletxes o Supr.
 

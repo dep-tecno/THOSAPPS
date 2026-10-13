@@ -22,6 +22,8 @@
   const nearby=candidates.filter(x=>near(a,x.b)).sort((x,y)=>C.distance(a,x.b)-C.distance(a,y.b));
   for(const {b,r}of nearby){
    if(r.state==='INTERFERENCE')return {state:'interference',targetId:b.id,message:`× Interferència amb ${label(b).toLowerCase()}. Separa les peces fins al contacte.`};
+   if(((a.type==='internalGear'&&b.type==='gear')||(b.type==='internalGear'&&a.type==='gear'))&&r.state==='INCOMPATIBLE'){const ring=a.type==='internalGear'?a:b,pin=ring===a?b:a;return {state:'incompatible',targetId:b.id,message:ring.properties.teeth<=pin.properties.teeth?'× La corona interior ha de tenir més dents que el pinyó.':'× Mòduls diferents. Iguala el mòdul per engranar les peces.'};}
+   if(a.type==='bevelGear'&&b.type==='bevelGear'&&r.state==='INCOMPATIBLE')return {state:'incompatible',targetId:b.id,message:Math.abs(a.properties.axis-b.properties.axis)!==90?'× Els eixos cònics han de ser perpendiculars: un a 0° i l’altre a 90°.':'× Mòduls diferents. Iguala el mòdul per engranar les peces.'};
    const sameModule=(a.type==='gear'&&['gear','rack'].includes(b.type))||(b.type==='gear'&&a.type==='rack');
    if(sameModule&&r.state==='INCOMPATIBLE')return {state:'incompatible',targetId:b.id,message:'× Mòduls diferents. Iguala el mòdul per engranar les peces.'};
    const type=a.type==='pulley'&&b.type==='pulley'?'belt':a.type==='sprocket'&&b.type==='sprocket'?'chain':['worm','wormWheel'].includes(a.type)&&['worm','wormWheel'].includes(b.type)&&a.type!==b.type?'worm':null;
@@ -31,7 +33,7 @@
   return incompatible?{state:'incompatible',targetId:incompatible.b.id,message:'× Aquestes peces no es connecten directament. Tria peces amb ports compatibles.'}:null;
  }
  function context(project,solution){
-  const roles=new Map(),issues=solution.diagnostics.map(d=>({...d,advice:d.kind==='CONFLICT'?'Revisa les velocitats i els sentits dels motors, o trenca una connexió del cicle. Els altres conjunts poden continuar funcionant.':'Connecta el conjunt a un motor actiu o afegeix una manovella manual.'}));
+  const roles=new Map(),issues=solution.diagnostics.map(d=>({...d,advice:d.advice||(d.kind==='CONFLICT'?'Revisa les velocitats i els sentits dels motors, o trenca una connexió del cicle. Els altres conjunts poden continuar funcionant.':'Connecta el conjunt a un motor actiu o afegeix una manovella manual.')}));
   for(const c of project.components){const s=solution.states.get(c.id);roles.set(c.id,c.type==='support'?'Estructural':c.type==='manualCrank'?'Conductor manual':c.type==='motor'?(c.properties.active?'Conductor · motor':'Motor inactiu'):s?.source?'Conduït · rep moviment del motor':'Sense font de moviment');}
   // A manual source is a valid driver even though the speed solver returns zero while paused.
   for(const source of project.components.filter(c=>c.type==='manualCrank')){const seen=new Set([source.id]),queue=[source.id];for(let i=0;i<queue.length;i++)for(const edge of solution.graph.get(queue[i])||[]){if(seen.has(edge.id))continue;seen.add(edge.id);queue.push(edge.id);if(roles.get(edge.id)==='Sense font de moviment')roles.set(edge.id,'Conduït · rep moviment de la manovella');}}
@@ -49,6 +51,7 @@
   let v=s.motion==='linear'?s.linearSpeed:0,point={x:0,y:0},axis='x';
   if(c.type==='crankSlider'){v=M.sliderVelocity(c,position,omega);point=M.tracePoint(c,'slider',position);}
   if(c.type==='camFollower'){v=M.camLiftVelocity(c,position,omega);point=M.tracePoint(c,'follower',position);axis='y';}
+  if(root.ThosMotion.families?.linearTypes.includes(c.type)){v=M.familyLinearVelocity(c,position,omega);point=c.type==='fourBar'?M.tracePoint(c,'couplerPoint',position):c.type==='lever'?M.tracePoint(c,'leverTip',position):M.tracePoint(c,'loadPoint',position);axis='y';}
   if(Math.abs(v)>M.EPS)result.push({kind:'linear',axis,direction:Math.sign(v),point});
   return result;
  }
