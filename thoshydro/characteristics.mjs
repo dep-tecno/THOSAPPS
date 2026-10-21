@@ -55,7 +55,7 @@ export function createCharacteristics(doc){
    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
    ctx.fillStyle='#f2f7f9';ctx.fillRect(0,0,width,height);
    const L=64,R=20,T=22,B=49,W=width-L-R,H=height-T-B;
-   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*350*250*.95):250;
+   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*h*250*.95):250;
    ctx.strokeStyle='#d7e3e8';ctx.fillStyle='#587381';ctx.font='12px system-ui';
    for(let j=0;j<=5;j++){const y=T+j*H/5;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+W,y);ctx.stroke();ctx.fillText(fmt(maxY*(1-j/5),0),5,y+4);}
    for(let j=0;j<=5;j++){const x=L+j*W/5;ctx.fillText(fmt(tab==='selection'?j*70:tab==='power'?j*50:j*20,0),x-8,height-23);}
