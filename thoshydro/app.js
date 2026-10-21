@@ -31,6 +31,16 @@ function update() {
   $('peltonRpm').textContent = physics.rpm.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' rpm';
   $('peltonTorque').textContent = physics.torque.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' N·m';
   for (const key of ['hydraulic', 'shaft', 'electric']) $(key).textContent = formatPower(p[key]);
+  // Francis: didactic nominal synchronous speed estimate at the reference head,
+  // scaled with sqrt(H). Torque derives from shaft power / angular velocity.
+  const francisRpm = actualFlow > 0 && state.type === 'francis'
+    ? 300 * Math.sqrt(Math.max(0,state.head)/80) * Math.sqrt(actualFlow/Math.max(0.001,state.flow))
+    : 0;
+  const francisOmega = francisRpm * 2*Math.PI/60;
+  $('francisFlow').textContent = actualFlow.toLocaleString('ca-ES',{maximumFractionDigits:2}) + ' m³/s';
+  $('francisRpm').textContent = francisRpm.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' rpm';
+  $('francisTorque').textContent = (francisOmega>0 ? p.shaft/francisOmega : 0).toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' N·m';
+
   for (const blade of pitchBlades) blade.rotation.x = state.pitch * Math.PI / 180;
   $('waveNote').textContent = actualFlow === 0
     ? 'Cabal nul: l’eix s’atura i no hi ha tensió induïda en aquest model.'
@@ -48,6 +58,7 @@ function selectType() {
   $('description').textContent = type.description; $('rangeNote').textContent = type.note;
   $('pitch').hidden = $('pitchLabel').hidden = state.type !== 'kaplan';
   $('peltonControls').hidden = $('peltonMetrics').hidden = state.type !== 'pelton';
+  $('francisMetrics').hidden = state.type !== 'francis';
   $('francisControls').hidden = state.type !== 'francis';
   if (THREE && scene) buildHydro();
   if (THREE && scene) applyView();
