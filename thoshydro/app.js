@@ -208,29 +208,59 @@ function buildHydro() {
     engineeringPelton(hydro,rotor,steel,flange,bronze);
     buildCoupledAlternator(hydro,steel);
   } else if (state.type === 'francis') {
-    const spiral = [];
-    for (let i = 0; i <= 100; i++) { const a = i / 100 * Math.PI * 2; const r = 2.35 - i / 100 * 0.65; spiral.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0)); }
-    spiral.unshift(new THREE.Vector3(3.4, 0, 0)); tube(spiral, 0.26, water, hydro);
-    for (let i = 0; i < 16; i++) {
-      const a = i * Math.PI * 2 / 16;
-      const vane = mesh(new THREE.BoxGeometry(0.38, 0.08, 0.5), steel, hydro, 1.6 * Math.cos(a), 1.6 * Math.sin(a)); vane.rotation.z = a + 0.65;
+    // Radial admission: volute, guide vanes, radial runner, axial draft tube.
+    const shell=material(0x467f9e,{metalness:0.3,roughness:0.42,transparent:true,opacity:0.45,depthWrite:false,side:THREE.DoubleSide});
+    const cast=material(0x566b79,{metalness:0.65,roughness:0.32});
+    const spiral=[];
+    for(let i=0;i<=128;i++){
+      const t=i/128,a=t*Math.PI*2.05,r=2.23-0.56*t;
+      spiral.push(new THREE.Vector3(Math.cos(a)*r,Math.sin(a)*r,-0.12));
     }
-    cylinder(1.15, 0.12, orange, rotor, 0, 0, -0.25);
-    for (let i = 0; i < 12; i++) {
-      const a = i / 12 * Math.PI * 2;
-      const points = [new THREE.Vector3(Math.cos(a) * 1.22, Math.sin(a) * 1.22, -0.18), new THREE.Vector3(Math.cos(a + 0.35) * 0.82, Math.sin(a + 0.35) * 0.82, 0), new THREE.Vector3(Math.cos(a + 0.65) * 0.42, Math.sin(a + 0.65) * 0.42, 0.38)];
-      tube(points, 0.11, orange, rotor);
+    tube(spiral,0.29,shell,hydro);
+    tube([new THREE.Vector3(3.25,0,-0.12),new THREE.Vector3(2.2,0,-0.12)],0.29,shell,hydro);
+    for(let i=0;i<18;i++){
+      const a=i*2*Math.PI/18;
+      const vane=mesh(new THREE.BoxGeometry(0.53,0.085,0.65),cast,hydro,1.42*Math.cos(a),1.42*Math.sin(a),0);
+      vane.rotation.z=a+0.55;
     }
-    cylinder(0.58, 1.8, water, hydro, 0, 0, 1.1);
+    cylinder(1.14,0.18,orange,rotor,0,0,-0.3);
+    cylinder(0.50,0.75,orange,rotor);
+    for(let i=0;i<13;i++){
+      const a=i*2*Math.PI/13,curve=[];
+      for(let j=0;j<=12;j++){
+        const t=j/12,ang=a+0.58*t,r=1.18-0.67*t;
+        curve.push(new THREE.Vector3(r*Math.cos(ang),r*Math.sin(ang),-0.28+0.68*t));
+      }
+      tube(curve,0.115,orange,rotor);
+    }
+    const draft=mesh(new THREE.CylinderGeometry(0.58,0.91,1.75,48,1,true),shell,hydro,0,0,1.35);
+    draft.rotation.x=Math.PI/2;housingParts.push(draft);
+    const inlet=mesh(new THREE.TorusGeometry(1.63,0.06,10,72),cast,hydro,0,0,-0.36);
+    housingParts.push(inlet);
   } else {
-    cylinder(1.85, 2.1, water, hydro);
-    for (let i = 0; i < 5; i++) {
-      const arm = new THREE.Group(); arm.rotation.z = i / 5 * Math.PI * 2; rotor.add(arm);
-      const pivot = new THREE.Group(); pivot.position.x = 0.9; arm.add(pivot);
-      const blade = mesh(new THREE.SphereGeometry(1, 24, 12), orange, pivot); blade.scale.set(0.85, 0.27, 0.075);
+    // Kaplan: axial flow through a transparent conduit and pitch-adjustable runner.
+    const shell=material(0x4987a5,{transparent:true,opacity:0.34,depthWrite:false,side:THREE.DoubleSide,metalness:0.24});
+    const cast=material(0x506c7c,{metalness:0.58});
+    const conduit=mesh(new THREE.CylinderGeometry(1.73,1.73,3.55,64,1,true),shell,hydro);
+    conduit.rotation.x=Math.PI/2;housingParts.push(conduit);
+    for(const z of [-1.7,1.7]){
+      const flange=mesh(new THREE.TorusGeometry(1.73,0.10,12,64),cast,hydro,0,0,z);
+      housingParts.push(flange);
+    }
+    for(let i=0;i<10;i++){
+      const a=i*2*Math.PI/10;
+      const guide=mesh(new THREE.BoxGeometry(0.55,0.09,0.72),cast,hydro,1.30*Math.cos(a),1.30*Math.sin(a),-0.95);
+      guide.rotation.z=a+0.35;
+    }
+    for(let i=0;i<5;i++){
+      const arm=new THREE.Group();arm.rotation.z=i*2*Math.PI/5;rotor.add(arm);
+      const pivot=new THREE.Group();pivot.position.x=0.84;arm.add(pivot);
+      const blade=mesh(new THREE.SphereGeometry(1,32,20),orange,pivot);
+      blade.scale.set(0.88,0.35,0.09);
       pitchBlades.push(pivot);
     }
-    cylinder(0.4, 0.8, orange, rotor);
+    cylinder(0.43,0.95,orange,rotor);
+    cylinder(0.17,3.2,cast,rotor,0,0,-1.1);
   }
   const positions = new Float32Array(90 * 3);
   particles = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x007bce, size: 0.075 }));
