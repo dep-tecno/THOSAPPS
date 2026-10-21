@@ -93,3 +93,6 @@
 .foundation-bar>div{height:100%;background:#2a9c79;transition:width .12s ease}
 .foundation-summary-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 @media(max-width:700px){.foundation-pressure{grid-template-columns:1fr}.foundation-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.foundation-stages>div::after{display:none}.fundamentals .foundation-card{padding:14px}.foundation-summary>div:first-child{align-items:flex-start;flex-direction:column}}
+
+.foundation-stage-icon{display:block;width:40px;height:40px;color:#007c90;flex-shrink:0}
+.foundation-stages>div{justify-content:center;min-height:155px}
