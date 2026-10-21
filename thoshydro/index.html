@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Explora les turbines Pelton, Francis i Kaplan i la generació de corrent altern amb THOSHYDRO.">
   <title>THOSHYDRO · Energia de l'aigua</title>
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 </head>
 <body>
@@ -47,7 +47,7 @@
         <div class="curve-tabs" role="group" aria-label="Tipus de gràfica"><button data-curve="efficiency" aria-pressed="true">Rendiment</button><button data-curve="power" aria-pressed="false">Potència</button><button data-curve="selection" aria-pressed="false">Selecció de turbina</button></div>
         <div class="curve-legend"><span><i style="background:#0085a3"></i>Pelton</span><span><i style="background:#d18a2c"></i>Francis</span><span><i style="background:#39a37b"></i>Kaplan</span></div>
         <canvas id="characteristicChart" role="img" aria-label="Corbes comparatives de turbines Pelton Francis i Kaplan"></canvas>
-        <p id="curveNote" class="note"></p>
+        <div class="curve-result" role="status" aria-live="polite"><div class="curve-result-heading"><span class="curve-result-icon" aria-hidden="true">ⓘ</span><strong>Interpretació del punt de treball</strong></div><p id="curveNote" class="curve-result-text"></p></div>
       </section>
       <div id="simulationContent">
       
