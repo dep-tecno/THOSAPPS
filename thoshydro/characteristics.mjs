@@ -15,10 +15,10 @@ export function efficiency(type,relativeFlow,head=profiles[type].minHead,operati
  const mismatch=Math.log(Math.max(1,head)/designHead);
  const operatingRatio=operatingFlow===null?1:clamp(operatingFlow/p.maxFlow,0,2);
  // Simplified variable regulation: changing the selected flow changes the operating characteristic.
- const regulation=0.16*Math.tanh((operatingRatio-0.5)*1.8);
+ const regulation=0.30*Math.tanh((operatingRatio-0.5)*2.4);
  const opt=clamp(p.opt+0.12*Math.tanh(mismatch)+regulation,0.25,1.05);
  const width=p.width*(1-0.28*Math.min(1,Math.abs(mismatch)/2))*(1-0.12*Math.abs(regulation));
- const peak=p.peak*(1-0.18*Math.min(1,Math.abs(mismatch)/2))*(1-0.09*Math.abs(operatingRatio-0.7));
+ const peak=p.peak*(1-0.18*Math.min(1,Math.abs(mismatch)/2))*(0.72+0.28*Math.min(1,operatingRatio/0.7));
  return clamp(peak*(1-Math.pow((q-opt)/width,2))*(1-Math.exp(-q*17)),0,p.peak);
 }
 export function createCharacteristics(doc){
@@ -55,11 +55,11 @@ export function createCharacteristics(doc){
    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
    ctx.fillStyle='#f2f7f9';ctx.fillRect(0,0,width,height);
    const L=64,R=20,T=22,B=49,W=width-L-R,H=height-T-B;
-   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*h*Math.max(1,q)*1.05):250;
+   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*350*250*.95):250;
    ctx.strokeStyle='#d7e3e8';ctx.fillStyle='#587381';ctx.font='12px system-ui';
    for(let j=0;j<=5;j++){const y=T+j*H/5;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+W,y);ctx.stroke();ctx.fillText(fmt(maxY*(1-j/5),0),5,y+4);}
-   for(let j=0;j<=5;j++){const x=L+j*W/5;ctx.fillText(fmt(tab==='selection'?j*70:j*20,0),x-8,height-23);}
-   ctx.fillText(tab==='selection'?'Salt hidràulic (m)':'Cabal relatiu (%)',L+W/2-55,height-5);
+   for(let j=0;j<=5;j++){const x=L+j*W/5;ctx.fillText(fmt(tab==='selection'?j*70:tab==='power'?j*50:j*20,0),x-8,height-23);}
+   ctx.fillText(tab==='selection'?'Salt hidràulic (m)':tab==='power'?'Cabal (m³/s)':'Cabal relatiu (%)',L+W/2-55,height-5);
    if(tab==='selection'){
      for(const [type,p] of Object.entries(profiles)){
        const x1=L+clamp(p.minHead/350,0,1)*W,x2=L+clamp(p.maxHead/350,0,1)*W;
@@ -68,6 +68,10 @@ export function createCharacteristics(doc){
        ctx.fillStyle=COLORS[type];ctx.fillText(type.toUpperCase(),x1+5,Math.max(T+14,y2+15));
      }
      ctx.fillStyle='#263f50';ctx.beginPath();ctx.arc(L+clamp(h/350,0,1)*W,T+H-clamp(q/250,0,1)*H,6,0,2*Math.PI);ctx.fill();
+     ctx.fillStyle='#587381';// Show the current flow as a horizontal reference across the entire map.
+     const selectedY=T+H-clamp(q/250,0,1)*H;
+     ctx.setLineDash([6,5]);ctx.strokeStyle='#203e50';ctx.lineWidth=2;
+     ctx.beginPath();ctx.moveTo(L,selectedY);ctx.lineTo(L+W,selectedY);ctx.stroke();ctx.setLineDash([]);
      ctx.fillStyle='#587381';ctx.fillText('Cabal (m³/s) ↑',L+6,T+14);
      doc.getElementById('curveNote').textContent=recommendation(h,q)+' · Eixos: 0–350 m i 0–250 m³/s.';
      return;
@@ -77,16 +81,16 @@ export function createCharacteristics(doc){
      ctx.beginPath();
      for(let j=0;j<=100;j++){
        const x=j/100;
-       const eta=efficiency(type,x,h,q);
-       const y=tab==='efficiency'?eta*100:9.81*h*(x*q)*eta*.9;
+       const eta=efficiency(type,tab==='power'?x*250/p.maxFlow:x,h,q);
+       const y=tab==='efficiency'?eta*100:9.81*h*(x*250)*eta*.9;
        const py=T+H-clamp(y/maxY,0,1)*H;
        if(j===0)ctx.moveTo(L,py);else ctx.lineTo(L+x*W,py);
      }
      ctx.strokeStyle=COLORS[type];ctx.lineWidth=2.5;ctx.stroke();
-     const y=tab==='efficiency'?efficiency(type,qRel,h,q)*100:9.81*h*q*efficiency(type,1,h,q)*.9;
-     ctx.fillStyle=COLORS[type];ctx.beginPath();ctx.arc(L+(tab==='power'?W:qRel*W),T+H-clamp(y/maxY,0,1)*H,5,0,Math.PI*2);ctx.fill();
+     const y=tab==='efficiency'?efficiency(type,qRel,h,q)*100:9.81*h*q*efficiency(type,q/p.maxFlow,h,q)*.9;
+     ctx.fillStyle=COLORS[type];ctx.beginPath();ctx.arc(L+(tab==='power'?q/250:qRel)*W,T+H-clamp(y/maxY,0,1)*H,5,0,Math.PI*2);ctx.fill();
    }
-   doc.getElementById('curveNote').textContent=tab==='efficiency'?'El salt i el cabal modifiquen la família de corbes de rendiment mitjançant un model simplificat de regulació. Els punts marquen el funcionament seleccionat; no són corbes de fabricant.':'El salt i el cabal seleccionats modifiquen la corba de potència disponible (0–100 % del cabal seleccionat). Alternador amb rendiment del 90 %. Model didàctic.';
+   doc.getElementById('curveNote').textContent=tab==='efficiency'?'El salt i el cabal modifiquen la família de corbes de rendiment mitjançant un model simplificat de regulació. Els punts marquen el funcionament seleccionat; no són corbes de fabricant.':'La potència es representa amb eixos fixos (0–250 m³/s) per veure'n els canvis reals. El salt i la regulació del cabal modifiquen les corbes; alternador al 90 %.';
  }
  for(const el of [head,flow])el.addEventListener('input',draw);
  tabs.forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.curve;tabs.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));updateGuide();draw();}));
