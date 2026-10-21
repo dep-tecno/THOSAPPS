@@ -20,7 +20,7 @@
       <label for="flow">Cabal <output id="flowValue" for="flow"></output></label><input id="flow" type="range" min="0" max="5" step="0.1" value="1">
       <label for="efficiency">Rendiment de la turbina <output id="efficiencyValue" for="efficiency"></output></label><input id="efficiency" type="range" min="40" max="95" step="1" value="88">
       <label for="pitch" id="pitchLabel" hidden>Angle de les pales <output id="pitchValue" for="pitch"></output></label><input id="pitch" type="range" min="10" max="60" value="30" hidden>
-      <div id="peltonControls"><label for="needle">Obertura de l’injector <output id="needleValue" for="needle">100 %</output></label><input id="needle" type="range" min="0" max="100" step="5" value="100"><p class="small">L’obertura regula el cabal efectiu. El salt determina la velocitat del raig.</p></div><div id="francisControls" hidden><label for="guide">Obertura del distribuïdor <output id="guideValue" for="guide">100 %</output></label><input id="guide" type="range" min="0" max="100" step="5" value="100"><p class="small">Els 18 àleps directrius giren conjuntament. El cabal efectiu es calcula amb una aproximació lineal didàctica.</p></div><p id="rangeNote" class="note"></p>
+      <div id="peltonControls"><label for="needle">Obertura de l’injector <output id="needleValue" for="needle">100 %</output></label><input id="needle" type="range" min="0" max="100" step="5" value="100"><p class="small">L’obertura regula el cabal efectiu. El salt determina la velocitat del raig.</p></div><div id="francisControls" hidden><label for="valve">Vàlvula d’entrada <output id="valveValue" for="valve">100 %</output></label><input id="valve" type="range" min="0" max="100" step="5" value="100"><p class="small">Vàlvula de tall: el volant gira amb l’obertura. El distribuïdor regula el cabal durant el funcionament.</p><label for="guide">Obertura del distribuïdor <output id="guideValue" for="guide">100 %</output></label><input id="guide" type="range" min="0" max="100" step="5" value="100"><p class="small">Els 18 àleps directrius giren conjuntament. El cabal efectiu es calcula amb una aproximació lineal didàctica.</p></div><p id="rangeNote" class="note"></p>
       <div class="actions"><button id="pause" aria-pressed="false">Pausa</button><button id="reset">Reinicia</button></div>
       <p class="eyebrow">02 / LA TRANSFORMACIÓ</p><div class="chain">Aigua → Turbina → Eix → Alternador</div>
       <p class="small">Model didàctic idealitzat. Les geometries i els valors són orientatius.</p>
@@ -33,7 +33,7 @@
     </section>
   </main>
   <footer>THOS APPS · J.Yerga · Institut Thos i Codina · Visualització amb Three.js (MIT). <a href="README.md">Abast i procedència</a></footer>
-  <script type="module" src="app.js?v=13"></script>
+  <script type="module" src="app.js?v=14"></script>
   <script>window.addEventListener('error',function(e){if(e.target.tagName==='SCRIPT'){document.getElementById('loading').textContent='No s’ha pogut carregar l’aplicació. Recarrega la pàgina i comprova la connexió.'}},true);</script>
 </body>
 </html>
