@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Explora les turbines Pelton, Francis i Kaplan i la generació de corrent altern amb THOSHYDRO.">
   <title>THOSHYDRO · Energia de l'aigua</title>
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 </head>
 <body>
@@ -24,6 +24,20 @@
       <div class="actions"><button id="pause" aria-pressed="false">Pausa</button><button id="reset">Reinicia</button></div>
       <p class="eyebrow">02 / LA TRANSFORMACIÓ</p><div class="chain">Aigua → Turbina → Eix → Alternador</div>
       <p class="small">Model didàctic idealitzat. Les geometries i els valors són orientatius.</p>
+      <section class="sidebar-energy" aria-label="De la turbina a l'electricitat">
+        <h3>De la turbina a l'electricitat</h3>
+        <div class="sidebar-energy-chain">
+          <div><span aria-hidden="true">≈</span><strong>Aigua</strong><small>Potència hidràulica</small><output id="sidebarHydraulic">—</output></div>
+          <div><span aria-hidden="true">⚙</span><strong>Turbina</strong><small>Potència a l'eix</small><output id="sidebarShaft">—</output></div>
+          <div><span aria-hidden="true">ϟ</span><strong>Alternador</strong><small>Potència elèctrica</small><output id="sidebarElectric">—</output></div>
+        </div>
+        <div class="sidebar-energy-eff"><span>Rendiment turbina</span><strong id="sidebarTurbineEta">—</strong><div class="sidebar-energy-track"><div id="sidebarTurbineBar"></div></div></div>
+        <div class="sidebar-energy-eff"><span>Rendiment alternador</span><strong id="sidebarGeneratorEta">90 %</strong><div class="sidebar-energy-track"><div style="width:90%"></div></div></div>
+        <div class="sidebar-energy-total"><span>Rendiment global</span><strong id="sidebarGlobalEta">—</strong></div>
+        <details><summary>Per què es perd energia?</summary><p>La fricció i les turbulències redueixen l'energia mecànica útil. A l'alternador, una part es dissipa en forma de calor, entre altres causes per l'efecte Joule.</p><p>Per transportar l'electricitat a grans distàncies, els transformadors n'eleven la tensió i així es redueixen les pèrdues a les línies.</p></details>
+        <p class="small">Model didàctic. Rendiment de l'alternador fixat al 90 %.</p>
+      </section>
+
     </aside>
     <aside id="curvesSidebar" class="curves-sidebar" hidden aria-label="Guia de les corbes característiques">
       <p class="eyebrow">01 / ANÀLISI DE TURBINES</p>
@@ -83,7 +97,7 @@
   </main>
   <footer>THOS APPS · J.Yerga · Institut Thos i Codina · Visualització amb Three.js (MIT). <a href="README.md">Abast i procedència</a></footer>
   <script defer src="fundamentals.js?v=1"></script>
-  <script type="module" src="app.js?v=40"></script>
+  <script type="module" src="app.js?v=43"></script>
   <script>window.addEventListener('error',function(e){if(e.target.tagName==='SCRIPT'){document.getElementById('loading').textContent='No s’ha pogut carregar l’aplicació. Recarrega la pàgina i comprova la connexió.'}},true);</script>
 </body>
 </html>
