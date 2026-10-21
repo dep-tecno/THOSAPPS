@@ -2,6 +2,7 @@ import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 
 const $ = id => document.getElementById(id);
 let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles, housingParts = [], explodedParts = [];
+let waterGuides = null;
 let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0;
 const pitchBlades = [];
 const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100 };
@@ -124,7 +125,7 @@ function engineeringPelton(parent,runner,steel,flange,bronze) {
 }
 
 function buildHydro() {
-  clearGroup(hydro); pitchBlades.length = 0;
+  clearGroup(hydro); waterGuides = null; pitchBlades.length = 0;
   hydro = new THREE.Group(); scene.add(hydro); hydro.visible = true; housingParts = []; explodedParts = [];
   // Pelton: horizontal shaft (local Z). Francis/Kaplan: vertical shaft.
   // Rotating the entire hydraulic assembly preserves runner/water alignment.
@@ -296,6 +297,26 @@ function buildHydro() {
       mesh(new THREE.CylinderGeometry(0.075,0.075,0.14,8),bolt,hydro,x,y,-3.66);
     }
     explodedParts.push({object:stator,base:-3.0,offset:-1.05});
+    // Semi-transparent continuous streamlines, drawn separately from moving
+    // tracer particles. They follow the volute, radial inlet and axial draft.
+    waterGuides=new THREE.Group();hydro.add(waterGuides);
+    const streamMat=material(0x1aa6d2,{transparent:true,opacity:0.24,depthWrite:false,metalness:0,roughness:0.18});
+    for(let k=0;k<9;k++){
+      const offset=k/9*2*Math.PI;
+      const points=[];
+      for(let j=0;j<=28;j++){
+        const u=j/28,ang=offset+u*1.12;
+        const radius=1.72-1.18*u;
+        points.push(new THREE.Vector3(radius*Math.cos(ang),radius*Math.sin(ang),-0.15+0.52*u));
+      }
+      for(let j=1;j<=18;j++){
+        const u=j/18,ang=offset+1.12+u*0.3;
+        const radius=0.54+0.18*u;
+        points.push(new THREE.Vector3(radius*Math.cos(ang),radius*Math.sin(ang),0.37+1.8*u));
+      }
+      tube(points,0.035,streamMat,waterGuides);
+    }
+
 
   } else {
     // Kaplan: axial flow through a transparent conduit and pitch-adjustable runner.
@@ -364,6 +385,7 @@ function animateWater() {
   if (!particles) return;
   const activeFlow = state.type === 'pelton' ? state.flow*state.needle/100 : state.flow;
   particles.visible = activeFlow > 0;
+  if(waterGuides){waterGuides.visible=activeFlow>0;waterGuides.children.forEach(line=>{line.material.opacity=0.12+0.20*Math.min(1,activeFlow/10);});}
   particles.material.size = state.type === 'francis' ? 0.065 : state.type === 'pelton' ? 0.03 + 0.055*Math.sqrt(state.needle/100) : 0.075;
   const a = particles.geometry.attributes.position.array;
   const count = a.length / 3;
