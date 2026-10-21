@@ -47,7 +47,7 @@ export function createCharacteristics(doc){
  // Schematic approximation of the three bounded regions in the classroom matrix.
  const pelton=[[0,1000],[200,1000],[200,1500],[0,1500]];
  const francis=[[200,500],[700,500],[700,1000],[200,1000]];
- const kaplanTop=[[200,1000],[250,850],[320,670],[400,500],[500,340],[600,230],[700,155],[800,115],[900,95],[1000,85]];
+ const kaplanTop=[[200,500],[400,500],[500,340],[600,230],[700,155],[800,115],[900,95],[1000,85]];
  const kaplan=[[200,0],[1000,0],[1000,85],...[...kaplanTop].reverse().slice(1)]];
  function inPolygon(q,h,polygon){
   let inside=false;
