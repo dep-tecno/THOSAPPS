@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Explora les turbines Pelton, Francis i Kaplan i la generació de corrent altern amb THOSHYDRO.">
   <title>THOSHYDRO · Energia de l'aigua</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 </head>
 <body>
   <header class="app-header"><a class="brand" href="https://tecno-apps.cat/" target="_top" aria-label="THOSHYDRO · Ves a tecno-apps.cat"><svg class="brand-icon" viewBox="0 0 44 44" width="36" height="36" aria-hidden="true"><path d="M22 3C16 12 8 19 8 27a14 14 0 0 0 28 0C36 19 28 12 22 3Z" fill="#48c4d4"/><circle cx="22" cy="27" r="8" fill="none" stroke="#103747" stroke-width="2.5"/><path d="M22 19v16M14 27h16M16.3 21.3l11.4 11.4M27.7 21.3 16.3 32.7" stroke="#103747" stroke-width="1.8"/></svg><h1>THOS<span>HYDRO</span></h1></a><p>De l'aigua a l'electricitat</p><div class="header-analysis-switch" role="group" aria-label="Mode de visualització"><button id="simulationMode" aria-pressed="true">Simulació 3D</button><button id="characteristicsMode" aria-pressed="false">Corbes característiques</button></div><nav class="viewbar" role="group" aria-label="Vista 3D"><button id="assembledView" aria-pressed="true">Completa</button><button id="cutawayView" aria-pressed="false">Transparent</button><button id="explodedView" aria-pressed="false">Especejament</button><button id="cameraReset">Centra la vista</button></nav><button id="help" aria-expanded="false" aria-controls="usageGuide">Guia d'ús</button></header>
   <section id="usageGuide" hidden class="guide"><h2>Comença a explorar</h2><ol><li>Tria una turbina i observa el recorregut de l'aigua.</li><li>Modifica el salt i el cabal. Com canvia la potència?</li><li>Canvia entre les vistes completa, transparent i especejament per observar l’eix i l’alternador acoblats.</li></ol><p>Arrossega per girar la vista 3D i fes servir la roda o dos dits per apropar-la. La velocitat visual està reduïda per facilitar l'observació.</p></section>
   <main>
-    <aside>
+    <aside id="simulationSidebar">
       <p class="eyebrow">01 / LA TURBINA</p>
       <label for="turbine">Tipus de turbina</label><select id="turbine"><option value="pelton">Pelton · Acció</option><option value="francis">Francis · Reacció</option><option value="kaplan">Kaplan · Reacció</option></select>
       <p id="description"></p>
@@ -24,6 +24,19 @@
       <div class="actions"><button id="pause" aria-pressed="false">Pausa</button><button id="reset">Reinicia</button></div>
       <p class="eyebrow">02 / LA TRANSFORMACIÓ</p><div class="chain">Aigua → Turbina → Eix → Alternador</div>
       <p class="small">Model didàctic idealitzat. Les geometries i els valors són orientatius.</p>
+    </aside>
+    <aside id="curvesSidebar" class="curves-sidebar" hidden aria-label="Guia de les corbes característiques">
+      <p class="eyebrow">01 / ANÀLISI DE TURBINES</p>
+      <h2 id="curveGuideTitle">Interpretar el rendiment</h2>
+      <p id="curveGuideIntro">El rendiment η indica quina part de la potència hidràulica es transforma en potència mecànica útil.</p>
+      <div class="curve-guide-formula" id="curveGuideFormula">η = P<sub>eix</sub> / P<sub>hidràulica</sub></div>
+      <h3>Què has d'observar?</h3>
+      <p id="curveGuideObservation">Identifica el punt de màxim rendiment i observa com es desplaça quan canvies el salt.</p>
+      <h3>Experimenta</h3>
+      <p id="curveGuideChallenge" class="note">Canvia el salt mantenint el cabal constant. Quina turbina manté millor el rendiment?</p>
+      <h3>Conceptes clau</h3>
+      <p id="curveGuideConcepts" class="small">Rendiment · Càrrega parcial · Punt òptim · Corba característica</p>
+      <p class="small">Les corbes són aproximacions didàctiques, no dades de fabricants.</p>
     </aside>
     <section class="workspace" aria-label="Visualització i resultats">
       
@@ -49,7 +62,7 @@
     </section>
   </main>
   <footer>THOS APPS · J.Yerga · Institut Thos i Codina · Visualització amb Three.js (MIT). <a href="README.md">Abast i procedència</a></footer>
-  <script type="module" src="app.js?v=31"></script>
+  <script type="module" src="app.js?v=32"></script>
   <script>window.addEventListener('error',function(e){if(e.target.tagName==='SCRIPT'){document.getElementById('loading').textContent='No s’ha pogut carregar l’aplicació. Recarrega la pàgina i comprova la connexió.'}},true);</script>
 </body>
 </html>
