@@ -1,3 +1,4 @@
+import { createCharacteristics } from './characteristics.mjs';
 import { createTelemetry } from './charts.mjs';
 import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 
@@ -9,6 +10,18 @@ const pitchBlades = [], francisGates = [], kaplanGates = [];
 const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100, valve: 100, kaplanGuide: 100 };
 const waveContext = $('wave').getContext('2d');
 const telemetry = createTelemetry(document);
+const characteristics = createCharacteristics(document);
+$('simulationMode').addEventListener('click',()=>setAnalysisMode(false));
+$('characteristicsMode').addEventListener('click',()=>setAnalysisMode(true));
+function setAnalysisMode(curves){
+  $('characteristics').hidden=!curves;
+  $('simulationContent').hidden=curves;
+  $('simulationMode').setAttribute('aria-pressed',String(!curves));
+  $('characteristicsMode').setAttribute('aria-pressed',String(curves));
+  if(curves)characteristics.draw();
+  else if(renderer&&camera){const w=$('scene').clientWidth,h=$('scene').clientHeight;if(w&&h){renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}}
+}
+
 
 function update() {
   for (const key of ['head', 'flow', 'efficiency', 'pitch']) state[key] = Number($(key).value);
