@@ -438,7 +438,7 @@ function buildHydro() {
     }
     for(let i=0;i<5;i++){
       const arm=new THREE.Group();arm.rotation.z=i*2*Math.PI/5;rotor.add(arm);
-      const pivot=new THREE.Group();pivot.position.x=0.84;arm.add(pivot);
+      const pivot=new THREE.Group();pivot.position.x=0.70;arm.add(pivot);
       // Tapered, cambered hydrofoil rather than a flattened spherical paddle.
       // Local X points radially outward; rotation about X adjusts blade pitch.
       const outline=new THREE.Shape();
@@ -448,6 +448,7 @@ function buildHydro() {
       outline.bezierCurveTo(0.63,0.31,0.05,0.32,-0.27,0.12);
       outline.quadraticCurveTo(-0.36,-0.03,-0.27,-0.19);
       const foil=new THREE.ExtrudeGeometry(outline,{depth:0.075,bevelEnabled:true,bevelThickness:0.025,bevelSize:0.035,bevelSegments:2,curveSegments:16});
+      foil.scale(0.72,0.85,1);
       foil.translate(0,0,-0.0375);
       mesh(foil,orange,pivot);
       mesh(new THREE.CylinderGeometry(0.13,0.13,0.24,16),cast,pivot,0,0,0).rotation.z=Math.PI/2;
