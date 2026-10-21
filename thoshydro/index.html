@@ -20,7 +20,7 @@
       <label for="flow">Cabal <output id="flowValue" for="flow"></output></label><input id="flow" type="range" min="0" max="5" step="0.1" value="1">
       <label for="efficiency">Rendiment de la turbina <output id="efficiencyValue" for="efficiency"></output></label><input id="efficiency" type="range" min="40" max="95" step="1" value="88">
       <label for="pitch" id="pitchLabel" hidden>Angle de les pales <output id="pitchValue" for="pitch"></output></label><input id="pitch" type="range" min="10" max="60" value="30" hidden>
-      <p id="rangeNote" class="note"></p>
+      <div id="peltonControls"><label for="needle">Obertura de l’injector <output id="needleValue" for="needle">100 %</output></label><input id="needle" type="range" min="0" max="100" step="5" value="100"><p class="small">L’obertura regula el cabal efectiu. El salt determina la velocitat del raig.</p></div><p id="rangeNote" class="note"></p>
       <div class="actions"><button id="pause" aria-pressed="false">Pausa</button><button id="reset">Reinicia</button></div>
       <p class="eyebrow">02 / LA TRANSFORMACIÓ</p><div class="chain">Aigua → Turbina → Eix → Alternador</div>
       <p class="small">Model didàctic idealitzat. Les geometries i els valors són orientatius.</p>
@@ -28,12 +28,12 @@
     <section class="workspace" aria-label="Visualització i resultats">
       <div class="viewbar" role="group" aria-label="Vista"><button id="assembledView" aria-pressed="true">Completa</button><button id="cutawayView" aria-pressed="false">Transparent</button><button id="explodedView" aria-pressed="false">Especejament</button><button id="cameraReset">Centra la vista</button></div>
       <div id="scene"><p id="loading" role="status">Carregant la vista 3D…</p><div class="sceneLabel"><strong id="sceneTitle">Turbina Pelton</strong><span id="sceneHint">Blau: aigua · Taronja: element giratori</span></div></div>
-      <section class="metrics" aria-label="Balanç de potència"><div><span>Potència hidràulica</span><strong id="hydraulic">—</strong></div><div><span>Potència a l'eix</span><strong id="shaft">—</strong></div><div><span>Potència elèctrica</span><strong id="electric">—</strong></div></section>
+      <section id="peltonMetrics" class="metrics" aria-label="Magnituds de la Pelton"><div><span>Velocitat del raig</span><strong id="jetSpeed">—</strong></div><div><span>Velocitat del rodet</span><strong id="peltonRpm">—</strong></div><div><span>Parell a l’eix</span><strong id="peltonTorque">—</strong></div></section><section class="metrics" aria-label="Balanç de potència"><div><span>Potència hidràulica</span><strong id="hydraulic">—</strong></div><div><span>Potència a l'eix</span><strong id="shaft">—</strong></div><div><span>Potència elèctrica</span><strong id="electric">—</strong></div></section>
       <section class="explanation"><div><h2 id="lessonTitle">Com funciona?</h2><p id="lesson"></p><p class="formula">P hidràulica = ρ · g · Q · H<br>P elèctrica = P hidràulica · η turbina · η alternador</p><p class="small">ρ = 1.000 kg/m³ · g = 9,81 m/s² · η alternador = 90 %</p></div><div><h2>Tensió alterna</h2><canvas id="wave" width="600" height="180" aria-label="Gràfic de tensió alterna il·lustrativa"></canvas><p id="waveNote" class="small"></p></div></section>
     </section>
   </main>
   <footer>THOS APPS · J.Yerga · Institut Thos i Codina · Visualització amb Three.js (MIT). <a href="README.md">Abast i procedència</a></footer>
-  <script type="module" src="app.js?v=5"></script>
+  <script type="module" src="app.js?v=6"></script>
   <script>window.addEventListener('error',function(e){if(e.target.tagName==='SCRIPT'){document.getElementById('loading').textContent='No s’ha pogut carregar l’aplicació. Recarrega la pàgina i comprova la connexió.'}},true);</script>
 </body>
 </html>
