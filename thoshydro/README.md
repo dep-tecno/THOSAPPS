@@ -16,7 +16,7 @@ Explorar els fonaments físics de l'aprofitament hidroelèctric, observar el fun
 
 Dues activitats interactives independents de la vista 3D:
 
-- **Pressió hidrostàtica:** columna d'aigua representada gràficament; controls d'altura (0–150 m) i densitat (800–1.200 kg/m³); càlcul de pressió manomètrica en MPa i bars amb `p = ρ · g · h`. Inclou un botó etiquetat «Recupera els valors de La Llosa del Cavall». **Nota:** el botó restaura els valors predefinits `h = 129 m` i `ρ = 1.000 kg/m³`; aquests valors no s'han validat com a dades reals de La Llosa del Cavall.
+- **Pressió hidrostàtica:** columna d'aigua representada gràficament; controls d'altura (0–150 m) i densitat (800–1.200 kg/m³); càlcul de pressió manomètrica en MPa i bars amb `p = ρ · g · h`. Inclou un botó «Recupera els valors inicials», que restaura els valors didàctics predefinits `h = 129 m` i `ρ = 1.000 kg/m³`. L'altura representa la **columna d'aigua sobre el punt de mesura**, no la capacitat ni necessàriament la profunditat real d'un embassament.
 - **Cadena de conversió energètica:** targetes amb símbols per a energia potencial, cinètica, mecànica i elèctrica. Controls de salt (10–200 m), cabal (1–50 m³/s), rendiment de turbina (50–100 %) i rendiment d'alternador (70–100 %). Mostra potència hidràulica, mecànica i elèctrica, rendiment global i pèrdues.
 
 L'activitat de conversió suposa **absència de pèrdues a les canonades** i utilitza `g = 9,807 m/s²`. La representació de les etapes és conceptual; no resol la distribució real de velocitats i pressions.
