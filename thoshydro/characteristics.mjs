@@ -33,6 +33,10 @@ export function createCharacteristics(doc){
   selection:{title:'Escollir una turbina',intro:'Pelton s’associa a salts elevats; Francis, a condicions intermèdies; Kaplan, a salts baixos i cabals elevats.',formula:'Selecció segons H (m) i Q (m³/s)',observation:'Localitza el punt de treball i identifica les zones orientatives que el contenen.',challenge:'Augmenta el cabal i redueix el salt. Cap a quina família de turbines et desplaces?',concepts:'Pelton · Francis · Kaplan · Zones de funcionament'}
  };
  function updateGuide(){
+  const selecting=tab==='selection';
+  head.max=selecting?'1500':'350';flow.max=selecting?'1000':'250';
+  if(+head.value>+head.max)head.value=head.max;
+  if(+flow.value>+flow.max)flow.value=flow.max;
   const g=guides[tab];
   for(const [id,value] of [['curveGuideTitle',g.title],['curveGuideIntro',g.intro],['curveGuideFormula',g.formula],['curveGuideObservation',g.observation],['curveGuideChallenge',g.challenge],['curveGuideConcepts',g.concepts]])doc.getElementById(id).textContent=value;
  }
