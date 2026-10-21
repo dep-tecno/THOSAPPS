@@ -1,4 +1,4 @@
-import { createCharacteristics } from './characteristics.mjs?v=36';
+import { createCharacteristics } from './characteristics.mjs?v=37';
 import { createTelemetry } from './charts.mjs';
 import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 
