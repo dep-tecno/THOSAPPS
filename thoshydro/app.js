@@ -219,6 +219,37 @@ function buildHydro() {
     }
     tube(spiral,0.29,shell,hydro);
     tube([new THREE.Vector3(3.25,0,-0.12),new THREE.Vector3(2.2,0,-0.12)],0.29,shell,hydro);
+    // Visible upstream shut-off valve ("aixeta"), analogous to Pelton's
+    // handwheel: pressure pipe, flanges, valve body, spindle and wheel.
+    // This is an isolation valve, not the Francis flow-regulating distributor.
+    const valvePipe=material(0x23618a,{metalness:0.55,roughness:0.30});
+    const valveBody=material(0x516d7b,{metalness:0.68,roughness:0.32});
+    const valveSteel=material(0xabb8bf,{metalness:0.76,roughness:0.23});
+    const valveGroup=new THREE.Group();hydro.add(valveGroup);
+    const pressure=mesh(new THREE.CylinderGeometry(0.32,0.32,2.05,40),valvePipe,valveGroup,4.04,0,-0.12);
+    pressure.rotation.z=Math.PI/2;
+    for(const x of [3.20,4.92]){
+      const flange=mesh(new THREE.CylinderGeometry(0.44,0.44,0.13,40),valveBody,valveGroup,x,0,-0.12);
+      flange.rotation.z=Math.PI/2;
+      for(let j=0;j<8;j++){
+        const a=j*Math.PI/4;
+        const fastener=mesh(new THREE.CylinderGeometry(0.04,0.04,0.10,8),valveSteel,valveGroup,x,0.37*Math.cos(a),-0.12+0.37*Math.sin(a));
+        fastener.rotation.z=Math.PI/2;
+      }
+    }
+    const valveHousing=mesh(new THREE.SphereGeometry(0.50,24,16),valveBody,valveGroup,4.12,0,-0.12);
+    valveHousing.scale.set(1.15,0.92,0.92);
+    mesh(new THREE.BoxGeometry(0.60,0.38,0.57),valveBody,valveGroup,4.12,0.48,-0.12);
+    mesh(new THREE.CylinderGeometry(0.065,0.065,0.75,16),valveSteel,valveGroup,4.12,0.94,-0.12);
+    const wheel=mesh(new THREE.TorusGeometry(0.37,0.042,12,48),valvePipe,valveGroup,4.12,1.33,-0.12);
+    wheel.rotation.x=Math.PI/2;
+    for(let j=0;j<4;j++){
+      const a=j*Math.PI/2;
+      const spoke=mesh(new THREE.BoxGeometry(0.06,0.65,0.06),valveSteel,valveGroup,4.12,1.33,-0.12);
+      spoke.rotation.y=a;
+    }
+    mesh(new THREE.SphereGeometry(0.10,12,10),valveSteel,valveGroup,4.12,1.33,-0.12);
+
     for(let i=0;i<18;i++){
       const a=i*2*Math.PI/18;
       const vane=mesh(new THREE.BoxGeometry(0.53,0.085,0.65),cast,hydro,1.42*Math.cos(a),1.42*Math.sin(a),0);
