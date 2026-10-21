@@ -10,7 +10,7 @@
 </head>
 <body>
   <header><a href="https://tecno-apps.cat/" target="_top">← THOS APPS</a><h1>THOS<span>HYDRO</span></h1><p>De l'aigua a l'electricitat</p><button id="help" aria-expanded="false" aria-controls="guide">Guia d'ús</button></header>
-  <section id="guide" hidden class="guide"><h2>Comença a explorar</h2><ol><li>Tria una turbina i observa el recorregut de l'aigua.</li><li>Modifica el salt i el cabal. Com canvia la potència?</li><li>Obre la vista de l'alternador: l'imant gira i el flux de la bobina varia.</li></ol><p>Arrossega per girar la vista 3D i fes servir la roda o dos dits per apropar-la. La velocitat visual està reduïda per facilitar l'observació.</p></section>
+  <section id="guide" hidden class="guide"><h2>Comença a explorar</h2><ol><li>Tria una turbina i observa el recorregut de l'aigua.</li><li>Modifica el salt i el cabal. Com canvia la potència?</li><li>Canvia entre les vistes completa, transparent i especejament per observar l’eix i l’alternador acoblats.</li></ol><p>Arrossega per girar la vista 3D i fes servir la roda o dos dits per apropar-la. La velocitat visual està reduïda per facilitar l'observació.</p></section>
   <main>
     <aside>
       <p class="eyebrow">01 / LA TURBINA</p>
@@ -26,14 +26,14 @@
       <p class="small">Model didàctic idealitzat. Les geometries i els valors són orientatius.</p>
     </aside>
     <section class="workspace" aria-label="Visualització i resultats">
-      <div class="viewbar" role="group" aria-label="Vista"><button id="hydroView" aria-pressed="true">Turbina 3D</button><button id="generatorView" aria-pressed="false">Alternador 3D</button><button id="cameraReset">Centra la vista</button></div>
+      <div class="viewbar" role="group" aria-label="Vista"><button id="assembledView" aria-pressed="true">Completa</button><button id="cutawayView" aria-pressed="false">Transparent</button><button id="explodedView" aria-pressed="false">Especejament</button><button id="cameraReset">Centra la vista</button></div>
       <div id="scene"><p id="loading" role="status">Carregant la vista 3D…</p><div class="sceneLabel"><strong id="sceneTitle">Turbina Pelton</strong><span id="sceneHint">Blau: aigua · Taronja: element giratori</span></div></div>
       <section class="metrics" aria-label="Balanç de potència"><div><span>Potència hidràulica</span><strong id="hydraulic">—</strong></div><div><span>Potència a l'eix</span><strong id="shaft">—</strong></div><div><span>Potència elèctrica</span><strong id="electric">—</strong></div></section>
       <section class="explanation"><div><h2 id="lessonTitle">Com funciona?</h2><p id="lesson"></p><p class="formula">P hidràulica = ρ · g · Q · H<br>P elèctrica = P hidràulica · η turbina · η alternador</p><p class="small">ρ = 1.000 kg/m³ · g = 9,81 m/s² · η alternador = 90 %</p></div><div><h2>Tensió alterna</h2><canvas id="wave" width="600" height="180" aria-label="Gràfic de tensió alterna il·lustrativa"></canvas><p id="waveNote" class="small"></p></div></section>
     </section>
   </main>
   <footer>THOS APPS · J.Yerga · Institut Thos i Codina · Visualització amb Three.js (MIT). <a href="README.md">Abast i procedència</a></footer>
-  <script type="module" src="app.js?v=1"></script>
+  <script type="module" src="app.js?v=2"></script>
   <script>window.addEventListener('error',function(e){if(e.target.tagName==='SCRIPT'){document.getElementById('loading').textContent='No s’ha pogut carregar l’aplicació. Recarrega la pàgina i comprova la connexió.'}},true);</script>
 </body>
 </html>
