@@ -16,7 +16,9 @@ function update() {
   $('pitchValue').textContent = state.pitch + '°';
   state.needle = Number($('needle').value);
   $('needleValue').textContent = state.needle + ' %';
-  state.guide = Number($('guide').value);
+  const guideInput = Number($('guide').value);
+  state.guide = Number.isFinite(guideInput) ? Math.max(0, Math.min(100, guideInput)) : 100;
+  $('guide').value = String(state.guide);
   $('guideValue').textContent = state.guide + ' %';
   state.valve = Number($('valve').value);
   $('valveValue').textContent = state.valve + ' %';
