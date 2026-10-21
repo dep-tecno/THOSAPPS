@@ -38,10 +38,10 @@ function selectType() {
 
 function updateLesson() {
   const type = TYPES[state.type];
-  $('sceneTitle').textContent = 'Turbina ' + type.name + ' · alternador acoblat';
+  $('sceneTitle').textContent = 'Turbina ' + type.name + (state.type === 'pelton' ? ' · alternador acoblat' : ' · model didàctic');
   $('sceneHint').textContent = mode === 'exploded' ? 'Vista d’especejament: components separats' : mode === 'cutaway' ? 'Carcasses transparents: mecanisme interior' : 'Turbina, eix i alternador en una sola instal·lació';
   $('lessonTitle').textContent = 'Com funciona la ' + type.name + '?';
-  $('lesson').textContent = type.lesson + ' L’eix transmet el gir al rotor de l’alternador; el camp magnètic variable indueix tensió al bobinatge fix.';
+  $('lesson').textContent = type.lesson + (state.type === 'pelton' ? ' L’eix transmet el gir al rotor de l’alternador; el camp magnètic variable indueix tensió al bobinatge fix.' : ' La integració mecànica de l’alternador està desenvolupada actualment per a la Pelton.');
 }
 function material(color, options = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.3, ...options }); }
 function mesh(geometry, mat, parent, x = 0, y = 0, z = 0) {
@@ -59,6 +59,60 @@ function clearGroup(group) {
 function cylinder(radius, length, mat, parent, x = 0, y = 0, z = 0) {
   const obj = mesh(new THREE.CylinderGeometry(radius, radius, length, 40), mat, parent, x, y, z);
   obj.rotation.x = Math.PI / 2; return obj;
+}
+
+// Engineering details are separate fixed assemblies; the runner and alternator rotor
+// remain children of the same rotating group.
+function boltCircle(parent,radius,z,count,mat,boltRadius=0.055) {
+  for(let i=0;i<count;i++){
+    const a=i*2*Math.PI/count;
+    const head=mesh(new THREE.CylinderGeometry(boltRadius,boltRadius,0.055,6),mat,parent,radius*Math.cos(a),radius*Math.sin(a),z);
+    head.rotation.x=Math.PI/2;
+  }
+}
+function bearingAssembly(parent,z,metal,dark) {
+  const support=mesh(new THREE.BoxGeometry(0.66,0.88,0.8),metal,parent,0,-0.65,z);
+  const ring=mesh(new THREE.TorusGeometry(0.31,0.11,14,48),dark,parent,0,0,z+0.42);
+  const cap=mesh(new THREE.TorusGeometry(0.29,0.045,12,48),metal,parent,0,0,z-0.42);
+  for(const x of [-0.23,0.23]) {
+    mesh(new THREE.CylinderGeometry(0.055,0.055,0.12,8),dark,parent,x,-1.09,z);
+  }
+
+}
+function engineeringPelton(parent,runner,steel,flange,bronze) {
+  const fastener=material(0x303f4a,{metalness:0.88,roughness:0.23});
+  const pipe=material(0x23618a,{metalness:0.55,roughness:0.3});
+  const gasket=material(0x9c5037,{metalness:0.3});
+  // Exposed casing flanges, bolt circles and inspection window.
+  for(const z of [-0.46,0.46]){
+    const ring=mesh(new THREE.TorusGeometry(1.85,0.11,12,80),flange,parent,0,0,z);
+    housingParts.push(ring);
+    boltCircle(parent,1.85,z+(z>0?0.10:-0.10),24,fastener);
+  }
+  const cover=mesh(new THREE.RingGeometry(1.52,1.82,72,1,0,Math.PI*1.22),material(0x386d91,{metalness:0.5,side:THREE.DoubleSide,transparent:true,opacity:0.65,depthWrite:false}),parent,0,0,0.48);
+  housingParts.push(cover);
+  // Hub cover and fasteners turn with the wheel.
+  cylinder(0.34,0.55,steel,runner,0,0,-0.1);
+  boltCircle(runner,0.28,0.31,8,fastener,0.035);
+  // Pressure pipe, nozzle adjustment spindle and hand wheel.
+  const inlet=mesh(new THREE.CylinderGeometry(0.32,0.32,1.4,40),pipe,parent,-3.45,1.36,0);
+  inlet.rotation.z=Math.PI/2;
+  for(const x of [-4.08,-2.82]){
+    const collar=mesh(new THREE.CylinderGeometry(0.41,0.41,0.12,40),flange,parent,x,1.36,0);
+    collar.rotation.z=Math.PI/2;
+  }
+  const actuator=mesh(new THREE.BoxGeometry(0.44,0.65,0.52),flange,parent,-2.48,2.13,0);
+  const stem=mesh(new THREE.CylinderGeometry(0.065,0.065,0.55,16),steel,parent,-2.48,2.65,0);
+  mesh(new THREE.TorusGeometry(0.31,0.035,10,32),pipe,parent,-2.48,2.95,0).rotation.x=Math.PI/2;
+  // Two bearing pedestals make the common shaft mechanically legible.
+  bearingAssembly(parent,0.88,steel,fastener);
+  bearingAssembly(parent,1.70,steel,fastener);
+  // Outlet and structural base with anchor bolts.
+  mesh(new THREE.BoxGeometry(4.0,0.24,2.1),flange,parent,0,-2.34,0.15);
+  for(const x of [-1.6,1.6])for(const z of [-0.65,0.95]){
+    mesh(new THREE.CylinderGeometry(0.095,0.095,0.16,8),fastener,parent,x,-2.17,z);
+  }
+  mesh(new THREE.BoxGeometry(1.1,0.2,1.4),gasket,parent,0,-2.48,0.2);
 }
 
 function buildHydro() {
@@ -115,6 +169,7 @@ function buildHydro() {
     tube([new THREE.Vector3(-3.25,1.36,0),new THREE.Vector3(-2.60,1.36,0)],0.26,flange,hydro);
     tube([new THREE.Vector3(-1.97,1.36,0),new THREE.Vector3(-1.50,1.36,0)],0.075,water,hydro);
     // Alternator sits on the same axis, to the rear (positive z).
+    engineeringPelton(hydro,rotor,steel,flange,bronze);
     buildCoupledAlternator(hydro,steel);
   } else if (state.type === 'francis') {
     const spiral = [];
@@ -156,6 +211,7 @@ function buildCoupledAlternator(parent,steel) {
     const ring=mesh(new THREE.TorusGeometry(1.1,0.08,12,64),iron,stator,0,0,z);
     housingParts.push(ring);
   }
+  boltCircle(stator,1.1,0.83,16,iron,0.045);
   // Stationary coils around the rotating field.
   for(let i=0;i<12;i++){
     const angle=i*Math.PI/6;
