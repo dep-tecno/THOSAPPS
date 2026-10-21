@@ -4,8 +4,8 @@ const $ = id => document.getElementById(id);
 let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles, housingParts = [], explodedParts = [];
 let waterGuides = null, francisHandwheel = null;
 let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0, angularSpeed = 0;
-const pitchBlades = [], francisGates = [];
-const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100, valve: 100 };
+const pitchBlades = [], francisGates = [], kaplanGates = [];
+const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100, valve: 100, kaplanGuide: 100 };
 const waveContext = $('wave').getContext('2d');
 
 function update() {
@@ -23,7 +23,10 @@ function update() {
   state.valve = Number($('valve').value);
   $('valveValue').textContent = state.valve + ' %';
   if(francisHandwheel) francisHandwheel.rotation.y = (1-state.valve/100)*Math.PI*3;
-  const actualFlow = state.type === 'pelton' ? state.flow * state.needle / 100 : state.type === 'francis' ? state.flow * state.guide/100 * state.valve/100 : state.flow;
+  state.kaplanGuide = Number($('kaplanGuide').value);
+  $('kaplanGuideValue').textContent = state.kaplanGuide + ' %';
+  const actualFlow = state.type === 'pelton' ? state.flow * state.needle / 100 : state.type === 'francis' ? state.flow * state.guide/100 * state.valve/100 : state.flow * state.kaplanGuide/100;
+  for(const gate of kaplanGates) gate.rotation.z=gate.userData.base+(1-state.kaplanGuide/100)*1.05;
   for(const gate of francisGates) gate.rotation.z = gate.userData.base + (1-state.guide/100)*1.1;
   const p = power(state.head, actualFlow, state.efficiency);
   const physics = peltonPhysics(state.head, actualFlow, state.efficiency);
@@ -69,6 +72,7 @@ function selectType() {
   $('francisMetrics').hidden = state.type !== 'francis';
   $('kaplanMetrics').hidden = state.type !== 'kaplan';
   $('francisControls').hidden = state.type !== 'francis';
+  $('kaplanControls').hidden = state.type !== 'kaplan';
   if (THREE && scene) buildHydro();
   if (THREE && scene) applyView();
   updateLesson(); update();
@@ -154,7 +158,7 @@ function engineeringPelton(parent,runner,steel,flange,bronze) {
 }
 
 function buildHydro() {
-  clearGroup(hydro); waterGuides = null; francisHandwheel = null; pitchBlades.length = 0; francisGates.length = 0;
+  clearGroup(hydro); waterGuides = null; francisHandwheel = null; pitchBlades.length = 0; francisGates.length = 0; kaplanGates.length = 0;
   hydro = new THREE.Group(); scene.add(hydro); hydro.visible = true; housingParts = []; explodedParts = [];
   // Pelton: horizontal shaft (local Z). Francis/Kaplan: vertical shaft.
   // Rotating the entire hydraulic assembly preserves runner/water alignment.
@@ -402,10 +406,16 @@ function buildHydro() {
       const flange=mesh(new THREE.TorusGeometry(1.73,0.10,12,64),cast,hydro,0,0,z);
       housingParts.push(flange);
     }
+    // Ten synchronised Kaplan inlet wicket gates on individual radial pivots.
     for(let i=0;i<10;i++){
       const a=i*2*Math.PI/10;
-      const guide=mesh(new THREE.BoxGeometry(0.55,0.09,0.72),cast,hydro,1.30*Math.cos(a),1.30*Math.sin(a),-0.95);
-      guide.rotation.z=a+0.35;
+      const gate=new THREE.Group();
+      gate.position.set(1.30*Math.cos(a),1.30*Math.sin(a),-0.95);
+      gate.userData.base=a+0.35;
+      gate.rotation.z=gate.userData.base;
+      hydro.add(gate);
+      mesh(new THREE.BoxGeometry(0.55,0.09,0.72),cast,gate,-0.10,0,0);
+      kaplanGates.push(gate);
     }
     for(let i=0;i<5;i++){
       const arm=new THREE.Group();arm.rotation.z=i*2*Math.PI/5;rotor.add(arm);
@@ -459,7 +469,7 @@ function buildCoupledAlternator(parent,steel) {
 
 function animateWater() {
   if (!particles) return;
-  const activeFlow = state.type === 'pelton' ? state.flow*state.needle/100 : state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow;
+  const activeFlow = state.type === 'pelton' ? state.flow*state.needle/100 : state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow*state.kaplanGuide/100;
   particles.visible = activeFlow > 0;
   if(waterGuides){waterGuides.visible=activeFlow>0;waterGuides.children.forEach(line=>{line.material.opacity=0.12+0.20*Math.min(1,activeFlow/10);});}
   particles.material.size = state.type === 'francis' ? 0.065 : state.type === 'pelton' ? 0.03 + 0.055*Math.sqrt(state.needle/100) : 0.075;
@@ -526,7 +536,7 @@ function tick(time) {
   const dt = lastTime ? Math.min((time-lastTime)/1000,0.05) : 0; lastTime=time;
   if (!paused && !document.hidden) {
     const effectiveFlow = state.type === 'pelton' ? state.flow*state.needle/100
-      : state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow;
+      : state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow*state.kaplanGuide/100;
     const relative = Math.sqrt(Math.max(0,state.head)/TYPES[state.type].head)
       * Math.sqrt(Math.max(0,effectiveFlow)/TYPES[state.type].flow);
     const pelton = peltonPhysics(state.head,effectiveFlow,state.efficiency);
@@ -550,10 +560,10 @@ function tick(time) {
   animateWater(); drawWave(); controls.update(); renderer.render(scene,camera);
 }
 
-for (const key of ['head','flow','efficiency','pitch','needle','guide','valve']) $(key).addEventListener('input',update);
+for (const key of ['head','flow','efficiency','pitch','needle','guide','valve','kaplanGuide']) $(key).addEventListener('input',update);
 $('turbine').addEventListener('change',selectType);
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Continua':'Pausa';$('pause').setAttribute('aria-pressed',String(paused));});
-$('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;angularSpeed=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;$('guide').value=100;$('valve').value=100;selectType();if(controls)resetCamera();});
+$('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;angularSpeed=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;$('guide').value=100;$('valve').value=100;$('kaplanGuide').value=100;selectType();if(controls)resetCamera();});
 $('help').addEventListener('click',()=>{$('usageGuide').hidden=!$('usageGuide').hidden;$('help').setAttribute('aria-expanded',String(!$('usageGuide').hidden));});
 for(const [id,value] of [['assembledView','assembled'],['cutawayView','cutaway'],['explodedView','exploded']]) {
   $(id).addEventListener('click',()=>{
