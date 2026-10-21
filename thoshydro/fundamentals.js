@@ -4,12 +4,20 @@
  const $=id=>document.getElementById(id);
  const format=(value,digits=0)=>value.toLocaleString('ca-ES',{maximumFractionDigits:digits});
  const gravity=9.807;
+ const waters=[
+  {name:'Aigua dolça · 4 °C',rho:1000},
+  {name:'Aigua dolça · 10 °C',rho:999.7},
+  {name:'Aigua dolça · 20 °C',rho:998.2},
+  {name:'Aigua dolça · 40 °C',rho:992.2},
+  {name:'Aigua de mar · 20 °C',rho:1025}
+ ];
  function updatePressure(){
-  const h=Number($('foundationHeight').value),rho=Number($('foundationDensity').value);
+  const h=Number($('foundationHeight').value),water=waters[Number($('foundationDensity').value)],rho=water.rho;
   const pressure=rho*gravity*h;
   $('foundationHeightValue').textContent=format(h)+' m';
   $('foundationHeightLabel').textContent=format(h)+' m';
-  $('foundationDensityValue').textContent=format(rho)+' kg/m³';
+  $('foundationDensityValue').textContent=format(rho,1)+' kg/m³';
+  $('foundationWaterType').textContent=water.name;
   $('foundationPressureMpa').textContent=format(pressure/1e6,3)+' MPa';
   $('foundationPressureBar').textContent=format(pressure/1e5,2)+' bar';
   $('foundationWater').style.height=(h/150*100)+'%';
@@ -30,7 +38,7 @@
  function init(){
   for(const id of ['foundationHeight','foundationDensity'])$(id).addEventListener('input',updatePressure);
   for(const id of ['foundationHead','foundationFlow','foundationTurbineEta','foundationGeneratorEta'])$(id).addEventListener('input',updateEnergy);
-  $('foundationResetPressure').addEventListener('click',()=>{$('foundationHeight').value='129';$('foundationDensity').value='1000';updatePressure();});
+  $('foundationResetPressure').addEventListener('click',()=>{$('foundationHeight').value='129';$('foundationDensity').value='0';updatePressure();});
   updatePressure();updateEnergy();
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
