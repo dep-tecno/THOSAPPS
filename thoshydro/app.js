@@ -3,7 +3,7 @@ import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 const $ = id => document.getElementById(id);
 let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles, housingParts = [], explodedParts = [];
 let waterGuides = null, francisHandwheel = null;
-let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0;
+let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0, angularSpeed = 0;
 const pitchBlades = [], francisGates = [];
 const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100, valve: 100 };
 const waveContext = $('wave').getContext('2d');
@@ -50,6 +50,7 @@ function update() {
 
 function selectType() {
   state.type = $('turbine').value;
+  angularSpeed = 0;
   const type = TYPES[state.type];
   $('head').max = type.maxHead; $('head').min = state.type === 'kaplan' ? 1 : 10;
   $('head').step = state.type === 'kaplan' ? 1 : 10; $('head').value = type.head;
@@ -513,13 +514,26 @@ function resetCamera() { camera.position.set(6,4.1,9.5); controls.target.set(0,0
 function tick(time) {
   requestAnimationFrame(tick);
   const dt = lastTime ? Math.min((time-lastTime)/1000,0.05) : 0; lastTime=time;
-  if (!paused && !document.hidden && state.flow > 0 && (state.type !== 'pelton' || state.needle > 0)) {
-    const effectiveFlow = state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow;
-    const relative = Math.sqrt(state.head/TYPES[state.type].head) * Math.sqrt(effectiveFlow/TYPES[state.type].flow);
-    // Animation is deliberately slowed down; Pelton angular speed follows jet speed.
-    const pelton = peltonPhysics(state.head,state.flow*state.needle/100,state.efficiency);
-    const speed = state.type === 'pelton' ? pelton.rpm/60*2*Math.PI*0.035 : Math.min(3,relative)*1.3;
-    phase = (phase + dt*speed) % (Math.PI*2); waterTime += dt*Math.min(2,relative);
+  if (!paused && !document.hidden) {
+    const effectiveFlow = state.type === 'pelton' ? state.flow*state.needle/100
+      : state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow;
+    const relative = Math.sqrt(Math.max(0,state.head)/TYPES[state.type].head)
+      * Math.sqrt(Math.max(0,effectiveFlow)/TYPES[state.type].flow);
+    const pelton = peltonPhysics(state.head,effectiveFlow,state.efficiency);
+    const targetSpeed = effectiveFlow > 0
+      ? (state.type === 'pelton' ? pelton.rpm/60*2*Math.PI*0.035 : Math.min(3,relative)*1.3)
+      : 0;
+    // Francis rotor and alternator have inertia: smooth acceleration and coast-down.
+    // The time constants are visual teaching approximations, not industrial dynamics.
+    if(state.type === 'francis') {
+      const tau = targetSpeed > angularSpeed ? 1.6 : 3.2;
+      angularSpeed += (targetSpeed-angularSpeed)*(1-Math.exp(-dt/tau));
+      if(angularSpeed < 0.002 && targetSpeed===0) angularSpeed=0;
+    } else {
+      angularSpeed=targetSpeed;
+    }
+    phase = (phase + dt*angularSpeed) % (Math.PI*2);
+    waterTime += dt*Math.min(2,relative);
   }
   if (rotor) rotor.rotation.z = -phase;
   
@@ -529,8 +543,8 @@ function tick(time) {
 for (const key of ['head','flow','efficiency','pitch','needle','guide','valve']) $(key).addEventListener('input',update);
 $('turbine').addEventListener('change',selectType);
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Continua':'Pausa';$('pause').setAttribute('aria-pressed',String(paused));});
-$('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;$('guide').value=100;$('valve').value=100;selectType();if(controls)resetCamera();});
-$('help').addEventListener('click',()=>{$('guide').hidden=!$('guide').hidden;$('help').setAttribute('aria-expanded',String(!$('guide').hidden));});
+$('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;angularSpeed=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;$('guide').value=100;$('valve').value=100;selectType();if(controls)resetCamera();});
+$('help').addEventListener('click',()=>{$('usageGuide').hidden=!$('usageGuide').hidden;$('help').setAttribute('aria-expanded',String(!$('usageGuide').hidden));});
 for(const [id,value] of [['assembledView','assembled'],['cutawayView','cutaway'],['explodedView','exploded']]) {
   $(id).addEventListener('click',()=>{
     mode=value;
