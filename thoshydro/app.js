@@ -2,7 +2,7 @@ import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 
 const $ = id => document.getElementById(id);
 let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles, housingParts = [], explodedParts = [];
-let waterGuides = null, francisHandwheel = null;
+let waterGuides = null, francisHandwheel = null, kaplanHandwheel = null;
 let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0, angularSpeed = 0;
 const pitchBlades = [], francisGates = [], kaplanGates = [];
 const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100, valve: 100, kaplanGuide: 100 };
@@ -25,6 +25,7 @@ function update() {
   if(francisHandwheel) francisHandwheel.rotation.y = (1-state.valve/100)*Math.PI*3;
   state.kaplanGuide = Number($('kaplanGuide').value);
   $('kaplanGuideValue').textContent = state.kaplanGuide + ' %';
+  if(kaplanHandwheel) kaplanHandwheel.rotation.y = (1-state.kaplanGuide/100)*Math.PI*3;
   const actualFlow = state.type === 'pelton' ? state.flow * state.needle / 100 : state.type === 'francis' ? state.flow * state.guide/100 * state.valve/100 : state.flow * state.kaplanGuide/100;
   for(const gate of kaplanGates) gate.rotation.z=gate.userData.base+(1-state.kaplanGuide/100)*1.05;
   for(const gate of francisGates) gate.rotation.z = gate.userData.base + (1-state.guide/100)*1.1;
@@ -137,15 +138,23 @@ function engineeringPelton(parent,runner,steel,flange,bronze) {
   cylinder(0.34,0.55,steel,runner,0,0,-0.1);
   boltCircle(runner,0.28,0.31,8,fastener,0.035);
   // Pressure pipe, nozzle adjustment spindle and hand wheel.
-  const inlet=mesh(new THREE.CylinderGeometry(0.32,0.32,1.4,40),pipe,parent,-3.45,1.36,0);
-  inlet.rotation.z=Math.PI/2;
-  for(const x of [-4.08,-2.82]){
-    const collar=mesh(new THREE.CylinderGeometry(0.41,0.41,0.12,40),flange,parent,x,1.36,0);
+  // Continuous pressure pipe, valve body and reducer leading directly to the nozzle.
+  const inlet=mesh(new THREE.CylinderGeometry(0.30,0.30,2.13,40),pipe,parent,-3.56,1.36,0);
+  inlet.rotation.z=Math.PI/2; // spans x=-4.625 to -2.495
+  for(const x of [-4.54,-3.18,-2.57]){
+    const collar=mesh(new THREE.CylinderGeometry(0.39,0.39,0.12,40),flange,parent,x,1.36,0);
     collar.rotation.z=Math.PI/2;
   }
-  const actuator=mesh(new THREE.BoxGeometry(0.44,0.65,0.52),flange,parent,-2.48,2.13,0);
-  const stem=mesh(new THREE.CylinderGeometry(0.065,0.065,0.55,16),steel,parent,-2.48,2.65,0);
-  mesh(new THREE.TorusGeometry(0.31,0.035,10,32),pipe,parent,-2.48,2.95,0).rotation.x=Math.PI/2;
+  const valveBody=mesh(new THREE.BoxGeometry(0.66,0.79,0.76),flange,parent,-3.18,1.36,0);
+  const bonnet=mesh(new THREE.CylinderGeometry(0.18,0.24,0.20,24),steel,parent,-3.18,1.85,0);
+  const stem=mesh(new THREE.CylinderGeometry(0.065,0.065,0.49,16),steel,parent,-3.18,2.15,0);
+  const wheel=mesh(new THREE.TorusGeometry(0.34,0.04,10,40),pipe,parent,-3.18,2.44,0);
+  wheel.rotation.x=Math.PI/2;
+  for(let j=0;j<4;j++){
+    const a=j*Math.PI/2;
+    const spoke=mesh(new THREE.BoxGeometry(0.58,0.045,0.045),steel,parent,-3.18,2.44,0);
+    spoke.rotation.y=a;
+  }
   // Two bearing pedestals make the common shaft mechanically legible.
   bearingAssembly(parent,0.88,steel,fastener);
   bearingAssembly(parent,1.70,steel,fastener);
@@ -158,7 +167,7 @@ function engineeringPelton(parent,runner,steel,flange,bronze) {
 }
 
 function buildHydro() {
-  clearGroup(hydro); waterGuides = null; francisHandwheel = null; pitchBlades.length = 0; francisGates.length = 0; kaplanGates.length = 0;
+  clearGroup(hydro); waterGuides = null; francisHandwheel = null; kaplanHandwheel = null; pitchBlades.length = 0; francisGates.length = 0; kaplanGates.length = 0;
   hydro = new THREE.Group(); scene.add(hydro); hydro.visible = true; housingParts = []; explodedParts = [];
   // Pelton: horizontal shaft (local Z). Francis/Kaplan: vertical shaft.
   // Rotating the entire hydraulic assembly preserves runner/water alignment.
@@ -236,7 +245,7 @@ function buildHydro() {
     // Tangential jet entering from the left, at the upper perimeter.
     const nozzle=mesh(new THREE.CylinderGeometry(0.1,0.25,0.72,32),flange,hydro,-2.28,1.36,0);
     nozzle.rotation.z=-Math.PI/2;
-    tube([new THREE.Vector3(-3.25,1.36,0),new THREE.Vector3(-2.60,1.36,0)],0.26,flange,hydro);
+    // The supply pipe is built in engineeringPelton as one continuous assembly.
     tube([new THREE.Vector3(-1.97,1.36,0),new THREE.Vector3(-1.50,1.36,0)],0.075,water,hydro);
     // Alternator sits on the same axis, to the rear (positive z).
     engineeringPelton(hydro,rotor,steel,flange,bronze);
@@ -425,6 +434,28 @@ function buildHydro() {
       strut.rotation.z=a;
     }
     const bearing=mesh(new THREE.TorusGeometry(0.32,0.10,12,40),cast,hydro,0,0,-1.88);
+    // Visible side-fed supply pipe with elbow into the upstream axial chamber.
+    const inletPipe=material(0x23618a,{metalness:0.55,roughness:0.3});
+    const supplyPath=[
+      new THREE.Vector3(-4.15,0,-2.75),
+      new THREE.Vector3(-2.45,0,-2.75),
+      new THREE.Vector3(-1.55,0,-2.75),
+      new THREE.Vector3(-0.95,0,-2.48)
+    ];
+    tube(supplyPath,0.34,inletPipe,hydro);
+    const pipeCollar=mesh(new THREE.CylinderGeometry(0.44,0.44,0.13,40),cast,hydro,-3.12,0,-2.75);
+    pipeCollar.rotation.z=Math.PI/2;
+    const valveBody=mesh(new THREE.BoxGeometry(0.72,0.83,0.79),cast,hydro,-3.12,0,-2.75);
+    const valveStem=mesh(new THREE.CylinderGeometry(0.07,0.07,0.50,16),cast,hydro,-3.12,0.64,-2.75);
+    kaplanHandwheel=new THREE.Group();
+    kaplanHandwheel.position.set(-3.12,0.95,-2.75);
+    hydro.add(kaplanHandwheel);
+    const wheel=mesh(new THREE.TorusGeometry(0.37,0.043,12,48),inletPipe,kaplanHandwheel);
+    wheel.rotation.x=Math.PI/2;
+    for(let j=0;j<4;j++){
+      const spoke=mesh(new THREE.BoxGeometry(0.63,0.05,0.05),cast,kaplanHandwheel);
+      spoke.rotation.y=j*Math.PI/2;
+    }
     // Ten synchronised Kaplan inlet wicket gates on individual radial pivots.
     for(let i=0;i<10;i++){
       const a=i*2*Math.PI/10;
