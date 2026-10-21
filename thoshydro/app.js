@@ -1,8 +1,8 @@
 import { TYPES, power, formatPower } from './model.mjs';
 
 const $ = id => document.getElementById(id);
-let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles;
-let mode = 'hydro', paused = false, phase = 0, lastTime = 0, waterTime = 0;
+let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles, housingParts = [], explodedParts = [];
+let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0;
 const pitchBlades = [];
 const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30 };
 const waveContext = $('wave').getContext('2d');
@@ -32,17 +32,17 @@ function selectType() {
   $('description').textContent = type.description; $('rangeNote').textContent = type.note;
   $('pitch').hidden = $('pitchLabel').hidden = state.type !== 'kaplan';
   if (THREE && scene) buildHydro();
+  if (THREE && scene) applyView();
   updateLesson(); update();
 }
 
 function updateLesson() {
   const type = TYPES[state.type];
-  $('sceneTitle').textContent = mode === 'hydro' ? 'Turbina ' + type.name : 'Alternador · Imant i bobina';
-  $('sceneHint').textContent = mode === 'hydro' ? 'Blau: aigua · Taronja: element giratori' : 'Vermell: nord · Blau: sud · Coure: bobina fixa';
-  $('lessonTitle').textContent = mode === 'hydro' ? 'Com funciona la ' + type.name + '?' : 'Per què es genera corrent altern?';
-  $('lesson').textContent = mode === 'hydro' ? type.lesson : 'L’eix de la turbina fa girar l’imant. El flux magnètic que travessa la bobina fixa varia i s’hi indueix una tensió alterna. La polaritat s’inverteix cada mitja volta. El circuit i la càrrega no es representen: la potència elèctrica és una estimació amb un rendiment fix del 90 %.';
+  $('sceneTitle').textContent = 'Turbina ' + type.name + ' · alternador acoblat';
+  $('sceneHint').textContent = mode === 'exploded' ? 'Vista d’especejament: components separats' : mode === 'cutaway' ? 'Carcasses transparents: mecanisme interior' : 'Turbina, eix i alternador en una sola instal·lació';
+  $('lessonTitle').textContent = 'Com funciona la ' + type.name + '?';
+  $('lesson').textContent = type.lesson + ' L’eix transmet el gir al rotor de l’alternador; el camp magnètic variable indueix tensió al bobinatge fix.';
 }
-
 function material(color, options = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.3, ...options }); }
 function mesh(geometry, mat, parent, x = 0, y = 0, z = 0) {
   const object = new THREE.Mesh(geometry, mat); object.position.set(x, y, z); parent.add(object); return object;
@@ -63,24 +63,59 @@ function cylinder(radius, length, mat, parent, x = 0, y = 0, z = 0) {
 
 function buildHydro() {
   clearGroup(hydro); pitchBlades.length = 0;
-  hydro = new THREE.Group(); scene.add(hydro); hydro.visible = mode === 'hydro';
+  hydro = new THREE.Group(); scene.add(hydro); hydro.visible = true; housingParts = []; explodedParts = [];
   rotor = new THREE.Group(); hydro.add(rotor);
   const orange = material(0xe98b36), steel = material(0x718c9a), water = material(0x009fc7, { transparent: true, opacity: 0.38, depthWrite: false });
   cylinder(0.13, 3.8, steel, hydro, 0, 0, 0.45);
   cylinder(0.32, 0.5, orange, rotor);
   if (state.type === 'pelton') {
-    cylinder(1.35, 0.16, steel, rotor);
-    for (let i = 0; i < 18; i++) {
-      const bucket = new THREE.Group(), a = i * Math.PI * 2 / 18;
-      bucket.position.set(1.55 * Math.cos(a), 1.55 * Math.sin(a), 0); bucket.rotation.z = a;
-      for (const z of [-0.19, 0.19]) {
-        const cup = mesh(new THREE.SphereGeometry(0.32, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), orange, bucket, 0, 0, z);
-        cup.scale.set(1.15, 0.7, 1); cup.rotation.x = Math.PI;
+    // Two opposed dished lobes and a central splitter: recognisable Pelton buckets.
+    const bronze = material(0xc78b45,{metalness:0.78,roughness:0.27});
+    const dark = material(0x465c6b,{metalness:0.65,roughness:0.33});
+    const casing = material(0x719ca9,{metalness:0.28,roughness:0.4,transparent:true,opacity:0.25,depthWrite:false,side:THREE.DoubleSide});
+    const flange = material(0x526c79,{metalness:0.65});
+    cylinder(1.12,0.23,dark,rotor);
+    cylinder(0.45,0.44,bronze,rotor);
+    for (let i=0;i<18;i++) {
+      const angle=i*Math.PI*2/18;
+      const bucket=new THREE.Group();
+      bucket.position.set(1.32*Math.cos(angle),1.32*Math.sin(angle),0);
+      bucket.rotation.z=angle;
+      // Lobes use an actual concave surface, not spheres.
+      for(const sign of [-1,1]) {
+        const vertices=[],indices=[],nu=14,nv=12;
+        for(let u=0;u<=nu;u++) for(let v=0;v<=nv;v++) {
+          const U=u/nu*2-1,V=v/nv*2-1;
+          const x=0.24+U*0.38;
+          const z=sign*(0.19+V*0.17);
+          const y=0.12-0.23*(1-U*U)*(1-V*V);
+          vertices.push(x,y,z);
+        }
+        for(let u=0;u<nu;u++) for(let v=0;v<nv;v++){
+          const k=u*(nv+1)+v;indices.push(k,k+1,k+nv+1,k+1,k+nv+2,k+nv+1);
+        }
+        const geo=new THREE.BufferGeometry();
+        geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+        geo.setIndex(indices);geo.computeVertexNormals();
+        mesh(geo,bronze,bucket).material.side=THREE.DoubleSide;
       }
+      const splitter=mesh(new THREE.ConeGeometry(0.11,0.55,4),bronze,bucket,0.25,0.10,0);
+      splitter.rotation.z=-Math.PI/2;
       rotor.add(bucket);
     }
-    const nozzle = cylinder(0.18, 0.7, steel, hydro, -2.6, 1.45, 0); nozzle.rotation.set(0, 0, Math.PI / 2);
-    tube([new THREE.Vector3(-2.25, 1.45, 0), new THREE.Vector3(-1, 1.45, 0), new THREE.Vector3(0.45, 1.3, 0), new THREE.Vector3(1.4, -2, 0)], 0.1, water, hydro);
+    // Casing: annular shroud, front inspection ring and mounting feet.
+    const shell=mesh(new THREE.TorusGeometry(1.78,0.32,18,90),casing,hydro);
+    housingParts.push(shell);
+    const rim=mesh(new THREE.TorusGeometry(1.8,0.045,8,90),flange,hydro,0,0,0.4);
+    housingParts.push(rim);
+    for(const x of [-1.15,1.15]) mesh(new THREE.BoxGeometry(0.38,0.8,0.55),flange,hydro,x,-2.03,0);
+    // Tangential jet entering from the left, at the upper perimeter.
+    const nozzle=mesh(new THREE.CylinderGeometry(0.1,0.25,0.72,32),flange,hydro,-2.28,1.36,0);
+    nozzle.rotation.z=-Math.PI/2;
+    tube([new THREE.Vector3(-3.25,1.36,0),new THREE.Vector3(-2.60,1.36,0)],0.26,flange,hydro);
+    tube([new THREE.Vector3(-1.97,1.36,0),new THREE.Vector3(-1.50,1.36,0)],0.075,water,hydro);
+    // Alternator sits on the same axis, to the rear (positive z).
+    buildCoupledAlternator(hydro,steel);
   } else if (state.type === 'francis') {
     const spiral = [];
     for (let i = 0; i <= 100; i++) { const a = i / 100 * Math.PI * 2; const r = 2.35 - i / 100 * 0.65; spiral.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0)); }
@@ -111,23 +146,36 @@ function buildHydro() {
   particles.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); hydro.add(particles);
 }
 
-function buildGenerator() {
-  generator = new THREE.Group(); scene.add(generator); generator.visible = false;
-  const copper = material(0xc77635), steel = material(0x718c9a);
-  // The fixed rectangular winding lies in the x-z plane; its normal is y.
-  for (let i = 0; i < 9; i++) {
-    const y = (i - 4) * 0.045;
-    const pts = [[-2,y,-0.8],[2,y,-0.8],[2,y,0.8],[-2,y,0.8],[-2,y,-0.8]].map(p => new THREE.Vector3(...p));
-    tube(pts, 0.045, copper, generator);
+function buildCoupledAlternator(parent,steel) {
+  const stator = new THREE.Group(); stator.position.z=2.75; parent.add(stator);
+  const copper=material(0xc87939,{metalness:0.72}), iron=material(0x485c6a,{metalness:0.65});
+  const cover=material(0x6d8795,{transparent:true,opacity:0.28,depthWrite:false,side:THREE.DoubleSide});
+  const housing=mesh(new THREE.CylinderGeometry(1.12,1.12,1.52,48,1,true),cover,stator);
+  housing.rotation.x=Math.PI/2; housingParts.push(housing);
+  for(const z of [-0.74,0.74]) {
+    const ring=mesh(new THREE.TorusGeometry(1.1,0.08,12,64),iron,stator,0,0,z);
+    housingParts.push(ring);
   }
-  cylinder(0.12, 4, steel, generator);
-  magnet = new THREE.Group(); generator.add(magnet);
-  mesh(new THREE.BoxGeometry(0.58, 0.85, 0.52), material(0xe35f52), magnet, 0, 0.425, 0);
-  mesh(new THREE.BoxGeometry(0.58, 0.85, 0.52), material(0x258ac2), magnet, 0, -0.425, 0);
-  // Illustrative field lines, fixed to the rotating magnet.
-  for (const x of [-0.75, 0.75]) {
-    tube([new THREE.Vector3(0,0.9,0),new THREE.Vector3(x,0.65,0),new THREE.Vector3(x,-0.65,0),new THREE.Vector3(0,-0.9,0)],0.018,material(0x7f9c8d),magnet);
+  // Stationary coils around the rotating field.
+  for(let i=0;i<12;i++){
+    const angle=i*Math.PI/6;
+    const coil=new THREE.Group();coil.rotation.z=angle;stator.add(coil);
+    const core=mesh(new THREE.BoxGeometry(0.23,0.42,0.92),iron,coil,0,0.84,0);
+    for(const z of [-0.32,-0.16,0,0.16,0.32]) {
+      const winding=mesh(new THREE.TorusGeometry(0.19,0.045,8,18),copper,coil,0,0.84,z);
+      winding.rotation.x=Math.PI/2;
+    }
   }
+  // Shaft passes through both units; rotor turns with the Pelton wheel.
+  cylinder(0.15,3.9,steel,rotor,0,0,1.55);
+  const armature=new THREE.Group();armature.position.z=2.75;rotor.add(armature);
+  cylinder(0.54,1.16,iron,armature);
+  for(let i=0;i<4;i++){
+    const a=i*Math.PI/2;
+    const pole=mesh(new THREE.BoxGeometry(0.46,0.32,0.88),material(i%2?0x277ca9:0xb84d43),armature,0.65*Math.cos(a),0.65*Math.sin(a),0);
+    pole.rotation.z=a;
+  }
+  explodedParts.push({object:stator,base:2.75,offset:1.25});
 }
 
 function animateWater() {
@@ -162,7 +210,7 @@ function drawWave() {
   ctx.stroke(); ctx.fillStyle = '#ea8834'; ctx.beginPath(); ctx.arc(w-16,90-(state.flow>0?60*Math.sin(phase):0),4,0,Math.PI*2);ctx.fill();
 }
 
-function resetCamera() { camera.position.set(5,3.2,6.5); controls.target.set(0,0,0); controls.update(); }
+function resetCamera() { camera.position.set(6,4.1,9.5); controls.target.set(0,0,0); controls.update(); }
 function tick(time) {
   requestAnimationFrame(tick);
   const dt = lastTime ? Math.min((time-lastTime)/1000,0.05) : 0; lastTime=time;
@@ -172,7 +220,7 @@ function tick(time) {
     phase = (phase + dt*speed) % (Math.PI*2); waterTime += dt*Math.min(2,relative);
   }
   if (rotor) rotor.rotation.z = -phase;
-  if (magnet) magnet.rotation.z = -phase;
+  
   animateWater(); drawWave(); controls.update(); renderer.render(scene,camera);
 }
 
@@ -181,7 +229,21 @@ $('turbine').addEventListener('change',selectType);
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Continua':'Pausa';$('pause').setAttribute('aria-pressed',String(paused));});
 $('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;selectType();if(controls)resetCamera();});
 $('help').addEventListener('click',()=>{$('guide').hidden=!$('guide').hidden;$('help').setAttribute('aria-expanded',String(!$('guide').hidden));});
-for(const [id,value] of [['hydroView','hydro'],['generatorView','generator']]) $(id).addEventListener('click',()=>{mode=value;if(hydro)hydro.visible=mode==='hydro';if(generator)generator.visible=mode==='generator';$('hydroView').setAttribute('aria-pressed',String(mode==='hydro'));$('generatorView').setAttribute('aria-pressed',String(mode==='generator'));updateLesson();if(controls)resetCamera();});
+for(const [id,value] of [['assembledView','assembled'],['cutawayView','cutaway'],['explodedView','exploded']]) {
+  $(id).addEventListener('click',()=>{
+    mode=value;
+    for(const [button,view] of [['assembledView','assembled'],['cutawayView','cutaway'],['explodedView','exploded']])
+      $(button).setAttribute('aria-pressed',String(mode===view));
+    applyView();updateLesson();
+  });
+}
+function applyView(){
+  for(const part of housingParts) {
+    if(part.material.transparent) part.material.opacity=mode==='assembled'?0.6:0.13;
+  }
+  for(const part of explodedParts) part.object.position.z=part.base+(mode==='exploded'?part.offset:0);
+}
+
 $('cameraReset').addEventListener('click',()=>{if(controls)resetCamera();});
 selectType();
 try {
@@ -189,14 +251,14 @@ try {
   scene = new THREE.Scene(); scene.background = new THREE.Color(0xdfeaf0);
   camera = new THREE.PerspectiveCamera(42,1,0.1,100);
   renderer = new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  renderer.domElement.setAttribute('aria-label','Model 3D interactiu de la turbina o de l’alternador');
+  renderer.domElement.setAttribute('aria-label','Model 3D de turbina i alternador acoblats');
   $('scene').appendChild(renderer.domElement);
-  controls = new OrbitControls(camera,renderer.domElement); controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=18;
+  controls = new OrbitControls(camera,renderer.domElement); controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=24;
   scene.add(new THREE.HemisphereLight(0xffffff,0x61737c,2.3));
   const light = new THREE.DirectionalLight(0xffffff,3);light.position.set(4,6,8);scene.add(light);
-  const floor = mesh(new THREE.BoxGeometry(8,0.12,6),material(0xb7cbd3),scene,0,-2.65,0);
+  const floor = mesh(new THREE.BoxGeometry(10,0.12,7),material(0xb7cbd3),scene,0,-2.65,0);
   floor.material.roughness=1;
-  buildHydro();buildGenerator();update();resetCamera();
+  buildHydro();update();resetCamera();
   new ResizeObserver(()=>{const w=$('scene').clientWidth,h=$('scene').clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}).observe($('scene'));
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){paused=true;$('pause').textContent='Continua';$('pause').setAttribute('aria-pressed','true');}
   $('loading').hidden=true;requestAnimationFrame(tick);
