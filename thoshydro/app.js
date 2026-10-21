@@ -406,6 +406,25 @@ function buildHydro() {
       const flange=mesh(new THREE.TorusGeometry(1.73,0.10,12,64),cast,hydro,0,0,z);
       housingParts.push(flange);
     }
+    // Upstream intake section and a downstream widening draft tube.
+    // All axial sections are oriented along local Z (the vertical turbine axis).
+    const intake=mesh(new THREE.CylinderGeometry(1.73,1.73,0.65,64,1,true),shell,hydro,0,0,-2.08);
+    intake.rotation.x=Math.PI/2;housingParts.push(intake);
+    const intakeLip=mesh(new THREE.TorusGeometry(1.73,0.11,12,64),cast,hydro,0,0,-2.40);
+    housingParts.push(intakeLip);
+    const diffuser=mesh(new THREE.CylinderGeometry(2.18,1.73,1.18,64,1,true),shell,hydro,0,0,2.37);
+    diffuser.rotation.x=Math.PI/2;housingParts.push(diffuser);
+    for(const [radius,z] of [[1.73,1.78],[2.18,2.96]]){
+      const ring=mesh(new THREE.TorusGeometry(radius,0.10,12,64),cast,hydro,0,0,z);
+      housingParts.push(ring);
+    }
+    // Fixed intake support struts and a protective bearing collar.
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2;
+      const strut=mesh(new THREE.BoxGeometry(1.17,0.14,0.22),cast,hydro,0.98*Math.cos(a),0.98*Math.sin(a),-1.88);
+      strut.rotation.z=a;
+    }
+    const bearing=mesh(new THREE.TorusGeometry(0.32,0.10,12,40),cast,hydro,0,0,-1.88);
     // Ten synchronised Kaplan inlet wicket gates on individual radial pivots.
     for(let i=0;i<10;i++){
       const a=i*2*Math.PI/10;
@@ -523,10 +542,10 @@ function animateWater() {
     } else {
       // Kaplan: upstream axial admission, guide-vane swirl, runner, axial discharge.
       const u=t<0.40?t/0.40:t<0.68?(t-0.40)/0.28:(t-0.68)/0.32;
-      const radius=t<0.68 ? 0.53+0.95*lane : (0.53+0.95*lane)*(1+0.12*u);
+      const radius=t<0.68 ? 0.53+0.95*lane : (0.53+0.95*lane)*(1+0.28*u);
       const angle=i*2.39996 + (t<0.40 ? 0.12*u : t<0.68 ? 0.12+0.40*u : 0.52+0.13*u);
       x=radius*Math.cos(angle);y=radius*Math.sin(angle);
-      z=t<0.40 ? -1.70+0.75*u : t<0.68 ? -0.95+1.15*u : 0.20+1.50*u;
+      z=t<0.40 ? -2.35+1.40*u : t<0.68 ? -0.95+1.15*u : 0.20+2.65*u;
     }
     a[3*i]=x;a[3*i+1]=y;a[3*i+2]=z;
   }
