@@ -134,3 +134,9 @@ button:hover{background:#d7e8ed}
 .characteristics .curve-result{background:#d5e9ef}
 .characteristics .curve-result[data-status="outside"]{background:#f5e7ce}
 .foundation-depth{background:#eaf2f5e8}
+
+/* Five-position water density selector: compact single-line legend */
+.foundation-water-selection{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 16px;margin-top:7px}
+.foundation-water-type{display:inline-flex;align-items:center;gap:7px;color:#12677b;font-size:.93rem;font-weight:700}
+.foundation-water-type::before{content:'💧';font-size:1.1rem}
+.foundation-water-hint{font-size:.76rem;color:#526a76}
