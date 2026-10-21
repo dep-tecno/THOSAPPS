@@ -15,6 +15,8 @@ $('simulationMode').addEventListener('click',()=>setAnalysisMode(false));
 $('characteristicsMode').addEventListener('click',()=>setAnalysisMode(true));
 function setAnalysisMode(curves){
   $('characteristics').hidden=!curves;
+  $('simulationSidebar').hidden=curves;
+  $('curvesSidebar').hidden=!curves;
   $('simulationContent').hidden=curves;
   $('simulationMode').setAttribute('aria-pressed',String(!curves));
   $('characteristicsMode').setAttribute('aria-pressed',String(curves));
