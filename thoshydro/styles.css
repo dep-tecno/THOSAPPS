@@ -39,3 +39,11 @@
 .curve-legend i{display:inline-block;width:11px;height:11px;border-radius:50%}
 #characteristicChart{width:100%;height:320px;display:block;border-radius:10px;background:#f2f7f9}
 @media(max-width:650px){.characteristics{padding:12px}.curve-controls{grid-template-columns:1fr;gap:8px}.analysis-switch button{padding:9px 6px;font-size:12px}}
+
+/* Prominent mode switch in the global header */
+.app-header .header-analysis-switch{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.app-header .header-analysis-switch button{font-size:12px;font-weight:750;padding:9px 12px;border:2px solid #68d3d9;background:#e6f9fa;color:#103747;white-space:nowrap}
+.app-header .header-analysis-switch button[aria-pressed=true]{background:#007c90;color:#fff;border-color:#68d3d9}
+.app-header .header-analysis-switch button:hover{background:#b5edf1;color:#103747}
+@media(max-width:1250px){.app-header .header-analysis-switch{order:2}.app-header .viewbar{order:3;width:100%;justify-content:flex-start;margin-left:0}}
+@media(max-width:650px){.app-header .header-analysis-switch{order:2;width:100%}.app-header .header-analysis-switch button{flex:1;white-space:normal}.app-header .viewbar{order:3}}
