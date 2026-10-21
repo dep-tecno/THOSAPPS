@@ -2,10 +2,10 @@ import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 
 const $ = id => document.getElementById(id);
 let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles, housingParts = [], explodedParts = [];
-let waterGuides = null;
+let waterGuides = null, francisHandwheel = null;
 let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0;
 const pitchBlades = [], francisGates = [];
-const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100 };
+const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100, valve: 100 };
 const waveContext = $('wave').getContext('2d');
 
 function update() {
@@ -18,7 +18,10 @@ function update() {
   $('needleValue').textContent = state.needle + ' %';
   state.guide = Number($('guide').value);
   $('guideValue').textContent = state.guide + ' %';
-  const actualFlow = state.type === 'pelton' ? state.flow * state.needle / 100 : state.type === 'francis' ? state.flow * state.guide / 100 : state.flow;
+  state.valve = Number($('valve').value);
+  $('valveValue').textContent = state.valve + ' %';
+  if(francisHandwheel) francisHandwheel.rotation.y = (1-state.valve/100)*Math.PI*3;
+  const actualFlow = state.type === 'pelton' ? state.flow * state.needle / 100 : state.type === 'francis' ? state.flow * state.guide/100 * state.valve/100 : state.flow;
   for(const gate of francisGates) gate.rotation.z = gate.userData.base + (1-state.guide/100)*1.1;
   const p = power(state.head, actualFlow, state.efficiency);
   const physics = peltonPhysics(state.head, actualFlow, state.efficiency);
@@ -129,7 +132,7 @@ function engineeringPelton(parent,runner,steel,flange,bronze) {
 }
 
 function buildHydro() {
-  clearGroup(hydro); waterGuides = null; pitchBlades.length = 0; francisGates.length = 0;
+  clearGroup(hydro); waterGuides = null; francisHandwheel = null; pitchBlades.length = 0; francisGates.length = 0;
   hydro = new THREE.Group(); scene.add(hydro); hydro.visible = true; housingParts = []; explodedParts = [];
   // Pelton: horizontal shaft (local Z). Francis/Kaplan: vertical shaft.
   // Rotating the entire hydraulic assembly preserves runner/water alignment.
@@ -245,14 +248,17 @@ function buildHydro() {
     valveHousing.scale.set(1.15,0.92,0.92);
     mesh(new THREE.BoxGeometry(0.60,0.38,0.57),valveBody,valveGroup,4.12,0.48,-0.12);
     mesh(new THREE.CylinderGeometry(0.065,0.065,0.75,16),valveSteel,valveGroup,4.12,0.94,-0.12);
-    const wheel=mesh(new THREE.TorusGeometry(0.37,0.042,12,48),valvePipe,valveGroup,4.12,1.33,-0.12);
+    francisHandwheel=new THREE.Group();
+    francisHandwheel.position.set(4.12,1.33,-0.12);
+    valveGroup.add(francisHandwheel);
+    const wheel=mesh(new THREE.TorusGeometry(0.37,0.042,12,48),valvePipe,francisHandwheel);
     wheel.rotation.x=Math.PI/2;
     for(let j=0;j<4;j++){
       const a=j*Math.PI/2;
-      const spoke=mesh(new THREE.BoxGeometry(0.06,0.65,0.06),valveSteel,valveGroup,4.12,1.33,-0.12);
+      const spoke=mesh(new THREE.BoxGeometry(0.65,0.06,0.06),valveSteel,francisHandwheel);
       spoke.rotation.y=a;
     }
-    mesh(new THREE.SphereGeometry(0.10,12,10),valveSteel,valveGroup,4.12,1.33,-0.12);
+    mesh(new THREE.SphereGeometry(0.10,12,10),valveSteel,francisHandwheel);
 
     for(let i=0;i<18;i++){
       const a=i*2*Math.PI/18;
@@ -423,7 +429,7 @@ function buildCoupledAlternator(parent,steel) {
 
 function animateWater() {
   if (!particles) return;
-  const activeFlow = state.type === 'pelton' ? state.flow*state.needle/100 : state.type === 'francis' ? state.flow*state.guide/100 : state.flow;
+  const activeFlow = state.type === 'pelton' ? state.flow*state.needle/100 : state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow;
   particles.visible = activeFlow > 0;
   if(waterGuides){waterGuides.visible=activeFlow>0;waterGuides.children.forEach(line=>{line.material.opacity=0.12+0.20*Math.min(1,activeFlow/10);});}
   particles.material.size = state.type === 'francis' ? 0.065 : state.type === 'pelton' ? 0.03 + 0.055*Math.sqrt(state.needle/100) : 0.075;
@@ -479,7 +485,7 @@ function drawWave() {
   ctx.font = '12px system-ui'; ctx.fillStyle = '#526e7b'; ctx.fillText('+',12,30); ctx.fillText('−',12,155); ctx.fillText('temps →',w-80,h-5);
   // Magnetic flux is proportional to cos(phase), induced voltage to sin(phase).
   ctx.strokeStyle = '#00869b'; ctx.lineWidth = 2.5; ctx.beginPath();
-  for(let x=30;x<w-15;x++) { const theta = phase - (w-16-x)/(w-46)*Math.PI*4; const y = 90 - ((state.flow > 0 && (state.type !== 'pelton' || state.needle > 0) && (state.type !== 'francis' || state.guide > 0)) ? 60*Math.sin(theta) : 0); if(x===30)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
+  for(let x=30;x<w-15;x++) { const theta = phase - (w-16-x)/(w-46)*Math.PI*4; const y = 90 - ((state.flow > 0 && (state.type !== 'pelton' || state.needle > 0) && (state.type !== 'francis' || (state.guide > 0 && state.valve > 0))) ? 60*Math.sin(theta) : 0); if(x===30)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
   ctx.stroke(); ctx.fillStyle = '#ea8834'; ctx.beginPath(); ctx.arc(w-16,90-((state.flow>0 && (state.type !== 'pelton' || state.needle > 0) && (state.type !== 'francis' || state.guide > 0))?60*Math.sin(phase):0),4,0,Math.PI*2);ctx.fill();
 }
 
@@ -488,7 +494,7 @@ function tick(time) {
   requestAnimationFrame(tick);
   const dt = lastTime ? Math.min((time-lastTime)/1000,0.05) : 0; lastTime=time;
   if (!paused && !document.hidden && state.flow > 0 && (state.type !== 'pelton' || state.needle > 0)) {
-    const effectiveFlow = state.type === 'francis' ? state.flow*state.guide/100 : state.flow;
+    const effectiveFlow = state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow;
     const relative = Math.sqrt(state.head/TYPES[state.type].head) * Math.sqrt(effectiveFlow/TYPES[state.type].flow);
     // Animation is deliberately slowed down; Pelton angular speed follows jet speed.
     const pelton = peltonPhysics(state.head,state.flow*state.needle/100,state.efficiency);
@@ -500,10 +506,10 @@ function tick(time) {
   animateWater(); drawWave(); controls.update(); renderer.render(scene,camera);
 }
 
-for (const key of ['head','flow','efficiency','pitch','needle','guide']) $(key).addEventListener('input',update);
+for (const key of ['head','flow','efficiency','pitch','needle','guide','valve']) $(key).addEventListener('input',update);
 $('turbine').addEventListener('change',selectType);
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Continua':'Pausa';$('pause').setAttribute('aria-pressed',String(paused));});
-$('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;$('guide').value=100;selectType();if(controls)resetCamera();});
+$('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;$('guide').value=100;$('valve').value=100;selectType();if(controls)resetCamera();});
 $('help').addEventListener('click',()=>{$('guide').hidden=!$('guide').hidden;$('help').setAttribute('aria-expanded',String(!$('guide').hidden));});
 for(const [id,value] of [['assembledView','assembled'],['cutawayView','cutaway'],['explodedView','exploded']]) {
   $(id).addEventListener('click',()=>{
