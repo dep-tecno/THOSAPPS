@@ -47,9 +47,9 @@ function selectType() {
 function updateLesson() {
   const type = TYPES[state.type];
   $('sceneTitle').textContent = 'Turbina ' + type.name + (state.type === 'pelton' ? ' · alternador acoblat' : ' · model didàctic');
-  $('sceneHint').textContent = mode === 'exploded' ? 'Vista d’especejament: components separats' : mode === 'cutaway' ? 'Carcasses transparents: mecanisme interior' : 'Turbina, eix i alternador en una sola instal·lació';
+  $('sceneHint').textContent = (state.type === 'pelton' ? 'Eix horitzontal' : 'Eix vertical') + ' · ' + (mode === 'exploded' ? 'components separats' : mode === 'cutaway' ? 'mecanisme interior' : 'vista completa');
   $('lessonTitle').textContent = 'Com funciona la ' + type.name + '?';
-  $('lesson').textContent = type.lesson + (state.type === 'pelton' ? ' L’eix transmet el gir al rotor de l’alternador; el camp magnètic variable indueix tensió al bobinatge fix.' : ' La integració mecànica de l’alternador està desenvolupada actualment per a la Pelton.');
+  $('lesson').textContent = type.lesson + (state.type === 'pelton' ? ' L’eix transmet el gir al rotor de l’alternador; el camp magnètic variable indueix tensió al bobinatge fix.' : ' En aquesta vista, l’eix és vertical i la sortida axial dirigeix l’aigua cap avall. La integració mecànica de l’alternador està desenvolupada actualment per a la Pelton.');
 }
 function material(color, options = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.3, ...options }); }
 function mesh(geometry, mat, parent, x = 0, y = 0, z = 0) {
@@ -126,6 +126,9 @@ function engineeringPelton(parent,runner,steel,flange,bronze) {
 function buildHydro() {
   clearGroup(hydro); pitchBlades.length = 0;
   hydro = new THREE.Group(); scene.add(hydro); hydro.visible = true; housingParts = []; explodedParts = [];
+  // Pelton: horizontal shaft (local Z). Francis/Kaplan: vertical shaft.
+  // Rotating the entire hydraulic assembly preserves runner/water alignment.
+  if (state.type !== 'pelton') { hydro.rotation.x = Math.PI / 2; hydro.position.y = 0.6; }
   rotor = new THREE.Group(); hydro.add(rotor);
   const orange = material(0xe98b36), steel = material(0x718c9a), water = material(0x009fc7, { transparent: true, opacity: 0.38, depthWrite: false });
   cylinder(0.13, 3.8, steel, hydro, 0, 0, 0.45);
