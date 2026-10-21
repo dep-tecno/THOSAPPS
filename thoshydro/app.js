@@ -1,3 +1,4 @@
+import { createTelemetry } from './charts.mjs';
 import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 
 const $ = id => document.getElementById(id);
@@ -7,6 +8,7 @@ let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0, 
 const pitchBlades = [], francisGates = [], kaplanGates = [];
 const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100, guide: 100, valve: 100, kaplanGuide: 100 };
 const waveContext = $('wave').getContext('2d');
+const telemetry = createTelemetry(document);
 
 function update() {
   for (const key of ['head', 'flow', 'efficiency', 'pitch']) state[key] = Number($(key).value);
@@ -52,6 +54,9 @@ function update() {
   $('kaplanRpm').textContent = kaplanRpm.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' rpm';
   $('kaplanTorque').textContent = (kaplanOmega>0 ? p.shaft/kaplanOmega : 0).toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' N·m';
 
+  const rpm = state.type==='pelton' ? physics.rpm : state.type==='francis' ? francisRpm : kaplanRpm;
+  const torque = state.type==='pelton' ? physics.torque : state.type==='francis' ? (francisOmega>0?p.shaft/francisOmega:0) : (kaplanOmega>0?p.shaft/kaplanOmega:0);
+  telemetry.setValues(p.electric/1000,rpm,torque);
   for (const blade of pitchBlades) blade.rotation.x = state.pitch * Math.PI / 180;
   $('waveNote').textContent = actualFlow === 0
     ? 'Cabal nul: l’eix s’atura i no hi ha tensió induïda en aquest model.'
@@ -62,6 +67,7 @@ function update() {
 function selectType() {
   state.type = $('turbine').value;
   angularSpeed = 0;
+  telemetry.reset();
   const type = TYPES[state.type];
   $('head').max = type.maxHead; $('head').min = state.type === 'kaplan' ? 1 : 10;
   $('head').step = state.type === 'kaplan' ? 1 : 10; $('head').value = type.head;
@@ -619,6 +625,7 @@ function tick(time) {
     }
     phase = (phase + dt*angularSpeed) % (Math.PI*2);
     waterTime += dt*Math.min(2,relative);
+    telemetry.sample(dt);
   }
   if (rotor) rotor.rotation.z = -phase;
   
@@ -627,6 +634,7 @@ function tick(time) {
 
 for (const key of ['head','flow','efficiency','pitch','needle','guide','valve','kaplanGuide']) $(key).addEventListener('input',update);
 $('turbine').addEventListener('change',selectType);
+$('clearCharts').addEventListener('click',()=>telemetry.reset());
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Continua':'Pausa';$('pause').setAttribute('aria-pressed',String(paused));});
 $('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;angularSpeed=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;$('guide').value=100;$('valve').value=100;$('kaplanGuide').value=100;selectType();if(controls)resetCamera();});
 $('help').addEventListener('click',()=>{$('usageGuide').hidden=!$('usageGuide').hidden;$('help').setAttribute('aria-expanded',String(!$('usageGuide').hidden));});
