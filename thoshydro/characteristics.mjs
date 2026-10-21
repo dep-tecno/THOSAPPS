@@ -24,6 +24,16 @@ export function createCharacteristics(doc){
  const head=doc.getElementById('curveHead'),flow=doc.getElementById('curveFlow');
  const tabs=[...panel.querySelectorAll('[data-curve]')];
  let tab='efficiency';
+ const guides={
+  efficiency:{title:'Interpretar el rendiment',intro:'El rendiment η indica la fracció de potència hidràulica convertida en potència mecànica útil.',formula:'η = P eix / P hidràulica',observation:'Busca el màxim de cada corba. Compara la forma de les corbes quan canvies el salt.',challenge:'Mantén el cabal i modifica el salt. Quina turbina conserva millor el rendiment?',concepts:'Rendiment · Càrrega parcial · Punt de màxim rendiment'},
+  power:{title:'Interpretar la potència',intro:'La potència depèn del salt, del cabal i dels rendiments de la turbina i l’alternador.',formula:'P elèctrica = ρ · g · Q · H · η turbina · η alternador',observation:'Compara la potència disponible a diferents percentatges del cabal seleccionat.',challenge:'Duplica el salt mantenint el cabal. Com canvia la potència?',concepts:'Salt · Cabal · Potència hidràulica · Potència elèctrica'},
+  selection:{title:'Escollir una turbina',intro:'Pelton s’associa a salts elevats; Francis, a condicions intermèdies; Kaplan, a salts baixos i cabals elevats.',formula:'Selecció segons H (m) i Q (m³/s)',observation:'Localitza el punt de treball i identifica les zones orientatives que el contenen.',challenge:'Augmenta el cabal i redueix el salt. Cap a quina família de turbines et desplaces?',concepts:'Pelton · Francis · Kaplan · Zones de funcionament'}
+ };
+ function updateGuide(){
+  const g=guides[tab];
+  for(const [id,value] of [['curveGuideTitle',g.title],['curveGuideIntro',g.intro],['curveGuideFormula',g.formula],['curveGuideObservation',g.observation],['curveGuideChallenge',g.challenge],['curveGuideConcepts',g.concepts]])doc.getElementById(id).textContent=value;
+ }
+ updateGuide();
  const fmt=(n,d=1)=>n.toLocaleString('ca-ES',{maximumFractionDigits:d});
  function recommendation(h,q){
    const eligible=Object.entries(profiles).filter(([,p])=>h>=p.minHead&&h<=p.maxHead&&q>=p.minFlow&&q<=p.maxFlow);
@@ -76,7 +86,7 @@ export function createCharacteristics(doc){
    doc.getElementById('curveNote').textContent=tab==='efficiency'?'El salt modifica el punt de màxim rendiment i la forma de cada corba. El cabal desplaça els punts de funcionament. Model didàctic, no dades reals.':'El salt i el cabal seleccionats modifiquen la corba de potència disponible (0–100 % del cabal seleccionat). Alternador amb rendiment del 90 %. Model didàctic.';
  }
  for(const el of [head,flow])el.addEventListener('input',draw);
- tabs.forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.curve;tabs.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));draw();}));
+ tabs.forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.curve;tabs.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));updateGuide();draw();}));
  window.addEventListener('resize',draw);
  return {draw};
 }
