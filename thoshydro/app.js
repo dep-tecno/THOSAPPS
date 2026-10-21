@@ -11,17 +11,24 @@ const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, n
 const waveContext = $('wave').getContext('2d');
 const telemetry = createTelemetry(document);
 const characteristics = createCharacteristics(document);
-$('simulationMode').addEventListener('click',()=>setAnalysisMode(false));
-$('characteristicsMode').addEventListener('click',()=>setAnalysisMode(true));
-function setAnalysisMode(curves){
+$('fundamentalsMode').addEventListener('click',()=>setAnalysisMode('fundamentals'));
+$('simulationMode').addEventListener('click',()=>setAnalysisMode('simulation'));
+$('characteristicsMode').addEventListener('click',()=>setAnalysisMode('curves'));
+function setAnalysisMode(mode){
+  const curves=mode==='curves',fundamentals=mode==='fundamentals',simulation=mode==='simulation';
   $('characteristics').hidden=!curves;
-  $('simulationSidebar').hidden=curves;
+  $('fundamentals').hidden=!fundamentals;
+  $('simulationSidebar').hidden=!simulation;
   $('curvesSidebar').hidden=!curves;
-  $('simulationContent').hidden=curves;
-  $('simulationMode').setAttribute('aria-pressed',String(!curves));
+  $('fundamentalsSidebar').hidden=!fundamentals;
+  $('simulationContent').hidden=!simulation;
+  $('fundamentalsMode').setAttribute('aria-pressed',String(fundamentals));
+  $('simulationMode').setAttribute('aria-pressed',String(simulation));
   $('characteristicsMode').setAttribute('aria-pressed',String(curves));
+  const viewbar=document.querySelector('.app-header .viewbar');
+  if(viewbar)viewbar.hidden=!simulation;
   if(curves)characteristics.draw();
-  else if(renderer&&camera){const w=$('scene').clientWidth,h=$('scene').clientHeight;if(w&&h){renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}}
+  else if(simulation&&renderer&&camera){const w=$('scene').clientWidth,h=$('scene').clientHeight;if(w&&h){renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}}
 }
 
 
