@@ -130,38 +130,63 @@ function buildHydro() {
     const flange = material(0x526c79,{metalness:0.65});
     cylinder(1.12,0.23,dark,rotor);
     cylinder(0.45,0.44,bronze,rotor);
+    // Pelton runner: eighteen double-cup buckets with sculpted concave surfaces,
+    // raised lips and a central water splitter. All components rotate together.
     for (let i=0;i<18;i++) {
       const angle=i*Math.PI*2/18;
       const bucket=new THREE.Group();
-      bucket.position.set(1.32*Math.cos(angle),1.32*Math.sin(angle),0);
+      bucket.position.set(1.31*Math.cos(angle),1.31*Math.sin(angle),0);
       bucket.rotation.z=angle;
-      // Lobes use an actual concave surface, not spheres.
+      rotor.add(bucket);
+      mesh(new THREE.BoxGeometry(0.50,0.19,0.40),bronze,bucket,-0.12,0,0);
       for(const sign of [-1,1]) {
-        const vertices=[],indices=[],nu=14,nv=12;
-        for(let u=0;u<=nu;u++) for(let v=0;v<=nv;v++) {
-          const U=u/nu*2-1,V=v/nv*2-1;
-          const x=0.24+U*0.38;
-          const z=sign*(0.19+V*0.17);
-          const y=0.12-0.23*(1-U*U)*(1-V*V);
-          vertices.push(x,y,z);
+        const vertices=[],indices=[],nu=24,nv=20;
+        for(let u=0;u<=nu;u++)for(let v=0;v<=nv;v++){
+          const U=2*u/nu-1,V=2*v/nv-1;
+          const radial=0.21+0.43*U;
+          const axial=sign*(0.23+0.20*V);
+          const depth=0.28*(1-U*U)*(1-V*V);
+          const tangent=0.08+0.13*U*U+0.08*V*V-depth;
+          vertices.push(radial,tangent,axial);
         }
-        for(let u=0;u<nu;u++) for(let v=0;v<nv;v++){
-          const k=u*(nv+1)+v;indices.push(k,k+1,k+nv+1,k+1,k+nv+2,k+nv+1);
+        for(let u=0;u<nu;u++)for(let v=0;v<nv;v++){
+          const k=u*(nv+1)+v;
+          indices.push(k,k+1,k+nv+1,k+1,k+nv+2,k+nv+1);
         }
         const geo=new THREE.BufferGeometry();
         geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
         geo.setIndex(indices);geo.computeVertexNormals();
-        mesh(geo,bronze,bucket).material.side=THREE.DoubleSide;
+        const cup=mesh(geo,bronze,bucket);
+        cup.material.side=THREE.DoubleSide;
+        // The visible thick rolled edge distinguishes the cup from a flat plate.
+        const lip=[];
+        for(let j=0;j<=24;j++){
+          const U=-1+2*j/24;
+          lip.push(new THREE.Vector3(0.21+0.43*U,0.21+0.13*U*U,sign*0.43));
+        }
+        tube(lip,0.027,bronze,bucket);
+        const outer=[];
+        for(let j=0;j<=20;j++){
+          const V=-1+2*j/20;
+          outer.push(new THREE.Vector3(0.64,0.21+0.08*V*V,sign*(0.23+0.20*V)));
+        }
+        tube(outer,0.025,bronze,bucket);
       }
-      const splitter=mesh(new THREE.ConeGeometry(0.11,0.55,4),bronze,bucket,0.25,0.10,0);
+      const splitter=mesh(new THREE.ConeGeometry(0.115,0.68,4),bronze,bucket,0.24,0.13,0);
       splitter.rotation.z=-Math.PI/2;
-      rotor.add(bucket);
+      boltCircle(bucket,0.14,0.25,4,dark,0.022);
     }
-    // Casing: annular shroud, front inspection ring and mounting feet.
-    const shell=mesh(new THREE.TorusGeometry(1.78,0.32,18,90),casing,hydro);
-    housingParts.push(shell);
-    const rim=mesh(new THREE.TorusGeometry(1.8,0.045,8,90),flange,hydro,0,0,0.4);
-    housingParts.push(rim);
+    // True sector-cut turbine housing: curved metal wall and annular end plates.
+    // The missing front-right sector exposes the runner instead of hiding it.
+    const casingMetal=material(0x386b88,{metalness:0.58,roughness:0.32,side:THREE.DoubleSide,transparent:true,opacity:0.95,depthWrite:false});
+    const shell=mesh(new THREE.CylinderGeometry(1.92,1.92,0.98,96,1,true,Math.PI*0.32,Math.PI*1.48),casingMetal,hydro);
+    shell.rotation.x=Math.PI/2;housingParts.push(shell);
+    for(const z of [-0.50,0.50]){
+      const face=mesh(new THREE.RingGeometry(1.55,1.94,96,1,Math.PI*0.32,Math.PI*1.48),casingMetal,hydro,0,0,z);
+      housingParts.push(face);
+      const rim=mesh(new THREE.TorusGeometry(1.91,0.06,12,96,Math.PI*1.48),flange,hydro,0,0,z);
+      rim.rotation.z=Math.PI*0.32;housingParts.push(rim);
+    }
     for(const x of [-1.15,1.15]) mesh(new THREE.BoxGeometry(0.38,0.8,0.55),flange,hydro,x,-2.03,0);
     // Tangential jet entering from the left, at the upper perimeter.
     const nozzle=mesh(new THREE.CylinderGeometry(0.1,0.25,0.72,32),flange,hydro,-2.28,1.36,0);
@@ -295,7 +320,7 @@ for(const [id,value] of [['assembledView','assembled'],['cutawayView','cutaway']
 }
 function applyView(){
   for(const part of housingParts) {
-    if(part.material.transparent) part.material.opacity=mode==='assembled'?0.6:0.13;
+    if(part.material.transparent) part.material.opacity=mode==='assembled'?0.93:0.16;
   }
   for(const part of explodedParts) part.object.position.z=part.base+(mode==='exploded'?part.offset:0);
 }
