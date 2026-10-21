@@ -1,10 +1,10 @@
-import { TYPES, power, formatPower } from './model.mjs';
+import { TYPES, power, formatPower, peltonPhysics } from './model.mjs';
 
 const $ = id => document.getElementById(id);
 let THREE, OrbitControls, renderer, scene, camera, controls, hydro, rotor, generator, magnet, particles, housingParts = [], explodedParts = [];
 let mode = 'assembled', paused = false, phase = 0, lastTime = 0, waterTime = 0;
 const pitchBlades = [];
-const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30 };
+const state = { type: 'pelton', head: 300, flow: 1, efficiency: 88, pitch: 30, needle: 100 };
 const waveContext = $('wave').getContext('2d');
 
 function update() {
@@ -13,10 +13,17 @@ function update() {
   $('flowValue').textContent = state.flow.toLocaleString('ca-ES') + ' m³/s';
   $('efficiencyValue').textContent = state.efficiency + ' %';
   $('pitchValue').textContent = state.pitch + '°';
-  const p = power(state.head, state.flow, state.efficiency);
+  state.needle = Number($('needle').value);
+  $('needleValue').textContent = state.needle + ' %';
+  const actualFlow = state.type === 'pelton' ? state.flow * state.needle / 100 : state.flow;
+  const p = power(state.head, actualFlow, state.efficiency);
+  const physics = peltonPhysics(state.head, actualFlow, state.efficiency);
+  $('jetSpeed').textContent = physics.jetSpeed.toLocaleString('ca-ES',{maximumFractionDigits:1}) + ' m/s';
+  $('peltonRpm').textContent = physics.rpm.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' rpm';
+  $('peltonTorque').textContent = physics.torque.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' N·m';
   for (const key of ['hydraulic', 'shaft', 'electric']) $(key).textContent = formatPower(p[key]);
   for (const blade of pitchBlades) blade.rotation.x = state.pitch * Math.PI / 180;
-  $('waveNote').textContent = state.flow === 0
+  $('waveNote').textContent = actualFlow === 0
     ? 'Cabal nul: l’eix s’atura i no hi ha tensió induïda en aquest model.'
     : 'Una parella de pols: una volta produeix un cicle. Ona normalitzada i temps alentit; no representa volts ni freqüència de xarxa.';
   drawWave();
@@ -31,6 +38,7 @@ function selectType() {
   $('efficiency').value = type.efficiency;
   $('description').textContent = type.description; $('rangeNote').textContent = type.note;
   $('pitch').hidden = $('pitchLabel').hidden = state.type !== 'kaplan';
+  $('peltonControls').hidden = $('peltonMetrics').hidden = state.type !== 'pelton';
   if (THREE && scene) buildHydro();
   if (THREE && scene) applyView();
   updateLesson(); update();
@@ -261,7 +269,8 @@ function buildCoupledAlternator(parent,steel) {
 
 function animateWater() {
   if (!particles) return;
-  particles.visible = state.flow > 0;
+  particles.visible = state.flow > 0 && (state.type !== 'pelton' || state.needle > 0);
+  particles.material.size = state.type === 'pelton' ? 0.03 + 0.055*Math.sqrt(state.needle/100) : 0.075;
   const a = particles.geometry.attributes.position.array;
   for (let i = 0; i < 90; i++) {
     const t = (i / 90 + waterTime * 0.3) % 1, lane = ((i * 7) % 13) / 13;
@@ -287,17 +296,19 @@ function drawWave() {
   ctx.font = '12px system-ui'; ctx.fillStyle = '#526e7b'; ctx.fillText('+',12,30); ctx.fillText('−',12,155); ctx.fillText('temps →',w-80,h-5);
   // Magnetic flux is proportional to cos(phase), induced voltage to sin(phase).
   ctx.strokeStyle = '#00869b'; ctx.lineWidth = 2.5; ctx.beginPath();
-  for(let x=30;x<w-15;x++) { const theta = phase - (w-16-x)/(w-46)*Math.PI*4; const y = 90 - (state.flow > 0 ? 60*Math.sin(theta) : 0); if(x===30)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
-  ctx.stroke(); ctx.fillStyle = '#ea8834'; ctx.beginPath(); ctx.arc(w-16,90-(state.flow>0?60*Math.sin(phase):0),4,0,Math.PI*2);ctx.fill();
+  for(let x=30;x<w-15;x++) { const theta = phase - (w-16-x)/(w-46)*Math.PI*4; const y = 90 - ((state.flow > 0 && (state.type !== 'pelton' || state.needle > 0)) ? 60*Math.sin(theta) : 0); if(x===30)ctx.moveTo(x,y);else ctx.lineTo(x,y); }
+  ctx.stroke(); ctx.fillStyle = '#ea8834'; ctx.beginPath(); ctx.arc(w-16,90-((state.flow>0 && (state.type !== 'pelton' || state.needle > 0))?60*Math.sin(phase):0),4,0,Math.PI*2);ctx.fill();
 }
 
 function resetCamera() { camera.position.set(6,4.1,9.5); controls.target.set(0,0,0); controls.update(); }
 function tick(time) {
   requestAnimationFrame(tick);
   const dt = lastTime ? Math.min((time-lastTime)/1000,0.05) : 0; lastTime=time;
-  if (!paused && !document.hidden && state.flow > 0) {
+  if (!paused && !document.hidden && state.flow > 0 && (state.type !== 'pelton' || state.needle > 0)) {
     const relative = Math.sqrt(state.head/TYPES[state.type].head) * Math.sqrt(state.flow/TYPES[state.type].flow);
-    const speed = Math.min(3,relative)*1.3;
+    // Animation is deliberately slowed down; Pelton angular speed follows jet speed.
+    const pelton = peltonPhysics(state.head,state.flow*state.needle/100,state.efficiency);
+    const speed = state.type === 'pelton' ? pelton.rpm/60*2*Math.PI*0.035 : Math.min(3,relative)*1.3;
     phase = (phase + dt*speed) % (Math.PI*2); waterTime += dt*Math.min(2,relative);
   }
   if (rotor) rotor.rotation.z = -phase;
@@ -305,7 +316,7 @@ function tick(time) {
   animateWater(); drawWave(); controls.update(); renderer.render(scene,camera);
 }
 
-for (const key of ['head','flow','efficiency','pitch']) $(key).addEventListener('input',update);
+for (const key of ['head','flow','efficiency','pitch','needle']) $(key).addEventListener('input',update);
 $('turbine').addEventListener('change',selectType);
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Continua':'Pausa';$('pause').setAttribute('aria-pressed',String(paused));});
 $('reset').addEventListener('click',()=>{paused=false;phase=0;waterTime=0;$('pause').textContent='Pausa';$('pause').setAttribute('aria-pressed','false');$('pitch').value=30;selectType();if(controls)resetCamera();});
