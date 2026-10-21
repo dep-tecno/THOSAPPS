@@ -490,8 +490,8 @@ function buildHydro() {
     // Fixed stator and rotating magnetic field, coupled to the Kaplan shaft.
     buildCoupledAlternator(hydro,cast);
   }
-  const positions = new Float32Array((state.type === 'francis' ? 480 : state.type === 'pelton' ? 900 : 90) * 3);
-  particles = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x42c9f5, size: 0.075, transparent: true, opacity: 0.86, depthWrite: false }));
+  const positions = new Float32Array((state.type === 'francis' ? 480 : 90) * 3);
+  particles = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x007bce, size: 0.075 }));
   particles.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); hydro.add(particles);
 }
 
@@ -533,7 +533,7 @@ function animateWater() {
   const activeFlow = state.type === 'pelton' ? state.flow*state.needle/100 : state.type === 'francis' ? state.flow*state.guide/100*state.valve/100 : state.flow*state.kaplanGuide/100;
   particles.visible = activeFlow > 0;
   if(waterGuides){waterGuides.visible=activeFlow>0;waterGuides.children.forEach(line=>{line.material.opacity=0.12+0.20*Math.min(1,activeFlow/10);});}
-  particles.material.size = state.type === 'francis' ? 0.065 : state.type === 'pelton' ? 0.025 + 0.027*Math.sqrt(state.needle/100) : 0.075;
+  particles.material.size = state.type === 'francis' ? 0.065 : state.type === 'pelton' ? 0.03 + 0.055*Math.sqrt(state.needle/100) : 0.075;
   const a = particles.geometry.attributes.position.array;
   const count = a.length / 3;
   for (let i=0; i<count; i++) {
@@ -542,27 +542,8 @@ function animateWater() {
     const t = (i/count + waterTime*(state.type==='francis'?0.22:0.3))%1;
     let x,y,z;
     if (state.type==='pelton') {
-      // Concentrated jet from the nozzle to the upper-left Pelton buckets.
-      // The water splits into two curved sheets and falls away after impact.
-      const side=(i%2===0 ? -1 : 1);
-      const jitter=(strand-0.5);
-      if(t<0.48){
-        const u=t/0.48;
-        x=-1.97+u*1.45;
-        y=1.36+jitter*0.10;
-        z=(lane-0.5)*0.13;
-      } else if(t<0.76){
-        const u=(t-0.48)/0.28;
-        const spread=Math.sin(u*Math.PI*0.65);
-        x=-0.52+0.68*u-0.24*u*u;
-        y=1.36-0.42*u-0.26*u*u+jitter*0.12;
-        z=side*(0.06+0.46*spread)+jitter*0.10;
-      } else {
-        const u=(t-0.76)/0.24;
-        x=-0.08+0.35*u+jitter*0.32*u;
-        y=0.68-2.35*u*u-(lane*0.25*u);
-        z=side*(0.49+0.46*u)+(lane-0.5)*0.48*u;
-      }
+      if(t<0.65){x=-2.3+t/0.65*2.6;y=1.45;z=(lane-0.5)*0.16;}
+      else {const u=(t-0.65)/0.35;x=0.3+u;y=1.45-u*3.6;z=(lane-0.5)*u;}
     } else if(state.type==='francis') {
       // Local XY = radial plane, local +Z = downward draft tube.
       // 0–32%: spiral casing; 32–70%: distributor/runner;
