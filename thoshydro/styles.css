@@ -96,3 +96,19 @@
 
 .foundation-stage-icon{display:block;width:40px;height:40px;color:#007c90;flex-shrink:0}
 .foundation-stages>div{justify-content:center;min-height:155px}
+
+.sidebar-energy{margin-top:22px;padding:14px;background:#eff7f9;border:1px solid #c5e0e7;border-radius:12px}
+.sidebar-energy h3{font-size:15px;margin:0 0 12px}
+.sidebar-energy-chain{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.sidebar-energy-chain>div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;background:white;border-radius:8px;padding:9px 3px;min-width:0}
+.sidebar-energy-chain div>span{font-size:26px;color:#007c90}
+.sidebar-energy-chain strong{font-size:12px}
+.sidebar-energy-chain small{font-size:10px;line-height:1.3;min-height:25px}
+.sidebar-energy-chain output{font-size:11px;font-weight:700;white-space:normal;overflow-wrap:anywhere}
+.sidebar-energy-eff{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:13px;font-size:12px}
+.sidebar-energy-track{grid-column:1/-1;height:7px;background:#cfdee4;border-radius:9px;overflow:hidden}
+.sidebar-energy-track>div{height:100%;background:#168ca3}
+.sidebar-energy-total{display:flex;justify-content:space-between;align-items:center;margin-top:15px;border-top:1px solid #c6dce3;padding-top:12px;font-size:13px;font-weight:700}
+.sidebar-energy-total strong{font-size:20px;color:#007c90}
+.sidebar-energy details{margin-top:14px;font-size:12px;line-height:1.55}
+.sidebar-energy summary{cursor:pointer;font-weight:700;color:#007c90}
