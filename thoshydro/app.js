@@ -40,6 +40,13 @@ function update() {
   $('francisFlow').textContent = actualFlow.toLocaleString('ca-ES',{maximumFractionDigits:2}) + ' m³/s';
   $('francisRpm').textContent = francisRpm.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' rpm';
   $('francisTorque').textContent = (francisOmega>0 ? p.shaft/francisOmega : 0).toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' N·m';
+  // Kaplan: simplified variable-pitch axial turbine indicators.
+  const kaplanRpm = actualFlow > 0 && state.type === 'kaplan'
+    ? 150 * Math.sqrt(Math.max(0,state.head)/10) * Math.sqrt(actualFlow/Math.max(0.001,state.flow)) : 0;
+  const kaplanOmega = kaplanRpm*2*Math.PI/60;
+  $('kaplanFlow').textContent = actualFlow.toLocaleString('ca-ES',{maximumFractionDigits:2}) + ' m³/s';
+  $('kaplanRpm').textContent = kaplanRpm.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' rpm';
+  $('kaplanTorque').textContent = (kaplanOmega>0 ? p.shaft/kaplanOmega : 0).toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' N·m';
 
   for (const blade of pitchBlades) blade.rotation.x = state.pitch * Math.PI / 180;
   $('waveNote').textContent = actualFlow === 0
@@ -60,6 +67,7 @@ function selectType() {
   $('pitch').hidden = $('pitchLabel').hidden = state.type !== 'kaplan';
   $('peltonControls').hidden = $('peltonMetrics').hidden = state.type !== 'pelton';
   $('francisMetrics').hidden = state.type !== 'francis';
+  $('kaplanMetrics').hidden = state.type !== 'kaplan';
   $('francisControls').hidden = state.type !== 'francis';
   if (THREE && scene) buildHydro();
   if (THREE && scene) applyView();
@@ -71,7 +79,7 @@ function updateLesson() {
   $('sceneTitle').textContent = 'Turbina ' + type.name + (state.type === 'pelton' ? ' · alternador acoblat' : ' · model didàctic');
   $('sceneHint').textContent = (state.type === 'pelton' ? 'Eix horitzontal' : 'Eix vertical') + ' · ' + (mode === 'exploded' ? 'components separats' : mode === 'cutaway' ? 'mecanisme interior' : 'vista completa');
   $('lessonTitle').textContent = 'Com funciona la ' + type.name + '?';
-  $('lesson').textContent = type.lesson + (state.type === 'pelton' ? ' L’eix transmet el gir al rotor de l’alternador; el camp magnètic variable indueix tensió al bobinatge fix.' : ' En aquesta vista, l’eix és vertical i la sortida axial dirigeix l’aigua cap avall. La integració mecànica de l’alternador està desenvolupada actualment per a la Pelton.');
+  $('lesson').textContent = type.lesson + (state.type === 'pelton' ? ' L’eix transmet el gir al rotor de l’alternador; el camp magnètic variable indueix tensió al bobinatge fix.' : ' En aquesta vista, l’eix és vertical i la sortida axial dirigeix l’aigua cap avall. L’eix transmet el moviment al rotor magnètic de l’alternador, mentre l’estator roman fix.');
 }
 function material(color, options = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.3, ...options }); }
 function mesh(geometry, mat, parent, x = 0, y = 0, z = 0) {
@@ -408,6 +416,8 @@ function buildHydro() {
     }
     cylinder(0.43,0.95,orange,rotor);
     cylinder(0.17,3.2,cast,rotor,0,0,-1.1);
+    // Fixed stator and rotating magnetic field, coupled to the Kaplan shaft.
+    buildCoupledAlternator(hydro,cast);
   }
   const positions = new Float32Array((state.type === 'francis' ? 480 : 90) * 3);
   particles = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x007bce, size: 0.075 }));
