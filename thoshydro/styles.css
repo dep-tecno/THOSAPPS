@@ -64,3 +64,32 @@
 .characteristics .curve-result[data-status="outside"] .curve-result-icon{background:#a7620e}
 .characteristics .curve-result[data-status="outside"] .curve-result-heading{color:#75420c}
 @media(max-width:650px){.characteristics .curve-result{padding:14px}.characteristics .curve-result-text{font-size:15px}}
+
+/* Interactive fundamentals: standalone classroom experiments */
+[hidden]{display:none!important}
+.fundamentals .foundation-card{background:#fff;border:1px solid #d2e2e9;border-radius:12px;padding:22px;margin-top:20px}
+.foundation-card h3{font-size:19px;color:#173c4e;margin:0 0 10px}
+.foundation-card>p{color:#476471;line-height:1.6}
+.foundation-pressure{display:grid;grid-template-columns:minmax(150px,240px) 1fr;gap:22px;align-items:center;background:#f2f7f9;padding:18px;border-radius:12px}
+.foundation-tank{height:200px;position:relative;border:3px solid #426a7e;border-top:0;background:#eaf2f6;border-radius:0 0 8px 8px;overflow:hidden}
+.foundation-water{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,#8ed8eb,#249ac0);transition:height .12s ease}
+.foundation-depth{position:absolute;top:12px;left:12px;color:#123b4b;background:#ffffffd9;border-radius:8px;padding:8px 12px;line-height:1.5}
+.foundation-readouts{display:grid;gap:12px}
+.foundation-readouts>div,.foundation-summary{background:#fff;border:1px solid #d4e3e9;border-radius:9px;padding:14px}
+.foundation-readouts span,.foundation-summary span{display:block;color:#526e7b;font-size:13px}
+.foundation-readouts strong{display:block;color:#123b4b;font-size:23px;margin-top:5px}
+.foundation-readouts p{font-size:18px;font-weight:700;color:#007c90}
+.foundation-exercise{background:#eaf6f7;border-left:5px solid #007c90;padding:13px 15px;border-radius:6px;font-weight:600}
+.foundation-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.foundation-stages>div{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:#eaf4f8;border:1px solid #c8e0e9;border-radius:9px;padding:16px 7px}
+.foundation-stages>div:not(:last-child)::after{content:'→';position:absolute;right:-13px;top:40%;font-size:20px;font-weight:800;color:#007c90;z-index:1}
+.foundation-stages span{font-size:15px;font-weight:750;color:#16485b}
+.foundation-stages small{font-size:12px;color:#526e7b}
+.foundation-stages strong{font-size:15px;color:#007c90}
+.foundation-summary{background:#eef7f8}
+.foundation-summary>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.foundation-summary strong{font-size:23px;color:#143d4d}
+.foundation-bar{height:18px;background:#c9dce3;border-radius:20px;overflow:hidden;margin:14px 0}
+.foundation-bar>div{height:100%;background:#2a9c79;transition:width .12s ease}
+.foundation-summary-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:700px){.foundation-pressure{grid-template-columns:1fr}.foundation-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.foundation-stages>div::after{display:none}.fundamentals .foundation-card{padding:14px}.foundation-summary>div:first-child{align-items:flex-start;flex-direction:column}}
