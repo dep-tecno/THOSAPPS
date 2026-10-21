@@ -54,3 +54,13 @@
 .curves-sidebar>p:not(.eyebrow){font-size:13px;line-height:1.65;color:#476471}
 .curves-sidebar .curve-guide-formula{font-size:13px;line-height:1.6;background:#eff6f8;border:1px solid #d6e3e7;border-radius:8px;padding:13px;margin-top:16px;overflow-wrap:anywhere}
 .curves-sidebar .note{color:#285366;background:#eaf6f7}
+
+/* Readable interpretation panel below the characteristic chart */
+.characteristics .curve-result{margin-top:18px;padding:18px 20px;background:#e9f4f8;border:2px solid #5a9caf;border-left:7px solid #007c90;border-radius:12px;box-shadow:0 3px 12px rgba(16,55,71,.09)}
+.curve-result-heading{display:flex;align-items:center;gap:10px;color:#123e50;font-size:17px;font-weight:750}
+.curve-result-icon{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:50%;background:#007c90;color:#fff;font-size:18px}
+.characteristics .curve-result-text{font-size:16px;line-height:1.65;font-weight:550;color:#173c4e;margin:12px 0 0}
+.characteristics .curve-result[data-status="outside"]{background:#fff4df;border-color:#d59b36;border-left-color:#bd751b}
+.characteristics .curve-result[data-status="outside"] .curve-result-icon{background:#a7620e}
+.characteristics .curve-result[data-status="outside"] .curve-result-heading{color:#75420c}
+@media(max-width:650px){.characteristics .curve-result{padding:14px}.characteristics .curve-result-text{font-size:15px}}
