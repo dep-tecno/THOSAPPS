@@ -21,3 +21,19 @@ export function formatPower(watts) {
   const megawatts = watts >= 1e6;
   return new Intl.NumberFormat('ca-ES', { maximumFractionDigits: 2 }).format(watts / (megawatts ? 1e6 : 1e3)) + (megawatts ? ' MW' : ' kW');
 }
+
+/** Pelton idealitzat: velocitat de raig, velocitat òptima i parell.
+ * Cv = 0.98; relació òptima u/v = 0.46; diàmetre nominal = 2.6 m.
+ * L'obertura és proporcional al cabal de referència a cada salt;
+ * el parell es deriva de P_eix/omega, sense duplicar rendiments.
+ */
+export function peltonPhysics(head, flow, efficiency, diameter = 2.6) {
+  const g = 9.81, cv = 0.98, speedRatio = 0.46;
+  const jetSpeed = cv * Math.sqrt(2 * g * Math.max(0, head));
+  const peripheralSpeed = speedRatio * jetSpeed;
+  const rpm = peripheralSpeed * 60 / (Math.PI * diameter);
+  const omega = rpm * 2 * Math.PI / 60;
+  const shaftPower = power(head, flow, efficiency).shaft;
+  const torque = omega > 0 && flow > 0 ? shaftPower / omega : 0;
+  return { jetSpeed: flow > 0 ? jetSpeed : 0, rpm: flow > 0 ? rpm : 0, torque, peripheralSpeed: flow > 0 ? peripheralSpeed : 0 };
+}
