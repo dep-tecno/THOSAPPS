@@ -420,8 +420,18 @@ function buildHydro() {
     for(let i=0;i<5;i++){
       const arm=new THREE.Group();arm.rotation.z=i*2*Math.PI/5;rotor.add(arm);
       const pivot=new THREE.Group();pivot.position.x=0.84;arm.add(pivot);
-      const blade=mesh(new THREE.SphereGeometry(1,32,20),orange,pivot);
-      blade.scale.set(0.88,0.35,0.09);
+      // Tapered, cambered hydrofoil rather than a flattened spherical paddle.
+      // Local X points radially outward; rotation about X adjusts blade pitch.
+      const outline=new THREE.Shape();
+      outline.moveTo(-0.27,-0.19);
+      outline.bezierCurveTo(0.08,-0.43,0.72,-0.33,1.04,-0.08);
+      outline.quadraticCurveTo(1.16,0.03,1.02,0.12);
+      outline.bezierCurveTo(0.63,0.31,0.05,0.32,-0.27,0.12);
+      outline.quadraticCurveTo(-0.36,-0.03,-0.27,-0.19);
+      const foil=new THREE.ExtrudeGeometry(outline,{depth:0.075,bevelEnabled:true,bevelThickness:0.025,bevelSize:0.035,bevelSegments:2,curveSegments:16});
+      foil.translate(0,0,-0.0375);
+      mesh(foil,orange,pivot);
+      mesh(new THREE.CylinderGeometry(0.13,0.13,0.24,16),cast,pivot,0,0,0).rotation.z=Math.PI/2;
       pitchBlades.push(pivot);
     }
     cylinder(0.43,0.95,orange,rotor);
@@ -511,8 +521,12 @@ function animateWater() {
         z=0.36+1.83*u;
       }
     } else {
-      const angle=i*2.4, radius=0.65+lane;
-      x=radius*Math.cos(angle);y=radius*Math.sin(angle);z=-1.7+t*3.4;
+      // Kaplan: upstream axial admission, guide-vane swirl, runner, axial discharge.
+      const u=t<0.40?t/0.40:t<0.68?(t-0.40)/0.28:(t-0.68)/0.32;
+      const radius=t<0.68 ? 0.53+0.95*lane : (0.53+0.95*lane)*(1+0.12*u);
+      const angle=i*2.39996 + (t<0.40 ? 0.12*u : t<0.68 ? 0.12+0.40*u : 0.52+0.13*u);
+      x=radius*Math.cos(angle);y=radius*Math.sin(angle);
+      z=t<0.40 ? -1.70+0.75*u : t<0.68 ? -0.95+1.15*u : 0.20+1.50*u;
     }
     a[3*i]=x;a[3*i+1]=y;a[3*i+2]=z;
   }
