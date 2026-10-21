@@ -26,3 +26,16 @@
 .telemetry-grid canvas{display:block;width:100%;height:145px}
 @media(max-width:1100px){.telemetry-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.telemetry{padding:12px}.telemetry-heading{align-items:flex-start;flex-direction:column}}
+
+.analysis-switch{display:flex;gap:8px;margin-bottom:16px}
+.analysis-switch button{flex:1;font-weight:700}
+.characteristics{padding:22px;background:#fff;border:1px solid #d6e3e7;border-radius:12px;margin-bottom:18px}
+.characteristics h2{font-size:20px;margin:0 0 6px;color:#183b4a}
+.curve-controls{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:20px 0}
+.curve-controls label{margin:8px 0}
+.curve-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.curve-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:#476471}
+.curve-legend span{display:inline-flex;gap:7px;align-items:center}
+.curve-legend i{display:inline-block;width:11px;height:11px;border-radius:50%}
+#characteristicChart{width:100%;height:320px;display:block;border-radius:10px;background:#f2f7f9}
+@media(max-width:650px){.characteristics{padding:12px}.curve-controls{grid-template-columns:1fr;gap:8px}.analysis-switch button{padding:9px 6px;font-size:12px}}
