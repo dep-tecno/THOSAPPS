@@ -59,6 +59,13 @@ function update() {
   $('peltonRpm').textContent = physics.rpm.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' rpm';
   $('peltonTorque').textContent = physics.torque.toLocaleString('ca-ES',{maximumFractionDigits:0}) + ' N·m';
   for (const key of ['hydraulic', 'shaft', 'electric']) $(key).textContent = formatPower(p[key]);
+  // Same power values as the 3D simulation; no independent physical model.
+  $('sidebarHydraulic').textContent=formatPower(p.hydraulic);
+  $('sidebarShaft').textContent=formatPower(p.shaft);
+  $('sidebarElectric').textContent=formatPower(p.electric);
+  $('sidebarTurbineEta').textContent=state.efficiency+' %';
+  $('sidebarTurbineBar').style.width=state.efficiency+'%';
+  $('sidebarGlobalEta').textContent=(state.efficiency*.9).toLocaleString('ca-ES',{maximumFractionDigits:1})+' %';
   // Francis: didactic nominal synchronous speed estimate at the reference head,
   // scaled with sqrt(H). Torque derives from shaft power / angular velocity.
   const francisRpm = actualFlow > 0 && state.type === 'francis'
