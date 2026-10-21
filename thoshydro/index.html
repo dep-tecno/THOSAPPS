@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Explora les turbines Pelton, Francis i Kaplan i la generació de corrent altern amb THOSHYDRO.">
   <title>THOSHYDRO · Energia de l'aigua</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 </head>
 <body>
-  <header class="app-header"><a class="brand" href="https://tecno-apps.cat/" target="_top" aria-label="THOSHYDRO · Ves a tecno-apps.cat"><svg class="brand-icon" viewBox="0 0 44 44" width="36" height="36" aria-hidden="true"><path d="M22 3C16 12 8 19 8 27a14 14 0 0 0 28 0C36 19 28 12 22 3Z" fill="#48c4d4"/><circle cx="22" cy="27" r="8" fill="none" stroke="#103747" stroke-width="2.5"/><path d="M22 19v16M14 27h16M16.3 21.3l11.4 11.4M27.7 21.3 16.3 32.7" stroke="#103747" stroke-width="1.8"/></svg><h1>THOS<span>HYDRO</span></h1></a><p>De l'aigua a l'electricitat</p><div class="header-analysis-switch" role="group" aria-label="Mode de visualització"><button id="simulationMode" aria-pressed="true">Simulació 3D</button><button id="characteristicsMode" aria-pressed="false">Corbes característiques</button></div><nav class="viewbar" role="group" aria-label="Vista 3D"><button id="assembledView" aria-pressed="true">Completa</button><button id="cutawayView" aria-pressed="false">Transparent</button><button id="explodedView" aria-pressed="false">Especejament</button><button id="cameraReset">Centra la vista</button></nav><button id="help" aria-expanded="false" aria-controls="usageGuide">Guia d'ús</button></header>
+  <header class="app-header"><a class="brand" href="https://tecno-apps.cat/" target="_top" aria-label="THOSHYDRO · Ves a tecno-apps.cat"><svg class="brand-icon" viewBox="0 0 44 44" width="36" height="36" aria-hidden="true"><path d="M22 3C16 12 8 19 8 27a14 14 0 0 0 28 0C36 19 28 12 22 3Z" fill="#48c4d4"/><circle cx="22" cy="27" r="8" fill="none" stroke="#103747" stroke-width="2.5"/><path d="M22 19v16M14 27h16M16.3 21.3l11.4 11.4M27.7 21.3 16.3 32.7" stroke="#103747" stroke-width="1.8"/></svg><h1>THOS<span>HYDRO</span></h1></a><p>De l'aigua a l'electricitat</p><div class="header-analysis-switch" role="group" aria-label="Mode de visualització"><button id="fundamentalsMode" aria-pressed="false">Fonaments físics</button><button id="simulationMode" aria-pressed="true">Simulació 3D</button><button id="characteristicsMode" aria-pressed="false">Corbes característiques</button></div><nav class="viewbar" role="group" aria-label="Vista 3D"><button id="assembledView" aria-pressed="true">Completa</button><button id="cutawayView" aria-pressed="false">Transparent</button><button id="explodedView" aria-pressed="false">Especejament</button><button id="cameraReset">Centra la vista</button></nav><button id="help" aria-expanded="false" aria-controls="usageGuide">Guia d'ús</button></header>
   <section id="usageGuide" hidden class="guide"><h2>Comença a explorar</h2><ol><li>Tria una turbina i observa el recorregut de l'aigua.</li><li>Modifica el salt i el cabal. Com canvia la potència?</li><li>Canvia entre les vistes completa, transparent i especejament per observar l’eix i l’alternador acoblats.</li></ol><p>Arrossega per girar la vista 3D i fes servir la roda o dos dits per apropar-la. La velocitat visual està reduïda per facilitar l'observació.</p></section>
   <main>
     <aside id="simulationSidebar">
@@ -38,8 +38,28 @@
       <p id="curveGuideConcepts" class="small">Rendiment · Càrrega parcial · Punt òptim · Corba característica</p>
       <p class="small">Les corbes són aproximacions didàctiques, no dades de fabricants.</p>
     </aside>
+<aside id="fundamentalsSidebar" class="curves-sidebar" hidden aria-label="Guia dels fonaments físics">
+<p class="eyebrow">01 / FONAMENTS FÍSICS</p><h2>De l'aigua a l'electricitat</h2>
+<p>Experimenta amb les magnituds que expliquen el funcionament d'una central hidroelèctrica.</p>
+<h3>Pressió hidrostàtica</h3><div class="curve-guide-formula">p = ρ · g · h</div><p>La pressió manomètrica augmenta amb la profunditat i la densitat del líquid.</p>
+<h3>Potència hidràulica</h3><div class="curve-guide-formula">P = ρ · g · Q · H</div><p>El salt i el cabal determinen la potència hidràulica disponible. Els rendiments redueixen la potència útil.</p>
+<h3>Experimenta</h3><p class="note">Duplica l'altura: es duplica la pressió? I si dupliques el cabal, què passa amb la potència?</p>
+<p class="small">Models simplificats: pressió relativa a l'atmosfera, sense pèrdues de càrrega a les canonades.</p></aside>
     <section class="workspace" aria-label="Visualització i resultats">
       
+<section id="fundamentals" class="fundamentals characteristics" hidden aria-label="Fonaments físics de les centrals hidràuliques">
+<h2>Fonaments físics · Experimenta amb l'aigua</h2><p class="small">Dos models interactius independents de la simulació 3D.</p>
+<div class="foundation-card"><h3>1. Pressió hidrostàtica</h3><p>La pressió a una profunditat h depèn de la densitat del líquid i de la gravetat.</p>
+<div class="foundation-pressure"><div class="foundation-tank" aria-hidden="true"><div id="foundationWater" class="foundation-water"></div><div class="foundation-depth">Columna d'aigua<br><strong id="foundationHeightLabel">129 m</strong></div></div>
+<div class="foundation-readouts"><div><span>Pressió a la base</span><strong id="foundationPressureMpa">1,265 MPa</strong></div><div><span>En bars</span><strong id="foundationPressureBar">12,65 bar</strong></div><p>p = ρ · g · h</p></div></div>
+<div class="curve-controls"><div><label for="foundationHeight">Altura de la columna <output id="foundationHeightValue">129 m</output></label><input id="foundationHeight" type="range" min="0" max="150" step="1" value="129"></div><div><label for="foundationDensity">Densitat del líquid <output id="foundationDensityValue">1.000 kg/m³</output></label><input id="foundationDensity" type="range" min="800" max="1200" step="10" value="1000"></div></div>
+<button type="button" id="foundationResetPressure">Recupera els valors de Susqueda</button>
+<p class="foundation-exercise">Investiga: què passa amb la pressió si dupliques l'altura de la columna d'aigua?</p></div>
+<div class="foundation-card"><h3>2. Cadena de conversió energètica</h3><p>Segueix l'energia de l'aigua fins a la sortida de l'alternador. Model sense pèrdues a les canonades.</p>
+<div class="foundation-stages" aria-label="Etapes de conversió"><div><span>Potencial</span><small>Embassament</small><strong id="foundationPotential">—</strong></div><div><span>Cinètica</span><small>Canonada</small><strong id="foundationKinetic">—</strong></div><div><span>Mecànica</span><small>Turbina</small><strong id="foundationMechanical">—</strong></div><div><span>Elèctrica</span><small>Alternador</small><strong id="foundationElectric">—</strong></div></div>
+<div class="curve-controls"><div><label for="foundationHead">Salt hidràulic <output id="foundationHeadValue">80 m</output></label><input id="foundationHead" type="range" min="10" max="200" step="5" value="80"></div><div><label for="foundationFlow">Cabal <output id="foundationFlowValue">10 m³/s</output></label><input id="foundationFlow" type="range" min="1" max="50" step="1" value="10"></div><div><label for="foundationTurbineEta">Rendiment turbina <output id="foundationTurbineEtaValue">90 %</output></label><input id="foundationTurbineEta" type="range" min="50" max="100" step="1" value="90"></div><div><label for="foundationGeneratorEta">Rendiment alternador <output id="foundationGeneratorEtaValue">95 %</output></label><input id="foundationGeneratorEta" type="range" min="70" max="100" step="1" value="95"></div></div>
+<div class="foundation-summary"><div><span>Potència elèctrica útil</span><strong id="foundationPowerResult">—</strong></div><div class="foundation-bar"><div id="foundationPowerBar"></div></div><div class="foundation-summary-foot"><span id="foundationOverallEta">—</span><span id="foundationLosses">—</span></div></div>
+<p class="foundation-exercise">Investiga: si el rendiment de la turbina és del 80 % i el de l'alternador del 90 %, quin és el rendiment global?</p></div></section>
       <section id="characteristics" class="characteristics" hidden aria-label="Corbes característiques de turbines">
         <h2>Corbes característiques · Comparador de turbines</h2>
         <p class="small">Models didàctics aproximats, no dades de fabricants. Els rangs de funcionament són orientatius.</p>
@@ -62,7 +82,8 @@
     </section>
   </main>
   <footer>THOS APPS · J.Yerga · Institut Thos i Codina · Visualització amb Three.js (MIT). <a href="README.md">Abast i procedència</a></footer>
-  <script type="module" src="app.js?v=39"></script>
+  <script defer src="fundamentals.js?v=1"></script>
+  <script type="module" src="app.js?v=40"></script>
   <script>window.addEventListener('error',function(e){if(e.target.tagName==='SCRIPT'){document.getElementById('loading').textContent='No s’ha pogut carregar l’aplicació. Recarrega la pàgina i comprova la connexió.'}},true);</script>
 </body>
 </html>
