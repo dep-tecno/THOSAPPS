@@ -38,12 +38,38 @@ export function createCharacteristics(doc){
  }
  updateGuide();
  const fmt=(n,d=1)=>n.toLocaleString('ca-ES',{maximumFractionDigits:d});
+ // Approximate boundaries digitized visually from the classroom PDF (not manufacturer data).
+ // Coordinates are [flow m³/s, head m], on a 0–1000 / 0–1500 matrix.
+ const peltonFrancis=[[0,1120],[70,1110],[140,1090],[185,1050],[200,1000]];
+ const francisKaplan=[[200,1000],[250,850],[320,670],[400,500],[500,340],[600,230],[700,155],[800,115],[900,95],[1000,85]];
+ function interpolate(points,q){
+  if(q<=points[0][0])return points[0][1];
+  for(let i=1;i<points.length;i++)if(q<=points[i][0]){
+   const [x0,y0]=points[i-1],[x1,y1]=points[i];return y0+(y1-y0)*(q-x0)/(x1-x0);
+  }
+  return points[points.length-1][1];
+ }
  function recommendation(h,q){
-   const eligible=Object.entries(profiles).filter(([,p])=>h>=p.minHead&&h<=p.maxHead&&q>=p.minFlow&&q<=p.maxFlow);
-   if(!eligible.length)return 'Fora de les zones orientatives: cal estudiar el disseny concret.';
-   const scores=eligible.map(([type,p])=>({type,score:Math.abs(Math.log(h/Math.sqrt(p.minHead*p.maxHead)))+Math.abs(Math.log(q/Math.sqrt(p.minFlow*p.maxFlow)))}));
-   scores.sort((a,b)=>a.score-b.score);
-   return 'Zona orientativa: '+scores[0].type.toUpperCase()+'. Les zones se superposen i la selecció real depèn de més factors.';
+  if(q<0||q>1000||h<0||h>1500)return 'Fora de la matriu de classe.';
+  if(q<200&&h>=interpolate(peltonFrancis,q))return 'Zona Pelton: salts elevats i cabals baixos.';
+  if(q>=200&&h<interpolate(francisKaplan,q))return 'Zona Kaplan: salts baixos i cabals elevats.';
+  if(q<200&&h<interpolate(peltonFrancis,q))return 'Zona de transició: consulta la frontera de la matriu.';
+  return 'Zona Francis: condicions intermèdies de salt i cabal.';
+ }
+ function drawSelection(ctx,L,T,W,H,h,q,width,height){
+  const X=v=>L+clamp(v/1000,0,1)*W,Y=v=>T+H-clamp(v/1500,0,1)*H;
+  ctx.fillStyle='rgba(0,133,163,.16)';ctx.beginPath();ctx.moveTo(X(0),Y(1500));ctx.lineTo(X(200),Y(1500));for(const [x,y] of [...peltonFrancis].reverse())ctx.lineTo(X(x),Y(y));ctx.lineTo(X(0),Y(1120));ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(57,163,123,.18)';ctx.beginPath();ctx.moveTo(X(200),Y(0));ctx.lineTo(X(1000),Y(0));ctx.lineTo(X(1000),Y(85));for(const [x,y] of [...francisKaplan].reverse())ctx.lineTo(X(x),Y(y));ctx.closePath();ctx.fill();
+  ctx.strokeStyle=COLORS.pelton;ctx.lineWidth=2.5;ctx.beginPath();peltonFrancis.forEach(([x,y],i)=>i?ctx.lineTo(X(x),Y(y)):ctx.moveTo(X(x),Y(y)));ctx.stroke();
+  ctx.strokeStyle=COLORS.kaplan;ctx.beginPath();francisKaplan.forEach(([x,y],i)=>i?ctx.lineTo(X(x),Y(y)):ctx.moveTo(X(x),Y(y)));ctx.stroke();
+  ctx.fillStyle=COLORS.pelton;ctx.fillText('PELTON',X(30),Y(1280));
+  ctx.fillStyle=COLORS.francis;ctx.fillText('FRANCIS',X(460),Y(770));
+  ctx.fillStyle=COLORS.kaplan;ctx.fillText('KAPLAN',X(750),Y(290));
+  ctx.setLineDash([5,5]);ctx.strokeStyle='#405c6a';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(X(q),Y(0));ctx.lineTo(X(q),Y(h));ctx.lineTo(X(0),Y(h));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#203f50';ctx.beginPath();ctx.arc(X(q),Y(h),6,0,Math.PI*2);ctx.fill();
+  ctx.fillText('Salt (m) ↑',L+4,T+13);
+  doc.getElementById('curveNote').textContent=recommendation(h,q)+' · Matriu didàctica aproximada del PDF de classe; eixos: cabal 0–1.000 m³/s, salt 0–1.500 m.';
  }
  function draw(){
    if(panel.hidden)return;
@@ -55,23 +81,12 @@ export function createCharacteristics(doc){
    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
    ctx.fillStyle='#f2f7f9';ctx.fillRect(0,0,width,height);
    const L=64,R=20,T=22,B=49,W=width-L-R,H=height-T-B;
-   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*h*Math.max(1,q)*1.05):250;
+   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*h*Math.max(1,q)*1.05):1500;
    ctx.strokeStyle='#d7e3e8';ctx.fillStyle='#587381';ctx.font='12px system-ui';
    for(let j=0;j<=5;j++){const y=T+j*H/5;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+W,y);ctx.stroke();ctx.fillText(fmt(maxY*(1-j/5),0),5,y+4);}
-   for(let j=0;j<=5;j++){const x=L+j*W/5;ctx.fillText(fmt(tab==='selection'?j*70:j*20,0),x-8,height-23);}
-   ctx.fillText(tab==='selection'?'Salt hidràulic (m)':'Cabal relatiu (%)',L+W/2-55,height-5);
-   if(tab==='selection'){
-     for(const [type,p] of Object.entries(profiles)){
-       const x1=L+clamp(p.minHead/350,0,1)*W,x2=L+clamp(p.maxHead/350,0,1)*W;
-       const y1=T+H-clamp(p.minFlow/250,0,1)*H,y2=T+H-clamp(p.maxFlow/250,0,1)*H;
-       ctx.globalAlpha=.16;ctx.fillStyle=COLORS[type];ctx.fillRect(x1,y2,x2-x1,y1-y2);ctx.globalAlpha=1;
-       ctx.fillStyle=COLORS[type];ctx.fillText(type.toUpperCase(),x1+5,Math.max(T+14,y2+15));
-     }
-     ctx.fillStyle='#263f50';ctx.beginPath();ctx.arc(L+clamp(h/350,0,1)*W,T+H-clamp(q/250,0,1)*H,6,0,2*Math.PI);ctx.fill();
-     ctx.fillStyle='#587381';ctx.fillText('Cabal (m³/s) ↑',L+6,T+14);
-     doc.getElementById('curveNote').textContent=recommendation(h,q)+' · Eixos: 0–350 m i 0–250 m³/s.';
-     return;
-   }
+   for(let j=0;j<=5;j++){const x=L+j*W/5;ctx.fillText(fmt(tab==='selection'?j*200:j*20,0),x-8,height-23);}
+   ctx.fillText(tab==='selection'?'Cabal (m³/s)':'Cabal relatiu (%)',L+W/2-55,height-5);
+   if(tab==='selection'){drawSelection(ctx,L,T,W,H,h,q,width,height);return;}
    for(const type of Object.keys(profiles)){
      const p=profiles[type],qRel=clamp(q/p.maxFlow,0,1);
      ctx.beginPath();
