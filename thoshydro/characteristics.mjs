@@ -6,16 +6,19 @@ const profiles={
  kaplan:{peak:0.93,opt:0.87,width:0.78,minHead:2,maxHead:70,minFlow:5,maxFlow:250}
 };
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-export function efficiency(type,relativeFlow,head=profiles[type].minHead){
+export function efficiency(type,relativeFlow,head=profiles[type].minHead,operatingFlow=null){
  const p=profiles[type],q=clamp(relativeFlow,0,1.3);
  if(q<=0)return 0;
  // Head-dependent design matching: the best efficiency point and curve width
  // vary with hydraulic head; deliberately simplified for classroom use.
  const designHead=Math.sqrt(p.minHead*p.maxHead);
  const mismatch=Math.log(Math.max(1,head)/designHead);
- const opt=clamp(p.opt+0.12*Math.tanh(mismatch),0.35,0.97);
- const width=p.width*(1-0.28*Math.min(1,Math.abs(mismatch)/2));
- const peak=p.peak*(1-0.18*Math.min(1,Math.abs(mismatch)/2));
+ const operatingRatio=operatingFlow===null?1:clamp(operatingFlow/p.maxFlow,0,2);
+ // Simplified variable regulation: changing the selected flow changes the operating characteristic.
+ const regulation=0.16*Math.tanh((operatingRatio-0.5)*1.8);
+ const opt=clamp(p.opt+0.12*Math.tanh(mismatch)+regulation,0.25,1.05);
+ const width=p.width*(1-0.28*Math.min(1,Math.abs(mismatch)/2))*(1-0.12*Math.abs(regulation));
+ const peak=p.peak*(1-0.18*Math.min(1,Math.abs(mismatch)/2))*(1-0.09*Math.abs(operatingRatio-0.7));
  return clamp(peak*(1-Math.pow((q-opt)/width,2))*(1-Math.exp(-q*17)),0,p.peak);
 }
 export function createCharacteristics(doc){
@@ -74,16 +77,16 @@ export function createCharacteristics(doc){
      ctx.beginPath();
      for(let j=0;j<=100;j++){
        const x=j/100;
-       const eta=efficiency(type,x,h);
+       const eta=efficiency(type,x,h,q);
        const y=tab==='efficiency'?eta*100:9.81*h*(x*q)*eta*.9;
        const py=T+H-clamp(y/maxY,0,1)*H;
        if(j===0)ctx.moveTo(L,py);else ctx.lineTo(L+x*W,py);
      }
      ctx.strokeStyle=COLORS[type];ctx.lineWidth=2.5;ctx.stroke();
-     const y=tab==='efficiency'?efficiency(type,qRel,h)*100:9.81*h*q*efficiency(type,1,h)*.9;
+     const y=tab==='efficiency'?efficiency(type,qRel,h,q)*100:9.81*h*q*efficiency(type,1,h,q)*.9;
      ctx.fillStyle=COLORS[type];ctx.beginPath();ctx.arc(L+(tab==='power'?W:qRel*W),T+H-clamp(y/maxY,0,1)*H,5,0,Math.PI*2);ctx.fill();
    }
-   doc.getElementById('curveNote').textContent=tab==='efficiency'?'El salt modifica el punt de màxim rendiment i la forma de cada corba. El cabal desplaça els punts de funcionament. Model didàctic, no dades reals.':'El salt i el cabal seleccionats modifiquen la corba de potència disponible (0–100 % del cabal seleccionat). Alternador amb rendiment del 90 %. Model didàctic.';
+   doc.getElementById('curveNote').textContent=tab==='efficiency'?'El salt i el cabal modifiquen la família de corbes de rendiment mitjançant un model simplificat de regulació. Els punts marquen el funcionament seleccionat; no són corbes de fabricant.':'El salt i el cabal seleccionats modifiquen la corba de potència disponible (0–100 % del cabal seleccionat). Alternador amb rendiment del 90 %. Model didàctic.';
  }
  for(const el of [head,flow])el.addEventListener('input',draw);
  tabs.forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.curve;tabs.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));updateGuide();draw();}));
