@@ -6,10 +6,17 @@ const profiles={
  kaplan:{peak:0.93,opt:0.87,width:0.78,minHead:2,maxHead:70,minFlow:5,maxFlow:250}
 };
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-export function efficiency(type,relativeFlow){
+export function efficiency(type,relativeFlow,head=profiles[type].minHead){
  const p=profiles[type],q=clamp(relativeFlow,0,1.3);
  if(q<=0)return 0;
- return clamp(p.peak*(1-Math.pow((q-p.opt)/p.width,2))*(1-Math.exp(-q*17)),0,p.peak);
+ // Head-dependent design matching: the best efficiency point and curve width
+ // vary with hydraulic head; deliberately simplified for classroom use.
+ const designHead=Math.sqrt(p.minHead*p.maxHead);
+ const mismatch=Math.log(Math.max(1,head)/designHead);
+ const opt=clamp(p.opt+0.12*Math.tanh(mismatch),0.35,0.97);
+ const width=p.width*(1-0.28*Math.min(1,Math.abs(mismatch)/2));
+ const peak=p.peak*(1-0.18*Math.min(1,Math.abs(mismatch)/2));
+ return clamp(peak*(1-Math.pow((q-opt)/width,2))*(1-Math.exp(-q*17)),0,p.peak);
 }
 export function createCharacteristics(doc){
  const panel=doc.getElementById('characteristics');
@@ -35,7 +42,7 @@ export function createCharacteristics(doc){
    const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
    ctx.fillStyle='#f2f7f9';ctx.fillRect(0,0,width,height);
    const L=64,R=20,T=22,B=49,W=width-L-R,H=height-T-B;
-   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*h*250*.95):250;
+   const maxY=tab==='efficiency'?100:tab==='power'?Math.max(1,9.81*h*Math.max(1,q)*1.05):250;
    ctx.strokeStyle='#d7e3e8';ctx.fillStyle='#587381';ctx.font='12px system-ui';
    for(let j=0;j<=5;j++){const y=T+j*H/5;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+W,y);ctx.stroke();ctx.fillText(fmt(maxY*(1-j/5),0),5,y+4);}
    for(let j=0;j<=5;j++){const x=L+j*W/5;ctx.fillText(fmt(tab==='selection'?j*70:j*20,0),x-8,height-23);}
@@ -57,16 +64,16 @@ export function createCharacteristics(doc){
      ctx.beginPath();
      for(let j=0;j<=100;j++){
        const x=j/100;
-       const eta=efficiency(type,x);
-       const y=tab==='efficiency'?eta*100:9.81*h*(x*p.maxFlow)*eta*.9;
+       const eta=efficiency(type,x,h);
+       const y=tab==='efficiency'?eta*100:9.81*h*(x*q)*eta*.9;
        const py=T+H-clamp(y/maxY,0,1)*H;
        if(j===0)ctx.moveTo(L,py);else ctx.lineTo(L+x*W,py);
      }
      ctx.strokeStyle=COLORS[type];ctx.lineWidth=2.5;ctx.stroke();
-     const y=tab==='efficiency'?efficiency(type,qRel)*100:9.81*h*q*efficiency(type,qRel)*.9;
-     ctx.fillStyle=COLORS[type];ctx.beginPath();ctx.arc(L+qRel*W,T+H-clamp(y/maxY,0,1)*H,5,0,Math.PI*2);ctx.fill();
+     const y=tab==='efficiency'?efficiency(type,qRel,h)*100:9.81*h*q*efficiency(type,1,h)*.9;
+     ctx.fillStyle=COLORS[type];ctx.beginPath();ctx.arc(L+(tab==='power'?W:qRel*W),T+H-clamp(y/maxY,0,1)*H,5,0,Math.PI*2);ctx.fill();
    }
-   doc.getElementById('curveNote').textContent=tab==='efficiency'?'Corbes de rendiment aproximades segons el cabal relatiu de cada turbina. Els punts indiquen el cabal seleccionat.':'Potència elèctrica estimada amb rendiment variable i alternador al 90 %. Les escales nominals de cabal són diferents per a cada turbina.';
+   doc.getElementById('curveNote').textContent=tab==='efficiency'?'El salt modifica el punt de màxim rendiment i la forma de cada corba. El cabal desplaça els punts de funcionament. Model didàctic, no dades reals.':'El salt i el cabal seleccionats modifiquen la corba de potència disponible (0–100 % del cabal seleccionat). Alternador amb rendiment del 90 %. Model didàctic.';
  }
  for(const el of [head,flow])el.addEventListener('input',draw);
  tabs.forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.curve;tabs.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));draw();}));
