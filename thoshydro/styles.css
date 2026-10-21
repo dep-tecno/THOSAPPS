@@ -112,3 +112,25 @@
 .sidebar-energy-total strong{font-size:20px;color:#007c90}
 .sidebar-energy details{margin-top:14px;font-size:12px;line-height:1.55}
 .sidebar-energy summary{cursor:pointer;font-weight:700;color:#007c90}
+
+/* v44 — Blau pissarra suau: visual-only, accessible classroom palette */
+:root{background:#dfe8ec;color:#203d4a}
+body{background:#dfe8ec}
+aside{background:#e5edf0;border-right-color:#bdcfd7}
+.workspace{background:#dfe8ec}
+.metrics>div,.telemetry,.characteristics,.explanation,.fundamentals .foundation-card{background:#edf3f5;border-color:#bfced5}
+.metrics>div{box-shadow:0 1px 3px rgba(27,55,70,.04)}
+.telemetry-grid>div,.foundation-readouts>div,.foundation-summary,.sidebar-energy-chain>div{background:#e0eaee;border-color:#bfced5}
+.foundation-pressure,#characteristicChart,.formula,.curves-sidebar .curve-guide-formula{background:#dce8ed}
+.foundation-stages>div{background:#dbe9ee;border-color:#b9d2dc}
+.sidebar-energy{background:#d6e6eb;border-color:#b5d0da}
+.note,.curves-sidebar .note,.foundation-exercise{background:#dcecef}
+.foundation-summary{background:#d8e9ed}
+.telemetry-heading button{background:#dbe9ee}
+button,select{background:#f0f5f6;border-color:#adc4cd}
+button:hover{background:#d7e8ed}
+.app-header .header-analysis-switch button{background:#d7eaee}
+.app-header .header-analysis-switch button[aria-pressed=true]{background:#007c90;color:#fff}
+.characteristics .curve-result{background:#d5e9ef}
+.characteristics .curve-result[data-status="outside"]{background:#f5e7ce}
+.foundation-depth{background:#eaf2f5e8}
