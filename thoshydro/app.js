@@ -322,7 +322,7 @@ function buildHydro() {
     cylinder(0.43,0.95,orange,rotor);
     cylinder(0.17,3.2,cast,rotor,0,0,-1.1);
   }
-  const positions = new Float32Array(90 * 3);
+  const positions = new Float32Array((state.type === 'francis' ? 480 : 90) * 3);
   particles = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x007bce, size: 0.075 }));
   particles.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); hydro.add(particles);
 }
@@ -362,24 +362,52 @@ function buildCoupledAlternator(parent,steel) {
 
 function animateWater() {
   if (!particles) return;
-  particles.visible = state.flow > 0 && (state.type !== 'pelton' || state.needle > 0);
-  particles.material.size = state.type === 'pelton' ? 0.03 + 0.055*Math.sqrt(state.needle/100) : 0.075;
+  const activeFlow = state.type === 'pelton' ? state.flow*state.needle/100 : state.flow;
+  particles.visible = activeFlow > 0;
+  particles.material.size = state.type === 'francis' ? 0.065 : state.type === 'pelton' ? 0.03 + 0.055*Math.sqrt(state.needle/100) : 0.075;
   const a = particles.geometry.attributes.position.array;
-  for (let i = 0; i < 90; i++) {
-    const t = (i / 90 + waterTime * 0.3) % 1, lane = ((i * 7) % 13) / 13;
-    if (state.type === 'pelton') {
-      if (t < 0.65) { a[3*i] = -2.3 + t / 0.65 * 2.6; a[3*i+1] = 1.45; a[3*i+2] = (lane - 0.5) * 0.16; }
-      else { const u = (t - 0.65) / 0.35; a[3*i] = 0.3 + u; a[3*i+1] = 1.45 - u * 3.6; a[3*i+2] = (lane - 0.5) * u; }
-    } else if (state.type === 'francis') {
-      const angle = lane * Math.PI * 2 - t * 2;
-      const r = t < 0.7 ? 2.05 * (1 - t / 0.7) + 0.3 : 0.3;
-      a[3*i] = r * Math.cos(angle); a[3*i+1] = r * Math.sin(angle); a[3*i+2] = t < 0.7 ? 0.1 : (t - 0.7) / 0.3 * 2;
+  const count = a.length / 3;
+  for (let i=0; i<count; i++) {
+    const lane = ((i*37)%101)/101;
+    const strand = ((i*17)%89)/89;
+    const t = (i/count + waterTime*(state.type==='francis'?0.22:0.3))%1;
+    let x,y,z;
+    if (state.type==='pelton') {
+      if(t<0.65){x=-2.3+t/0.65*2.6;y=1.45;z=(lane-0.5)*0.16;}
+      else {const u=(t-0.65)/0.35;x=0.3+u;y=1.45-u*3.6;z=(lane-0.5)*u;}
+    } else if(state.type==='francis') {
+      // Local XY = radial plane, local +Z = downward draft tube.
+      // 0–32%: spiral casing; 32–70%: distributor/runner;
+      // 70–100%: axial discharge, with decaying swirl.
+      if(t<0.32){
+        const u=t/0.32;
+        const angle=2*Math.PI*(u*0.94)+strand*0.10;
+        const radius=2.24-0.54*u+(lane-0.5)*0.24;
+        x=radius*Math.cos(angle);
+        y=radius*Math.sin(angle);
+        z=-0.12+(strand-0.5)*0.32;
+      } else if(t<0.70){
+        const u=(t-0.32)/0.38;
+        const angle=2*Math.PI*(0.94+strand*0.10)+u*1.0;
+        const radius=1.70-1.20*u+(lane-0.5)*0.12;
+        x=radius*Math.cos(angle);
+        y=radius*Math.sin(angle);
+        z=-0.16+0.52*u;
+      } else {
+        const u=(t-0.70)/0.30;
+        const angle=2*Math.PI*(0.94+strand*0.10)+1.0+0.35*u;
+        const radius=0.18+0.50*lane+0.18*u;
+        x=radius*Math.cos(angle);
+        y=radius*Math.sin(angle);
+        z=0.36+1.83*u;
+      }
     } else {
-      const angle = i * 2.4; const r = 0.65 + lane;
-      a[3*i] = r * Math.cos(angle); a[3*i+1] = r * Math.sin(angle); a[3*i+2] = -1.7 + t * 3.4;
+      const angle=i*2.4, radius=0.65+lane;
+      x=radius*Math.cos(angle);y=radius*Math.sin(angle);z=-1.7+t*3.4;
     }
+    a[3*i]=x;a[3*i+1]=y;a[3*i+2]=z;
   }
-  particles.geometry.attributes.position.needsUpdate = true;
+  particles.geometry.attributes.position.needsUpdate=true;
 }
 
 function drawWave() {
