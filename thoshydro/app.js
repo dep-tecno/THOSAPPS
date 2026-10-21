@@ -237,6 +237,66 @@ function buildHydro() {
     draft.rotation.x=Math.PI/2;housingParts.push(draft);
     const inlet=mesh(new THREE.TorusGeometry(1.63,0.06,10,72),cast,hydro,0,0,-0.36);
     housingParts.push(inlet);
+    // Francis-specific stationary structure: stay ring, wicket-gate pivots and
+    // removable inspection covers. All coordinates are local to the vertical axis.
+    const bolt=material(0x303e49,{metalness:0.82,roughness:0.25});
+    const copper=material(0xb97638,{metalness:0.7,roughness:0.27});
+    const magnetSteel=material(0x3d5363,{metalness:0.7,roughness:0.3});
+    for(const z of [-0.48,0.50]){
+      const rim=mesh(new THREE.TorusGeometry(1.84,0.095,14,80),cast,hydro,0,0,z);
+      housingParts.push(rim);
+      boltCircle(hydro,1.84,z+(z>0?0.09:-0.09),24,bolt,0.046);
+    }
+    // Annular scroll-casing wall, shown as a sectional transparent envelope.
+    const casing=mesh(new THREE.CylinderGeometry(1.90,1.90,1.0,80,1,true),shell,hydro);
+    casing.rotation.x=Math.PI/2;housingParts.push(casing);
+    for(let i=0;i<18;i++){
+      const a=i*2*Math.PI/18;
+      const pin=mesh(new THREE.CylinderGeometry(0.075,0.075,0.88,12),bolt,hydro,1.42*Math.cos(a),1.42*Math.sin(a),0);
+      pin.rotation.x=Math.PI/2;
+      mesh(new THREE.SphereGeometry(0.095,10,8),cast,hydro,1.42*Math.cos(a),1.42*Math.sin(a),-0.49);
+    }
+    // Continuous vertical shaft, mechanical coupling and bearing housings.
+    cylinder(0.17,4.6,cast,rotor,0,0,-1.65);
+    for(const z of [-1.12,-1.77]){
+      const pedestal=mesh(new THREE.BoxGeometry(0.84,0.72,0.48),cast,hydro,0,-0.54,z);
+      const bearing=mesh(new THREE.TorusGeometry(0.32,0.10,12,40),magnetSteel,hydro,0,0,z);
+      boltCircle(hydro,0.42,z-0.22,8,bolt,0.038);
+    }
+    cylinder(0.30,0.38,magnetSteel,rotor,0,0,-1.94);
+    for(const z of [-2.08,-1.81])boltCircle(rotor,0.24,z,8,bolt,0.032);
+    // Coupled alternator: rotating magnetic poles inside fixed laminated stator.
+    const stator=new THREE.Group();stator.position.z=-3.0;hydro.add(stator);
+    const generatorShell=mesh(new THREE.CylinderGeometry(1.07,1.07,1.28,64,1,true),shell,stator);
+    generatorShell.rotation.x=Math.PI/2;housingParts.push(generatorShell);
+    for(const z of [-0.64,0.64]){
+      const ring=mesh(new THREE.TorusGeometry(1.07,0.10,12,64),magnetSteel,stator,0,0,z);
+      housingParts.push(ring);
+      boltCircle(stator,1.07,z,16,bolt,0.038);
+    }
+    for(let i=0;i<12;i++){
+      const a=i*Math.PI/6;
+      const core=new THREE.Group();core.rotation.z=a;stator.add(core);
+      mesh(new THREE.BoxGeometry(0.25,0.35,0.85),magnetSteel,core,0,0.82,0);
+      for(const z of [-0.28,-0.10,0.10,0.28]){
+        const winding=mesh(new THREE.TorusGeometry(0.18,0.042,8,20),copper,core,0,0.82,z);
+        winding.rotation.x=Math.PI/2;
+      }
+    }
+    const field=new THREE.Group();field.position.z=-3.0;rotor.add(field);
+    cylinder(0.52,1.05,magnetSteel,field);
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2;
+      const pole=mesh(new THREE.BoxGeometry(0.42,0.30,0.88),material(i%2?0x2d80a6:0xb65044),field,0.64*Math.cos(a),0.64*Math.sin(a));
+      pole.rotation.z=a;
+    }
+    // Generator support platform and structural anchors.
+    mesh(new THREE.BoxGeometry(2.8,2.4,0.18),cast,hydro,0,0,-3.78);
+    for(const x of [-1.12,1.12])for(const y of [-0.88,0.88]){
+      mesh(new THREE.CylinderGeometry(0.075,0.075,0.14,8),bolt,hydro,x,y,-3.66);
+    }
+    explodedParts.push({object:stator,base:-3.0,offset:-1.05});
+
   } else {
     // Kaplan: axial flow through a transparent conduit and pitch-adjustable runner.
     const shell=material(0x4987a5,{transparent:true,opacity:0.34,depthWrite:false,side:THREE.DoubleSide,metalness:0.24});
