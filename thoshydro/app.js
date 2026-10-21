@@ -280,7 +280,13 @@ function buildHydro() {
       gate.userData.base=a+0.55;
       gate.rotation.z=gate.userData.base;
       hydro.add(gate);
-      mesh(new THREE.BoxGeometry(0.53,0.085,0.65),cast,gate,-0.12,0,0);
+      // Slightly cambered guide blade; pivot remains fixed while blade turns.
+      const outline=new THREE.Shape();
+      outline.moveTo(-0.34,-0.045);
+      outline.quadraticCurveTo(-0.05,-0.12,0.32,0.035);
+      outline.quadraticCurveTo(0.07,0.125,-0.34,0.045);
+      const bladeGeo=new THREE.ExtrudeGeometry(outline,{depth:0.65,bevelEnabled:true,bevelThickness:0.012,bevelSize:0.012,bevelSegments:2,steps:1,curveSegments:12});
+      mesh(bladeGeo,cast,gate,-0.12,0,-0.325);
       francisGates.push(gate);
     }
     cylinder(1.14,0.18,orange,rotor,0,0,-0.3);
@@ -293,7 +299,7 @@ function buildHydro() {
       }
       tube(curve,0.115,orange,rotor);
     }
-    const draft=mesh(new THREE.CylinderGeometry(0.58,0.91,1.75,48,1,true),shell,hydro,0,0,1.35);
+    const draft=mesh(new THREE.CylinderGeometry(0.91,0.58,1.75,48,1,true),shell,hydro,0,0,1.35);
     draft.rotation.x=Math.PI/2;housingParts.push(draft);
     const inlet=mesh(new THREE.TorusGeometry(1.63,0.06,10,72),cast,hydro,0,0,-0.36);
     housingParts.push(inlet);
@@ -477,7 +483,8 @@ function animateWater() {
       } else {
         const u=(t-0.70)/0.30;
         const angle=2*Math.PI*(0.94+strand*0.10)+1.0+0.35*u;
-        const radius=0.18+0.50*lane+0.18*u;
+        // Divergent draft tube: radial spread increases downstream.
+        const radius=(0.18+0.38*lane)*(1+0.48*u);
         x=radius*Math.cos(angle);
         y=radius*Math.sin(angle);
         z=0.36+1.83*u;
