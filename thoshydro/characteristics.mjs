@@ -83,7 +83,9 @@ export function createCharacteristics(doc){
   ctx.beginPath();ctx.moveTo(X(q),Y(0));ctx.lineTo(X(q),Y(h));ctx.lineTo(X(0),Y(h));ctx.stroke();ctx.setLineDash([]);
   ctx.fillStyle='#203f50';ctx.beginPath();ctx.arc(X(q),Y(h),6,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#587381';ctx.fillText('Salt (m) ↑',L+4,T+13);
-  doc.getElementById('curveNote').textContent=recommendation(h,q)+' · Zones esquemàtiques aproximades del PDF de classe; no són límits tècnics universals.';
+  const message=recommendation(h,q);
+  doc.querySelector('.curve-result').dataset.status=message.startsWith('FORA DE LES ZONES')?'outside':'normal';
+  doc.getElementById('curveNote').textContent=message+' · Zones esquemàtiques aproximades del PDF de classe; no són límits tècnics universals.';
  }
  function draw(){
    if(panel.hidden)return;
