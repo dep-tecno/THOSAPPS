@@ -36,7 +36,8 @@ function torsion(p,scale){const length=3.8,r=.45*scale;const n=64,around=24,vert
  const marker=box(.1,.7,.12,accent,2.32,0,0);marker.rotation.x=p*1.45}
 function hardness(p,scale){box(4,.7,2.6,hardware,0,-1.13,0);box(2.5,.28,1.7,specimen,0,-.63,0);const tip=cyl(.15,.48,.82,accent,0,.65-.7*p,0);tip.rotation.z=Math.PI;const shaft=cyl(.16,.16,.8,hardware,0,1.45-.7*p,0);if(p>.05){const ring=add(new THREE.TorusGeometry(.07+.26*p,.035,12,40),dark,0,-.48,0);ring.rotation.x=Math.PI/2}}
 function impact(p,scale){const theta=p<.48?(-1.1+(p/.48)*1.1):(p<.58?0:(p-.58)/.42*.75),len=2.9;const pivot=new THREE.Vector3(0,1.65,0),end=new THREE.Vector3(Math.sin(theta)*len,1.65-Math.cos(theta)*len,0);rod(pivot,end,.065,hardware);sphere(.24,accent,end.x,end.y,end.z);cyl(.18,.18,.6,hardware,0,1.65,0).rotation.x=Math.PI/2;for(const x of [-.7,.7])box(.65,.28,.9,hardware,x,-1.44,0);box(1.8,.24,.35,specimen,0,-1.19,0);if(p>.53){const fracture=Math.min(1,(p-.53)*10);box(.85*(1-fracture*.16),.22,.35,specimen,-.48-fracture*.12,-1.19,0);box(.85*(1-fracture*.16),.22,.35,specimen,.48+fracture*.12,-1.19,0)}}
-let current={test:'compressio',progress:0,size:20};
+const initialTest=new URLSearchParams(window.location.search).get('test');
+let current={test:['compressio','flexio','torsio','duresa','impacte'].includes(initialTest)?initialTest:'compressio',progress:Number(document.getElementById('load')?.value||0)/1000,size:Number(document.getElementById('size')?.value||20)};
 function rebuild(){clear();grid();const p=Math.max(0,Math.min(1,current.progress)),scale=.75+current.size/60;
  if(current.test==='compressio')compression(p,scale);
  else if(current.test==='flexio')flexion(p,scale);
