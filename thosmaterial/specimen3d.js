@@ -44,13 +44,15 @@ function profileMesh(start,end,length,radius,neck,fracture,topPiece){
  mesh.castShadow=true;body.add(mesh);meshes.push(mesh);
 }
 let current={strain:0,maxStrain:.28,diameter:10,broken:false,neckStart:.17,fragile:false,unloading:false,plastic:0};
+let peakStrain=0;
 function renderSpecimen(){
  const {strain,maxStrain,diameter,broken,neckStart,fragile,unloading,plastic}=current;
- const fraction=Math.max(0,Math.min(1,strain/maxStrain));
- const length=2.65*(1+.33*fraction);
- const radius=.19*diameter/10;
+ const length=2.65*(1+strain);
+ // Aproximació de conservació del volum durant la deformació plàstica.
+ const radius=.19*diameter/10/Math.sqrt(1+Math.max(0,strain));
  originalGuide.scale.x=diameter/10;originalGuide.scale.z=diameter/10;originalGuide.visible=unloading&&!broken&&plastic>0.00001;
- const neck=fragile?1:Math.max(.48,1-.5*Math.max(0,(strain-neckStart)/(maxStrain-neckStart||1)));
+ const retainedNeckStrain=unloading?Math.max(plastic,peakStrain):strain;
+ const neck=fragile?1:Math.max(.48,1-.5*Math.max(0,(retainedNeckStrain-neckStart)/(maxStrain-neckStart||1)));
  upper.position.y=length/2+.18;lower.position.y=-length/2-.18;
  clearBody();
  if(broken){
@@ -61,7 +63,7 @@ function renderSpecimen(){
  const status=document.getElementById('specimenStatus');
  if(status)status.textContent=broken?'Proveta fracturada':unloading?(Math.abs(strain-plastic)<1e-6?'Deformació permanent: '+(plastic*100).toFixed(2)+' %':'Recuperació elàstica…'):fragile?'Comportament fràgil':strain>neckStart?'Estricció localitzada':strain>0?'Allargament axial':'Proveta inicial';
 }
-window.updateThosSpecimen3D=state=>{current={...current,...state};renderSpecimen();};
+window.updateThosSpecimen3D=state=>{if(!state.unloading&&state.strain===0)peakStrain=0;else if(!state.unloading)peakStrain=Math.max(peakStrain,state.strain);current={...current,...state};renderSpecimen();};
 renderSpecimen();
 const resize=()=>{const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
 new ResizeObserver(resize).observe(host);resize();
