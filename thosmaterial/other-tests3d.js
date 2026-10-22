@@ -22,7 +22,7 @@ function clear(){group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.mate
 function grid(){const g=new THREE.GridHelper(7,14,0x3c687b,0x2c5366);g.position.y=-1.7;group.add(g)}
 function compression(p,scale){
  const mode=current.compressionMode||"axial",threshold=current.thresholdP??1;
- if(mode==="buckling")return compressionBuckling(p,scale,threshold,current.failureP??1);
+ if(mode==="buckling")return compressionBuckling(p,scale,threshold,current.failureP??1,current.material==="wood");
  if(mode==="fracture")return compressionFracture(p,scale,threshold,current.failureP??1);
  if(mode==="wood")return compressionWood(p,scale,current.failureP??1);
  // Deformació 3D amplificada ×20, amb contorn de referència de la proveta original.
@@ -79,27 +79,31 @@ function compressionWood(p,scale,failureP){
  if(p>.2)for(let k=0;k<5;k++){const y=bottom+.125+h*(k+1)/6;const ring=add(new THREE.TorusGeometry(r*.99,.012,6,40),accent,0,y,0);ring.rotation.x=Math.PI/2;}
  if(damage>.1)for(let k=0;k<4;k++){const crack=box(.02,.25*damage,.02,dark,r*.85*Math.cos(k*Math.PI/2),bottom+.4+h*k/5,r*.85*Math.sin(k*Math.PI/2));crack.rotation.z=.4*damage;}
 }
-function compressionBuckling(p,scale,threshold,failureP){
+function compressionBuckling(p,scale,threshold,failureP,isWood){
  const bottom=-1.45,top=1.25,r=.24*scale;
  const after=Math.max(0,Math.min(1,(p-threshold)/Math.max(.05,failureP-threshold)));
- const deflection=1.28*Math.sqrt(after);
+ const deflection=(isWood?.32:1.28)*Math.sqrt(after);
  box(2.4,.22,2.1,hardware,0,bottom,0);
  box(2.4,.22,2.1,hardware,0,top+.22,0);
  const rings=50,around=32,vertices=[],indices=[];
+ const broken=isWood&&p>=failureP;
+ const gap=broken?.13:0;
  for(let i=0;i<=rings;i++){
   const t=i/rings,y=bottom+.12+(top-bottom-.02)*t;
   const bend=deflection*Math.sin(Math.PI*t);
   for(let j=0;j<=around;j++){
    const a=j/around*Math.PI*2;
-   vertices.push(bend+r*Math.cos(a),y,r*Math.sin(a));
+   vertices.push(bend+r*Math.cos(a)+(broken?(t>.5?.11:-.11):0),y+(broken?(t>.5?gap:-gap):0),r*Math.sin(a));
   }
  }
  for(let i=0;i<rings;i++)for(let j=0;j<around;j++){
+  if(broken&&i===Math.floor(rings/2))continue;
   const a=i*(around+1)+j,b=a+around+1;
   indices.push(a,b,a+1,a+1,b,b+1);
  }
+ if(broken){for(let j=0;j<around;j++){const a=j/around*Math.PI*2;const z=r*Math.sin(a);const x=deflection+r*Math.cos(a);const splinter=box(.025,.19,.025,accent,x+(j%2?.13:-.13),.01+(j%3)*.025,z);splinter.rotation.z=(j%2?1:-1)*.4;}}
  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();add(geo,specimen);
- if(after>.68){const hinge=box(.16,.16,.13,accent,deflection*.99, (bottom+top)/2, r*.8);hinge.rotation.z=-after*.7;}
+ if(after>.68&&!isWood){const hinge=box(.16,.16,.13,accent,deflection*.99, (bottom+top)/2, r*.8);hinge.rotation.z=-after*.7;}
  const reference=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,bottom+.12,0),new THREE.Vector3(0,top+.22,0)]),new THREE.LineDashedMaterial({color:0xa9e6ef,dashSize:.12,gapSize:.08,transparent:true,opacity:.5}));reference.computeLineDistances();group.add(reference);
 }
 function compressionFracture(p,scale,threshold,failureP){
