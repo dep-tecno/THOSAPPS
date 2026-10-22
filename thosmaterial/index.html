@@ -73,10 +73,10 @@ function draw(){const L=+$('length').value,d=+$('diameter').value,area=Math.PI*d
  g+='<text x="350" y="351" text-anchor="middle" font-size="14" fill="#183644">Deformació nominal ε (%)</text><text transform="translate(18 183) rotate(-90)" text-anchor="middle" font-size="14" fill="#183644">Tensió nominal σ (MPa)</text>';
  const elasticLimit=m.zones[0],limitX=px(elasticLimit),limitY=py(stressAt(elasticLimit)),isElastic=!broken&&eps<=elasticLimit;
 
- const zoneNames=m===materials.brittle?['Elàstica','Transició','Fractura']:['Elàstica','Límit','Fluència','Enduriment','Estricció'];
+ const zoneNames=m===materials.brittle?['Elàstica','Transició','Ruptura']:['Elàstica','Límit','Fluència','Enduriment','Estricció'];
  const zoneColors=['#159a80','#e2ae31','#e58b35','#3188c5','#a75caa'];
- const bounds=[0,...m.zones];const totalWidth=px(m.end)-px(0);
- for(let i=0;i<5;i++){
+ const bounds=m===materials.brittle?[0,.003,.008,m.end]:[0,...m.zones];const totalWidth=px(m.end)-px(0);
+ for(let i=0;i<zoneNames.length;i++){
   const left=px(bounds[i]),right=px(bounds[i+1]),width=Math.max(0,right-left);
   if(width<.2)continue;
   g+='<rect x="'+left+'" y="76" width="'+width+'" height="230" fill="'+zoneColors[i]+'" fill-opacity=".14"/>';
@@ -88,7 +88,7 @@ function draw(){const L=+$('length').value,d=+$('diameter').value,area=Math.PI*d
  }
  g+='<path d="M'+limitX+' 76V306" stroke="#a85d29" stroke-width="2" stroke-dasharray="6 5"/>';
  // Llegenda fixa fora de la zona de traçat: les fases estretes també són llegibles.
- let lx=70;for(let i=0;i<5;i++){const label=zoneNames[i],step=[106,91,110,129,115][i];g+='<rect x="'+lx+'" y="11" width="10" height="10" rx="2" fill="'+zoneColors[i]+'"/><text x="'+(lx+15)+'" y="21" font-size="11" font-weight="600" fill="#345261">'+label+'</text>';lx+=step;}
+ let lx=70;for(let i=0;i<zoneNames.length;i++){const label=zoneNames[i],step=[106,91,110,129,115][i];g+='<rect x="'+lx+'" y="11" width="10" height="10" rx="2" fill="'+zoneColors[i]+'"/><text x="'+(lx+15)+'" y="21" font-size="11" font-weight="600" fill="#345261">'+label+'</text>';lx+=step;}
  g+='<circle cx="'+limitX+'" cy="'+limitY+'" r="5" fill="#a85d29" stroke="#fff" stroke-width="2"/>';
  g+='<text x="'+Math.max(90,limitX+10)+'" y="'+Math.max(100,limitY-25)+'" font-size="12" font-weight="700" fill="#96551c">Límit elàstic ('+fmt(elasticLimit*100,2)+' %)</text>';
  g+='<rect x="365" y="40" width="268" height="26" rx="6" fill="'+(broken?'#e9edf0':isElastic?'#dff4e9':'#fff0dc')+'"/><text x="499" y="58" text-anchor="middle" font-size="12" font-weight="700" fill="'+(broken?'#536e7a':isElastic?'#176b57':'#96551c')+'">'+(broken?'PROVETA FRACTURADA':isElastic?'DEFORMACIÓ REVERSIBLE':'LÍMIT SUPERAT · DEFORMACIÓ PERMANENT')+'</text>';
