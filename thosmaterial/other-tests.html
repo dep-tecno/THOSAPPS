@@ -52,4 +52,4 @@ $('metric1Name').textContent=t.m1;$('metric2Name').textContent=t.m2;$('metric1')
 function stop(){playing=false;cancelAnimationFrame(raf);$('play').textContent='▶ Inicia';}
 $('play').onclick=()=>{if(playing){stop();return;}if(progress>=1)progress=0;playing=true;last=0;$('play').textContent='Ⅱ Pausa';function tick(now){if(!playing)return;if(last)progress=Math.min(1,progress+Math.min((now-last)/1000,.05)/18);last=now;render();if(progress>=1)stop();else raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick)};
 $('reset').onclick=()=>{stop();progress=0;render()};$('load').oninput=()=>{stop();progress=+$('load').value/1000;render()};$('size').oninput=()=>{stop();render()};$('material').onchange=()=>{stop();progress=0;render()};render();
-</script><script type="module" src="other-tests3d.js?v=4e11b709"></script></body></html>
+</script><script type="module" src="other-tests3d.js?v=800891d6"></script></body></html>
