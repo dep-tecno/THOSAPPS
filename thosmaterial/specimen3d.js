@@ -25,6 +25,7 @@ for(const g of [upper,lower]){
  for(const x of [-.42,.42]){const jaw=new THREE.Mesh(new THREE.BoxGeometry(.30,.5,.83),detail);jaw.position.set(x,0,0);g.add(jaw);}
 }
 const body=new THREE.Group();scene.add(body);
+const originalGuide=new THREE.Mesh(new THREE.CylinderGeometry(.205,.205,2.65,48,1,true),new THREE.MeshBasicMaterial({color:0x278b9d,transparent:true,opacity:.16,wireframe:true,depthWrite:false}));scene.add(originalGuide);
 let meshes=[];
 function clearBody(){for(const mesh of meshes){body.remove(mesh);mesh.geometry.dispose();}meshes=[];}
 function profileMesh(start,end,length,radius,neck,fracture,topPiece){
@@ -42,12 +43,13 @@ function profileMesh(start,end,length,radius,neck,fracture,topPiece){
  const mesh=new THREE.Mesh(new THREE.LatheGeometry(points,48),steel);
  mesh.castShadow=true;body.add(mesh);meshes.push(mesh);
 }
-let current={strain:0,maxStrain:.28,diameter:10,broken:false,neckStart:.17,fragile:false};
+let current={strain:0,maxStrain:.28,diameter:10,broken:false,neckStart:.17,fragile:false,unloading:false,plastic:0};
 function renderSpecimen(){
- const {strain,maxStrain,diameter,broken,neckStart,fragile}=current;
+ const {strain,maxStrain,diameter,broken,neckStart,fragile,unloading,plastic}=current;
  const fraction=Math.max(0,Math.min(1,strain/maxStrain));
  const length=2.65*(1+.33*fraction);
  const radius=.19*diameter/10;
+ originalGuide.scale.x=diameter/10;originalGuide.scale.z=diameter/10;originalGuide.visible=unloading&&!broken&&plastic>0.00001;
  const neck=fragile?1:Math.max(.48,1-.5*Math.max(0,(strain-neckStart)/(maxStrain-neckStart||1)));
  upper.position.y=length/2+.18;lower.position.y=-length/2-.18;
  clearBody();
@@ -57,7 +59,7 @@ function renderSpecimen(){
   upper.position.y+=.13;lower.position.y-=.13;
  }else profileMesh(-length/2,length/2,length,radius,neck,false,false);
  const status=document.getElementById('specimenStatus');
- if(status)status.textContent=broken?'Proveta fracturada':fragile?'Comportament fràgil':strain>neckStart?'Estricció localitzada':strain>0?'Allargament axial':'Proveta inicial';
+ if(status)status.textContent=broken?'Proveta fracturada':unloading?(Math.abs(strain-plastic)<1e-6?'Deformació permanent: '+(plastic*100).toFixed(2)+' %':'Recuperació elàstica…'):fragile?'Comportament fràgil':strain>neckStart?'Estricció localitzada':strain>0?'Allargament axial':'Proveta inicial';
 }
 window.updateThosSpecimen3D=state=>{current={...current,...state};renderSpecimen();};
 renderSpecimen();
