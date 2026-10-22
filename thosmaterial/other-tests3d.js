@@ -1,0 +1,50 @@
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const host=document.getElementById('scene3d');
+if(!host)throw Error('Falta el contenidor de la simulació 3D');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x17384a);
+const camera=new THREE.PerspectiveCamera(38,1,.1,100);camera.position.set(5,3.3,7.8);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;host.appendChild(renderer.domElement);
+const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.minDistance=3.3;orbit.maxDistance=13;orbit.target.set(0,0,0);
+scene.add(new THREE.HemisphereLight(0xffffff,0x446579,2.5));const light=new THREE.DirectionalLight(0xffffff,3);light.position.set(3,7,6);scene.add(light);
+const specimen=new THREE.MeshStandardMaterial({color:0x54c7d6,metalness:.65,roughness:.32,side:THREE.DoubleSide});
+const hardware=new THREE.MeshStandardMaterial({color:0x8ca4b1,metalness:.75,roughness:.32});
+const accent=new THREE.MeshStandardMaterial({color:0xf3ae5a,metalness:.3,roughness:.4});
+const dark=new THREE.MeshStandardMaterial({color:0x344f60,metalness:.65,roughness:.4});
+const stripe=new THREE.MeshStandardMaterial({color:0xe2f7fb,metalness:.25,roughness:.55});
+const group=new THREE.Group();scene.add(group);
+function add(geometry,material,x=0,y=0,z=0,parent=group){const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x,y,z);parent.add(mesh);return mesh}
+function box(w,h,d,mat,x=0,y=0,z=0){return add(new THREE.BoxGeometry(w,h,d),mat,x,y,z)}
+function cyl(rt,rb,h,mat,x=0,y=0,z=0){return add(new THREE.CylinderGeometry(rt,rb,h,40),mat,x,y,z)}
+function sphere(r,mat,x=0,y=0,z=0){return add(new THREE.SphereGeometry(r,24,16),mat,x,y,z)}
+function rod(a,b,r,mat){const d=new THREE.Vector3().subVectors(b,a),mid=new THREE.Vector3().addVectors(a,b).multiplyScalar(.5);const mesh=add(new THREE.CylinderGeometry(r,r,d.length(),18),mat,mid.x,mid.y,mid.z);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return mesh}
+function clear(){group.traverse(o=>{if(o.geometry)o.geometry.dispose()});group.clear()}
+function grid(){const g=new THREE.GridHelper(7,14,0x3c687b,0x2c5366);g.position.y=-1.7;group.add(g)}
+function compression(p,scale){const h=2.65*(1-.34*p),r=.47*scale*(1+.22*p);box(2.4,.25,2.1,hardware,0,-1.42,0);box(2.4,.25,2.1,hardware,0,-1.42+h+.25,0);cyl(r,r,h,specimen,0,-1.42+.125+h/2,0);for(let j=0;j<4;j++)cyl(r*1.008,r*1.008,.022,stripe,0,-1.42+.125+h*(j+1)/5,0);box(.24,.55,.24,dark,0,-1.42+h+.65,0)}
+function flexion(p,scale){const L=4.5,def=.85*p;for(const x of [-2.12,2.12]){const support=cyl(.34,.34,.75,hardware,x,-1.12,0);support.rotation.x=Math.PI/2;box(.9,.2,1.1,dark,x,-1.6,0)}
+ const sections=42;const verts=[],norm=[],indices=[];const w=.44*scale,h=.42*scale;
+ for(let i=0;i<=sections;i++){const x=-L/2+L*i/sections,y=.05-def*Math.pow(Math.sin(Math.PI*i/sections),2);for(const [yy,zz] of [[-h/2,-w/2],[-h/2,w/2],[h/2,w/2],[h/2,-w/2]])verts.push(x,y+yy,zz)}
+ for(let i=0;i<sections;i++)for(let k=0;k<4;k++){const a=4*i+k,b=4*i+(k+1)%4,c=a+4,d=b+4;indices.push(a,b,c,b,d,c)}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();add(geo,specimen);
+ cyl(.19,.19,.85,hardware,0,1.45-def,0);box(.9,.24,.9,accent,0,.94-def,0)}
+function torsion(p,scale){const length=3.8,r=.45*scale;const n=64,around=24,verts=[],inds=[];
+ for(let i=0;i<=n;i++){const x=-length/2+length*i/n,angle=p*1.45*i/n;for(let j=0;j<=around;j++){const a=j/around*Math.PI*2+angle;verts.push(x,r*Math.cos(a),r*Math.sin(a))}}
+ for(let i=0;i<n;i++)for(let j=0;j<around;j++){const a=i*(around+1)+j,b=a+around+1;inds.push(a,b,a+1,a+1,b,b+1)}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(inds);geo.computeVertexNormals();add(geo,specimen);
+ for(let i=0;i<=8;i++){const x=-length/2+length*i/8,angle=p*1.45*i/8;const s=sphere(.075,stripe,x,r*Math.cos(angle),r*Math.sin(angle));s.scale.set(1,.65,.65)}
+ for(const x of [-2.2,2.2]){const chuck=cyl(.76,.76,.3,hardware,x,0,0);chuck.rotation.z=Math.PI/2}
+ const marker=box(.1,.7,.12,accent,2.32,0,0);marker.rotation.x=p*1.45}
+function hardness(p,scale){box(4,.7,2.6,hardware,0,-1.13,0);box(2.5,.28,1.7,specimen,0,-.63,0);const tip=cyl(.15,.48,.82,accent,0,.65-.7*p,0);tip.rotation.z=Math.PI;const shaft=cyl(.16,.16,.8,hardware,0,1.45-.7*p,0);if(p>.05){const ring=add(new THREE.TorusGeometry(.07+.26*p,.035,12,40),dark,0,-.48,0);ring.rotation.x=Math.PI/2}}
+function impact(p,scale){const theta=p<.48?(-1.1+(p/.48)*1.1):(p<.58?0:(p-.58)/.42*.75),len=2.9;const pivot=new THREE.Vector3(0,1.65,0),end=new THREE.Vector3(Math.sin(theta)*len,1.65-Math.cos(theta)*len,0);rod(pivot,end,.065,hardware);sphere(.24,accent,end.x,end.y,end.z);cyl(.18,.18,.6,hardware,0,1.65,0).rotation.x=Math.PI/2;for(const x of [-.7,.7])box(.65,.28,.9,hardware,x,-1.44,0);box(1.8,.24,.35,specimen,0,-1.19,0);if(p>.53){const fracture=Math.min(1,(p-.53)*10);box(.85*(1-fracture*.16),.22,.35,specimen,-.48-fracture*.12,-1.19,0);box(.85*(1-fracture*.16),.22,.35,specimen,.48+fracture*.12,-1.19,0)}}
+let current={test:'compressio',progress:0,size:20};
+function rebuild(){clear();grid();const p=Math.max(0,Math.min(1,current.progress)),scale=.75+current.size/60;
+ if(current.test==='compressio')compression(p,scale);
+ else if(current.test==='flexio')flexion(p,scale);
+ else if(current.test==='torsio')torsion(p,scale);
+ else if(current.test==='duresa')hardness(p,scale);
+ else impact(p,scale)}
+window.updateThosOther3D=state=>{current={...current,...state};rebuild()};
+const resize=()=>{const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)};
+new ResizeObserver(resize).observe(host);resize();rebuild();
+let running=true;function frame(){if(!running)return;requestAnimationFrame(frame);orbit.update();renderer.render(scene,camera)}frame();
+window.addEventListener('pagehide',()=>{running=false;orbit.dispose();clear();renderer.dispose()},{once:true});
