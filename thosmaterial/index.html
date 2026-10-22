@@ -126,11 +126,23 @@ function draw(){const L=+$('length').value,d=+$('diameter').value,area=Math.PI*d
  g+='<text x="644" y="348" text-anchor="end" font-size="10" fill="#6b7780">ESCALA ε ESQUEMÀTICA</text>';g+='<circle cx="'+px(eps)+'" cy="'+py(s)+'" r="7" fill="#ee8b35" stroke="white" stroke-width="2"/>';$('plotContent').innerHTML=g;
  if(window.updateThosSpecimen3D)window.updateThosSpecimen3D({strain:eps,maxStrain:m.end,diameter:d,broken,neckStart:m.zones[3],fragile:false,unloading,plastic});$('strain').value=Math.round(eps/m.end*1000);$('strain').disabled=broken||unloading;
 }
+// Conversió inversa de l'escala esquemàtica, per avançar visualment a velocitat constant.
+function strainFromProgress(progress){
+ const v=[0,.18,.30,.47,.77,1],a=[0,...m.zones],p=Math.max(0,Math.min(1,progress));
+ for(let i=0;i<5;i++)if(p<=v[i+1])return a[i]+(a[i+1]-a[i])*(p-v[i])/(v[i+1]-v[i]);
+ return m.end;
+}
+function progressFromStrain(x){
+ const v=[0,.18,.30,.47,.77,1],a=[0,...m.zones];
+ if(x<=0)return 0;
+ for(let i=0;i<5;i++)if(x<=a[i+1])return v[i]+(v[i+1]-v[i])*(x-a[i])/(a[i+1]-a[i]);
+ return 1;
+}
 function stop(){playing=false;cancelAnimationFrame(raf);$('play').textContent='▶ Inicia';}
 function reset(){stop();eps=0;plastic=0;unloadStart=0;unloadStress=0;unloading=false;broken=false;$('message').textContent='Proveta preparada per a l’assaig.';draw();}
 function setEps(v){if(broken||unloading)return;eps=Math.max(0,Math.min(m.end,v));if(eps>=m.end){broken=true;stop();$('message').textContent='Trencament: reinicia per fer un altre assaig.';}draw();}
 $('length').addEventListener('input',draw);$('diameter').addEventListener('input',draw);$('strain').addEventListener('input',()=>{stop();setEps(+$('strain').value/1000*m.end);});$('reset').addEventListener('click',reset);
-$('play').addEventListener('click',()=>{if(broken||unloading)return;if(playing){stop();return;}playing=true;last=0;$('play').textContent='Ⅱ Pausa';function tick(t){if(!playing)return;if(last)setEps(eps+Math.min((t-last)/1000,.06)*m.end/12);last=t;if(playing)raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick);});
+$('play').addEventListener('click',()=>{if(broken||unloading)return;if(playing){stop();return;}playing=true;last=0;$('play').textContent='Ⅱ Pausa';let progress=progressFromStrain(eps);function tick(t){if(!playing)return;if(last){const dt=Math.min((t-last)/1000,.05);progress=Math.min(1,progress+dt/24);setEps(strainFromProgress(progress));}last=t;if(playing)raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick);});
 $('unload').addEventListener('click',()=>{if(broken){$('message').textContent='No es pot descarregar una proveta fracturada.';return;}stop();if(!unloading){unloadStart=eps;unloadStress=stressAt(eps);plastic=Math.max(0,eps-unloadStress/m.E);unloading=true;$('message').textContent='Descàrrega: observa la recuperació elàstica i la deformació residual.';}let start=eps,begin=0;function step(t){if(!begin)begin=t;let a=Math.min(1,(t-begin)/650);eps=start+(plastic-start)*a;draw();if(a<1)raf=requestAnimationFrame(step);else{$('message').textContent='Descàrrega completada. Reinicia per fer un altre assaig.';}}raf=requestAnimationFrame(step);});
 for(const [id,,name] of materialTable){const option=document.createElement('option');option.value=id;option.textContent=name;$('material').append(option);}
 $('material').value=m.id;
