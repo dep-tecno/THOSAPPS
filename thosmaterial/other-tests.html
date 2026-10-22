@@ -17,28 +17,50 @@ const rect=(x,y,w,h,fill='#39a9bd',r=4)=>'<rect x="'+x+'" y="'+y+'" width="'+w+'
 function render(){const mode=$('compressionMode').value,L0=+$('length').value;$('compressionOptions').hidden=id!=='compressio';$('lengthOut').textContent=L0+' mm';const p=progress,m=models[$('material').value],d=+$('size').value,t=tests[id];$('load').value=Math.round(p*1000);$('loadOut').textContent=Math.round(p*100)+' %';$('sizeOut').textContent=d+' mm';$('sceneTitle').textContent=t.name+' · proveta';$('selectedMaterial').textContent='Material: '+m.name;$('materialReference').textContent='Referència de la taula: E = '+(m.E/1000).toLocaleString('ca-ES')+' GPa; '+(m.brittle?'resistència orientativa a compressió':'límit elàstic orientatiu')+' = '+m.yield.toLocaleString('ca-ES')+' MPa. Valors didàctics aproximats, no experimentals.';$('chartTitle').textContent=t.chart;$('description').textContent=t.description;$('formula').textContent=t.formula;
 let scene='',x=0,y=0,xmax=1,ymax=1,unit1='',unit2='',phase=p<.25?'Inici':p<.65?'Deformació':'Fase final';
 if(id==='compressio'){
- const eps=.012*p,area=Math.PI*d*d/4;
- const elastic=compressionStress(m,eps),failureStress=Math.min(m.yield*1.2,Math.max(30,m.yield*.85));
+ const eps=.012*p,area=Math.PI*d*d/4,epsMax=.012;
+ const brittle=!!m.brittle,wood=$('material').value==='wood';
+ // Educationally amplified strain-domain responses: shape reflects material family, not measured test data.
+ const peakP=brittle?Math.max(.12,Math.min(.82,(m.yield/m.E)/epsMax*(m.name==='Fosa grisa'?1.4:2.5))):wood?.38:Math.min(.88,m.yield/m.E/epsMax);
+ const peakStress=m.yield;
+ const axialStress=q=>{
+  if(brittle){
+   const r=q/peakP;
+   if(r<=1)return peakStress*(2*r-r*r);
+   const after=(q-peakP)/(1-peakP);
+   return peakStress*Math.max(.035,Math.exp(-8*after));
+  }
+  if(wood){
+   if(q<.2)return peakStress*.75*(q/.2);
+   if(q<.68)return peakStress*(.75+.09*(q-.2)/.48);
+   return peakStress*(.84+.36*(q-.68)/.32);
+  }
+  return compressionStress(m,epsMax*q);
+ };
  const I=Math.PI*d**4/64,Fcr=Math.PI**2*m.E*I/L0**2,criticalStress=Fcr/area;
  const bucklingStress=Math.min(criticalStress,m.yield);
- const threshold=mode==='fracture'?failureStress: bucklingStress;
- const thresholdP=mode==='fracture'?Math.min(.92,threshold/(m.E*.012)):Math.min(.92,threshold/(m.E*.012));
- const maxStress=mode==='axial'?compressionStress(m,.012):Math.max(10,threshold*1.18);
+ const threshold=mode==='buckling'?bucklingStress:peakStress;
+ const thresholdP=mode==='buckling'?Math.max(.04,Math.min(.92,threshold/(m.E*epsMax))):peakP;
  const stressAt=q=>{
-  if(mode==='axial')return compressionStress(m,.012*q);
+  if(mode==='axial')return axialStress(q);
+  if(mode==='fracture'){
+   const r=q/peakP;
+   if(r<=1)return peakStress*(brittle?(2*r-r*r):r);
+   const loss=(q-peakP)/(1-peakP);
+   return peakStress*Math.max(.035,Math.exp(-(brittle?9:5)*loss));
+  }
   const qcrit=Math.max(.04,thresholdP);
   if(q<=qcrit)return threshold*q/qcrit;
-  const loss=(q-qcrit)/(1-qcrit);
-  return mode==='fracture'?threshold*Math.max(.07,1-.93*Math.min(1,loss*3)):threshold*(1-.45*loss);
+  return threshold*(1-.45*(q-qcrit)/(1-qcrit));
  };
  const s=stressAt(p),F=s*area/1000;
- x=eps*100;y=s;xmax=1.2;ymax=Math.max(20,maxStress);
+ x=eps*100;y=s;xmax=1.2;
+ ymax=Math.max(20,mode==='buckling'?threshold*1.18:mode==='axial'&&!brittle&&!wood?axialStress(1)*1.18:peakStress*1.25);
  unit1=n(F)+' kN';unit2=n(eps*L0,2)+' mm';
- phase=p===0?'Inici':mode==='axial'?(eps>m.yield/m.E?'Zona plàstica':'Zona elàstica'):p>=thresholdP?(mode==='fracture'?'Fractura':'Vinclament'):'Compressió estable';
+ phase=p===0?'Inici':mode==='buckling'?(p>=thresholdP?'Vinclament':'Compressió estable'):mode==='fracture'||brittle?(p>=peakP?'Fractura':'Càrrega estable'):wood?(p<.2?'Resposta inicial':p<.68?'Aixafament de fibres':'Densificació'):(eps>m.yield/m.E?'Zona plàstica':'Zona elàstica');
  $('chartTitle').textContent=mode==='axial'?t.chart:mode==='fracture'?'Fractura · tensió–deformació':'Vinclament · tensió nominal–deformació';
- $('description').textContent=mode==='axial'?t.description:mode==='fracture'?'Model esquemàtic de fallada fràgil: després de la resistència màxima, la proveta perd capacitat de càrrega. No representa una predicció de fractura per a aquest material.':'Columna ideal articulada als dos extrems: càrrega crítica d’Euler, limitada pel límit elàstic. La desviació lateral és una amplificació visual; no es modelen imperfeccions ni postvinclament real.';
- $('formula').textContent=mode==='axial'?t.formula:mode==='fracture'?'Fractura didàctica: llindar de resistència simplificat i descens posterior de càrrega. No és una propietat experimental del material.':'Fcr = π²EI/L₀²; I = πd⁴/64; F crítica limitada per A₀·σy. Model ideal d’extrems articulats (K = 1).';
- var compressionInfo={mode,L0,threshold,thresholdP,stressAt,criticalStress};
+ $('description').textContent=mode==='buckling'?'Columna ideal articulada: el vinclament depèn de l’esveltesa i del mòdul E. La visualització lateral està amplificada.':brittle?'Material fràgil: augment de càrrega fins a la resistència màxima i pèrdua sobtada de capacitat resistent. La fissuració es representa de manera exagerada per aprendre.':wood?'Fusta comprimida paral·lelament a la fibra: tram inicial, aixafament progressiu de fibres i densificació. Model qualitatiu, sensible a humitat i direcció.':mode==='fracture'?'Fractura forçada didàctica d’un material dúctil: no és el seu mode de fallada habitual en compressió.':'Material dúctil: resposta elàstica, fluència i deformació plàstica amb enduriment. Deformació 3D amplificada.';
+ $('formula').textContent=mode==='buckling'?'Euler ideal: Fcr = π²EI/L₀²; I = πd⁴/64. Límit per resistència del material; no modela imperfeccions.':brittle?'Corba qualitativa: σ puja fins a σmax i després disminueix. L’amplada i el descens estan exagerats, no són dades experimentals.':wood?'Corba qualitativa en tres fases: resposta inicial → aixafament de fibres → densificació. No és una llei constitutiva calibrada.':mode==='fracture'?'Fallada imposada didàcticament; la compressió real de metalls dúctils acostuma a provocar plasticitat, no fractura fràgil.':t.formula;
+ var compressionInfo={mode,L0,threshold,thresholdP,stressAt,criticalStress,peakP,brittle,wood};
 }
 if(id==='flexio'){const L=300,h=d*.9,delta=65*p,load=m.E*d*d*d*delta/(4*300**3);scene=rect(90,255,20,20,'#7e9ca9')+rect(390,255,20,20,'#7e9ca9')+'<path d="M100 250 Q250 '+(250+delta*2)+' 400 250" fill="none" stroke="#39a9bd" stroke-width="'+Math.max(12,h)+'" stroke-linecap="round"/>'+line(250,90,250,205+delta,'#f4ad54',6);x=delta;y=load;xmax=70;ymax=Math.max(100,load/Math.max(.01,p)*1.2);unit1=n(load)+' N';unit2=n(delta)+' mm';}
 if(id==='torsio'){const angle=75*p,G=m.E/2.6,L=200,J=Math.PI*d**4/32,T=G*J*(angle*Math.PI/180)/L/1000;scene=rect(90,145,35,100,'#7e9ca9')+rect(125,166,250,58,'#39a9bd')+rect(375,145,35,100,'#7e9ca9')+'<ellipse cx="375" cy="195" rx="20" ry="29" fill="#5ac5d5"/><path d="M370 145 A55 55 0 '+(p>.5?1:0)+' 1 '+(370+45*Math.sin(p*1.5))+' '+(145+45*(1-Math.cos(p*1.5)))+'" fill="none" stroke="#f4ad54" stroke-width="6"/>';x=angle;y=T;xmax=80;ymax=Math.max(1,T/Math.max(.01,p)*1.2);unit1=n(T,2)+' N·m';unit2=n(angle)+'°';}
@@ -48,11 +70,11 @@ if(window.updateThosOther3D)window.updateThosOther3D({test:id,progress:p,size:d,
 let grid='',annotations='';
 const fmtAxis=v=>Number(v.toFixed(Math.abs(v)<10?2:Math.abs(v)<100?1:0)).toLocaleString('ca-ES');
 const phaseColors=['#159a80','#e2ae31','#e58b35','#3188c5','#a75caa'];
-const phaseLabels=id==='compressio'?(mode==='axial'?['Elàstica','Plàstica']:mode==='fracture'?['Càrrega estable','Fractura','Pèrdua de càrrega']:['Estabilitat','Càrrega crítica','Postvinclament']):['Evolució de l’assaig'];
+const phaseLabels=id==='compressio'?(mode==='axial'?(compressionInfo.brittle?['Càrrega','Fractura']:compressionInfo.wood?['Inicial','Aixafament','Densificació']:['Elàstica','Plàstica']):mode==='fracture'?['Càrrega estable','Fractura','Pèrdua de càrrega']:['Estabilitat','Càrrega crítica','Postvinclament']):['Evolució de l’assaig'];
 let thresholds=[0,1];
 if(id==='compressio'){
  const cp=compressionInfo.thresholdP;
- thresholds=mode==='axial'?[0,Math.min(1,m.yield/m.E/.012),1]:[0,Math.max(.001,cp),Math.min(1,cp+.06),1];
+ thresholds=mode==='axial'?(compressionInfo.brittle?[0,compressionInfo.peakP,1]:compressionInfo.wood?[0,.2,.68,1]:[0,Math.min(1,m.yield/m.E/.012),1]):[0,Math.max(.001,cp),Math.min(1,cp+.06),1];
  thresholds=[...new Set(thresholds)].sort((a,b)=>a-b);
 }
 const plotLeft=62,plotTop=70,plotBottom=310,plotWidth=580,plotHeight=240;
@@ -76,12 +98,12 @@ for(let i=0;i<thresholds.length-1;i++){
  coloredCurves+='<path d="'+section+'" fill="none" stroke="'+color+'" stroke-width="4" stroke-linecap="round"/>';
 }
 if(id==='compressio'){
- const info=compressionInfo,crit=mode==='axial'?m.yield/m.E/.012:info.thresholdP;
+ const info=compressionInfo,crit=mode==='axial'?(info.brittle?info.peakP:info.wood?.2:m.yield/m.E/.012):info.thresholdP;
  if(crit<=1){
   const px=sx(curveX(crit)),py=sy(curveY(crit));
   annotations+='<line x1="'+px+'" y1="'+plotTop+'" x2="'+px+'" y2="'+plotBottom+'" stroke="#a85d29" stroke-width="2" stroke-dasharray="6 5"/>';
   annotations+='<circle cx="'+px+'" cy="'+py+'" r="5" fill="#a85d29" stroke="white" stroke-width="2"/>';
-  annotations+='<text x="'+Math.min(480,Math.max(75,px+9))+'" y="91" fill="#96551c" font-size="11" font-weight="700">'+(mode==='axial'?'Límit elàstic':mode==='fracture'?'Resistència màxima':'Càrrega crítica')+': '+fmtAxis(curveY(crit))+' MPa</text>';
+  annotations+='<text x="'+Math.min(480,Math.max(75,px+9))+'" y="91" fill="#96551c" font-size="11" font-weight="700">'+(mode==='axial'?(info.brittle?'Resistència màxima':info.wood?'Inici aixafament':'Límit elàstic'):mode==='fracture'?'Resistència màxima':'Càrrega crítica')+': '+fmtAxis(curveY(crit))+' MPa</text>';
  }
 }
 let legendSvg='',lx=72;
@@ -96,7 +118,7 @@ const status='<rect x="390" y="37" width="242" height="26" rx="6" fill="'+stateC
 $('chart').innerHTML=grid+legendSvg+status+annotations+line(62,70,62,310,'#637f8b',2)+line(62,310,642,310,'#637f8b',2)+coloredCurves+'<circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="7" fill="#ee8b35" stroke="white" stroke-width="2"/><text x="350" y="351" text-anchor="middle" fill="#183644" font-size="14">'+t.x+'</text><text transform="translate(18 190) rotate(-90)" text-anchor="middle" fill="#183644" font-size="14">'+t.y+'</text><text x="70" y="43" font-size="11" fill="#58727f">Model didàctic aproximat · '+m.name+'</text>';
 if(id==='compressio'){
  const info=compressionInfo;
- $('chartExplanation').textContent=mode==='axial'?(p===0?'Estat inicial. El pendent elàstic depèn del mòdul de Young E.':phase==='Zona plàstica'?'S’ha superat el límit elàstic. L’enduriment és aproximat.':'Zona elàstica: σ = E·ε.'):mode==='fracture'?(p<info.thresholdP?'La proveta acumula càrrega abans del llindar de fallada esquemàtic.':'Fallada fràgil: la corba perd càrrega després del màxim; el 3D mostra la fissura.'):p<info.thresholdP?'Columna estable. La càrrega crítica depèn molt de la longitud i el diàmetre.':'Vinclament: inestabilitat lateral després de la càrrega crítica ideal. La corba postcrítica és il·lustrativa.';
+ $('chartExplanation').textContent=mode==='axial'?(info.brittle?(p<info.peakP?'Material fràgil: la tensió creix fins al màxim.':'Fractura fràgil: descens brusc de resistència, exagerat per visualitzar-lo.'):info.wood?(p<.2?'Resposta inicial de les fibres.':p<.68?'Aixafament progressiu de les fibres.':'Densificació: augment de resistència després de l’aixafament.'):(p===0?'Estat inicial. El pendent elàstic depèn del mòdul de Young E.':phase==='Zona plàstica'?'S’ha superat el límit elàstic. L’enduriment és aproximat.':'Zona elàstica: σ = E·ε.')):mode==='fracture'?(p<info.thresholdP?'La proveta acumula càrrega abans del llindar de fallada esquemàtic.':'Fallada fràgil: la corba perd càrrega després del màxim; el 3D mostra la fissura.'):p<info.thresholdP?'Columna estable. La càrrega crítica depèn molt de la longitud i el diàmetre.':'Vinclament: inestabilitat lateral després de la càrrega crítica ideal. La corba postcrítica és il·lustrativa.';
  $('chartExplanation').textContent+=' Longitud '+L0+' mm · diàmetre '+d+' mm.';
 }else $('chartExplanation').textContent='Corba didàctica orientativa. El punt taronja indica l’estat instantani de l’assaig.';
 $('metric1Name').textContent=t.m1;$('metric2Name').textContent=t.m2;$('metric1').textContent=unit1;$('metric2').textContent=unit2;$('metric3').textContent=Math.round(p*100)+' %';$('metric4Name').textContent=id==='compressio'?'Tensió nominal':'Fase';$('metric4').textContent=id==='compressio'?n(y,2)+' MPa':phase;}
