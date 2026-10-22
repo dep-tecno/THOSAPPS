@@ -24,7 +24,25 @@ if(id==='impacte'){const theta=(1-p)*(-65)+p*48,rad=theta*Math.PI/180,cx=250+180
 if(window.updateThosOther3D)window.updateThosOther3D({test:id,progress:p,size:d,material:$('material').value});
 const sx=v=>62+580*v/xmax,sy=v=>310-250*v/ymax;let path='';for(let i=0;i<=100;i++){const q=i/100;let yy;if(id==='compressio')yy=compressionStress(m,.012*q);else if(id==='flexio')yy=m.E*d**3*(65*q)/(4*300**3);else if(id==='torsio')yy=(m.E/2.6)*(Math.PI*d**4/32)*(75*q*Math.PI/180)/200/1000;else if(id==='duresa')yy=m.hard*15*q*q;else yy=80*(1-Math.cos(Math.PI*q))/2;let xx=id==='compressio'?1.2*q:id==='flexio'?65*q:id==='torsio'?75*q:id==='duresa'?3*q:100*q;path+=(i?'L':'M')+sx(xx).toFixed(1)+' '+sy(yy).toFixed(1)+' ';}
 let grid='';for(let i=0;i<=5;i++){grid+=line(62+580*i/5,60,62+580*i/5,310,'#dce8ec',1)+line(62,310-250*i/5,642,310-250*i/5,'#dce8ec',1);}
-$('chart').innerHTML=grid+line(62,60,62,310,'#637f8b',2)+line(62,310,642,310,'#637f8b',2)+'<path d="'+path+'" stroke="#007f93" stroke-width="4" fill="none"/><circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="7" fill="#ee8b35" stroke="white" stroke-width="2"/><text x="350" y="351" text-anchor="middle" fill="#183644" font-size="14">'+t.x+'</text><text transform="translate(18 190) rotate(-90)" text-anchor="middle" fill="#183644" font-size="14">'+t.y+'</text><text x="70" y="42" font-size="12" fill="#58727f">Corba didàctica aproximada</text>';
+const fmtAxis=v=>Number(v.toFixed(Math.abs(v)<10?2:Math.abs(v)<100?1:0)).toLocaleString('ca-ES');
+for(let i=0;i<=5;i++){
+ const gx=62+580*i/5,gy=310-250*i/5;
+ grid+='<text x="'+gx+'" y="330" text-anchor="middle" font-size="11" fill="#496675">'+fmtAxis(xmax*i/5)+'</text>';
+ grid+='<text x="52" y="'+(gy+4)+'" text-anchor="end" font-size="11" fill="#496675">'+fmtAxis(ymax*i/5)+'</text>';
+}
+let annotations='';
+if(id==='compressio'){
+ const yieldX=100*m.yield/m.E,yieldY=m.yield;
+ if(yieldX<=xmax){
+ const px=sx(yieldX),py=sy(yieldY);
+ annotations+='<line x1="'+px+'" y1="60" x2="'+px+'" y2="310" stroke="#cf9652" stroke-width="1.5" stroke-dasharray="5 5"/>';
+ annotations+='<circle cx="'+px+'" cy="'+py+'" r="5" fill="#cf9652" stroke="white" stroke-width="1.5"/>';
+ annotations+='<text x="'+Math.min(px+8,515)+'" y="75" fill="#8a571b" font-size="12" font-weight="600">Límit elàstic ('+fmtAxis(yieldY)+' MPa)</text>';
+ annotations+='<text x="75" y="94" fill="#147e8f" font-size="12">Zona elàstica</text>';
+ annotations+='<text x="'+Math.max(365,px+12)+'" y="110" fill="#8a571b" font-size="12">Zona plàstica (model)</text>';
+ }else annotations+='<text x="75" y="92" fill="#147e8f" font-size="12">Tot el recorregut és elàstic</text>';
+}
+$('chart').innerHTML=grid+annotations+line(62,60,62,310,'#637f8b',2)+line(62,310,642,310,'#637f8b',2)+'<path d="'+path+'" stroke="#007f93" stroke-width="4" fill="none"/><circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="7" fill="#ee8b35" stroke="white" stroke-width="2"/><text x="350" y="351" text-anchor="middle" fill="#183644" font-size="14">'+t.x+'</text><text transform="translate(18 190) rotate(-90)" text-anchor="middle" fill="#183644" font-size="14">'+t.y+'</text><text x="70" y="42" font-size="12" fill="#58727f">Corba didàctica aproximada</text>';
 $('metric1Name').textContent=t.m1;$('metric2Name').textContent=t.m2;$('metric1').textContent=unit1;$('metric2').textContent=unit2;$('metric3').textContent=Math.round(p*100)+' %';$('metric4').textContent=phase;}
 function stop(){playing=false;cancelAnimationFrame(raf);$('play').textContent='▶ Inicia';}
 $('play').onclick=()=>{if(playing){stop();return;}if(progress>=1)progress=0;playing=true;last=0;$('play').textContent='Ⅱ Pausa';function tick(now){if(!playing)return;if(last)progress=Math.min(1,progress+Math.min((now-last)/1000,.05)/18);last=now;render();if(progress>=1)stop();else raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick)};
