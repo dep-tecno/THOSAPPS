@@ -117,7 +117,7 @@ function buildMaterialList(query=''){
  const groups=[...new Set(materialTable.map(r=>r[1]))],list=$('materialList');list.replaceChildren();
  for(const family of groups){const entries=materialTable.filter(r=>r[1]===family&&r[2].toLocaleLowerCase('ca').includes(query.toLocaleLowerCase('ca')));if(!entries.length)continue;
  const section=document.createElement('section'),heading=document.createElement('h3');heading.textContent=family;section.append(heading);
- for(const [id,,name] of entries){const btn=document.createElement('button');btn.type='button';btn.className='material-choice'+(m.id===id?' selected':'');btn.textContent=name;btn.setAttribute('aria-pressed',String(m.id===id));btn.addEventListener('click',()=>{$('material').value=id;m=materials[id];reset();buildMaterialList($('materialSearch').value);});section.append(btn);}
+ for(const [id,,name] of entries){const btn=document.createElement('button');btn.type='button';btn.className='material-choice'+(m.id===id?' selected':'');btn.textContent=name;btn.setAttribute('aria-pressed',String(m.id===id));btn.addEventListener('click',()=>{$('material').value=id;m=materials[id];reset();buildMaterialList();});section.append(btn);}
  list.append(section);
  }
 }
