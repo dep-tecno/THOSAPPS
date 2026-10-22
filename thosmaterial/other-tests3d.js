@@ -18,32 +18,48 @@ function box(w,h,d,mat,x=0,y=0,z=0){return add(new THREE.BoxGeometry(w,h,d),mat,
 function cyl(rt,rb,h,mat,x=0,y=0,z=0){return add(new THREE.CylinderGeometry(rt,rb,h,40),mat,x,y,z)}
 function sphere(r,mat,x=0,y=0,z=0){return add(new THREE.SphereGeometry(r,24,16),mat,x,y,z)}
 function rod(a,b,r,mat){const d=new THREE.Vector3().subVectors(b,a),mid=new THREE.Vector3().addVectors(a,b).multiplyScalar(.5);const mesh=add(new THREE.CylinderGeometry(r,r,d.length(),18),mat,mid.x,mid.y,mid.z);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return mesh}
-function clear(){group.traverse(o=>{if(o.geometry)o.geometry.dispose()});group.clear()}
+function clear(){group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material?.isLineDashedMaterial)o.material.dispose()});group.clear()}
 function grid(){const g=new THREE.GridHelper(7,14,0x3c687b,0x2c5366);g.position.y=-1.7;group.add(g)}
 function compression(p,scale){
- // Amplificació didàctica ×20: deformació real màxima 1,2 %, visual màxima 24 %.
- const visualStrain=.012*p*20;
- const h0=2.65,h=h0*(1-visualStrain),bottom=-1.45;
+ // Deformació 3D amplificada ×20, amb contorn de referència de la proveta original.
+ const visualStrain=.012*p*20,h0=2.65,h=h0*(1-visualStrain),bottom=-1.45;
  const radius0=.47*scale,volumeRadius=radius0/Math.sqrt(1-visualStrain);
- const points=[],segments=48;
- // Perfil lleugerament abarrilat, amb volum aproximadament conservat.
- const bulge=.11*p;
+ const points=[],segments=48,bulge=.11*p;
  for(let i=0;i<=segments;i++){
   const t=i/segments,localY=-h/2+t*h;
   const factor=1+bulge*Math.pow(Math.sin(Math.PI*t),2);
   const normalization=1+bulge*.5;
   points.push(new THREE.Vector2(volumeRadius*factor/normalization,localY));
  }
- const body=add(new THREE.LatheGeometry(points,48),specimen,0,bottom+.13+h/2,0);
+ // Referència inicial: només contorns discontinus, sense tapar la proveta actual.
+ if(p>.001){
+  const ghostMat=new THREE.LineDashedMaterial({color:0xa9e6ef,transparent:true,opacity:.45,dashSize:.10,gapSize:.075,depthTest:false});
+  const reference=new THREE.Group();group.add(reference);
+  const y0=bottom+.13,y1=y0+h0;
+  for(const y of [y0,y1]){
+   const vertices=[];
+   for(let k=0;k<=64;k++){const a=k*Math.PI*2/64;vertices.push(new THREE.Vector3(radius0*Math.cos(a),y,radius0*Math.sin(a)))}
+   const geo=new THREE.BufferGeometry().setFromPoints(vertices);
+   const ring=new THREE.Line(geo,ghostMat);ring.computeLineDistances();reference.add(ring);
+  }
+  for(const a of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
+   const geo=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(radius0*Math.cos(a),y0,radius0*Math.sin(a)),
+    new THREE.Vector3(radius0*Math.cos(a),y1,radius0*Math.sin(a))
+   ]);
+   const side=new THREE.Line(geo,ghostMat);side.computeLineDistances();reference.add(side);
+  }
+ }
+ // Plaques i cos deformable: posició de contacte coherent amb la superfície.
  box(2.4,.25,2.1,hardware,0,bottom,0);
+ add(new THREE.LatheGeometry(points,48),specimen,0,bottom+.125+h/2,0);
  box(2.4,.25,2.1,hardware,0,bottom+.25+h,0);
- // Eix de càrrega, solidari amb el plat superior.
  cyl(.14,.14,.6,dark,0,bottom+.25+h+.43,0);
- // Marques de superfície que segueixen l'escurçament.
+ // Anells de referència pintats a la superfície, seguint la deformació.
  for(let j=1;j<=4;j++){
   const t=j/5,r=volumeRadius*(1+bulge*Math.pow(Math.sin(Math.PI*t),2))/(1+bulge*.5);
-  const mark=cyl(r*1.008,r*1.008,.018,stripe,0,bottom+.13+h*t,0);
-  mark.material=stripe;
+  const ring=add(new THREE.TorusGeometry(r,.012,8,64),stripe,0,bottom+.125+h*t,0);
+  ring.rotation.x=Math.PI/2;
  }
 }
 function flexion(p,scale){const L=4.5,def=.85*p;for(const x of [-2.12,2.12]){const support=cyl(.34,.34,.75,hardware,x,-1.12,0);support.rotation.x=Math.PI/2;box(.9,.2,1.1,dark,x,-1.6,0)}
