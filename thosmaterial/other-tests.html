@@ -24,7 +24,7 @@ if(id==='compressio'){
  const mode=buckles?'buckling':brittle?'fracture':wood?'wood':'axial';
  const peakP=brittle?Math.max(.15,Math.min(.75,m.yield/m.E/epsMax*2.5)):wood?.38:Math.min(.92,m.yield/m.E/epsMax);
  const thresholdP=buckles?Math.max(.08,Math.min(.72,criticalStress/(m.E*epsMax))):peakP;
- const failureP=brittle?Math.min(.98,peakP+.23*(1-peakP)):buckles?Math.min(.98,thresholdP+.73*(1-thresholdP)):wood?.93:1;
+ const failureP=brittle?Math.min(.98,peakP+.23*(1-peakP)):buckles?Math.min(.98,thresholdP+(wood?.19:.73)*(1-thresholdP)):wood?.93:1;
  const axialStress=q=>{
   if(brittle){const r=q/peakP;return r<=1?m.yield*(2*r-r*r):m.yield*Math.max(.035,Math.exp(-9*(q-peakP)/(1-peakP)));}
   if(wood)return q<.2?m.yield*.75*q/.2:q<.68?m.yield*(.75+.09*(q-.2)/.48):m.yield*(.84+.36*(q-.68)/.32);
@@ -36,15 +36,15 @@ if(id==='compressio'){
   if(!buckles)return axialStress(q);
   if(q<=thresholdP)return criticalStress*q/thresholdP;
   const r=(q-thresholdP)/(failureP-thresholdP);
-  return criticalStress*(r>=1?.08:1-.92*Math.pow(Math.max(0,r),1.3));
+  return criticalStress*(r>=1?(wood?.025:.08):1-(wood?.75:.92)*Math.pow(Math.max(0,r),1.3));
  };
  const s=stressAt(p),F=s*area/1000;
  x=eps*100;y=s;xmax=epsMax*100;ymax=Math.max(20,buckles?criticalStress*1.22:brittle||wood?m.yield*1.25:axialStress(1)*1.15);
  unit1=n(F)+' kN';unit2=n(eps*L0,2)+' mm';
- phase=p===0?'Inici':buckles?(p>=failureP?'Col·lapse per vinclament':p>=thresholdP?'Vinclament i flexió':'Compressió estable'):brittle?(p>=failureP?'Fractura final':p>=peakP?'Fissuració i fractura':'Càrrega estable'):wood?(p>=failureP?'Col·lapse de fibres':p<.2?'Resposta inicial':p<.68?'Aixafament de fibres':'Densificació'):(eps>m.yield/m.E?'Zona plàstica':'Zona elàstica');
- $('compressionOutcome').textContent='Resultat previst: '+(buckles?(wood?'vinclament de fusta':'vinclament'):brittle?'fractura fràgil':wood?'aixafament de fibres':'deformació dúctil')+' · esveltesa L/d = '+n(L0/d,1)+'.';
+ phase=p===0?'Inici':buckles?(p>=failureP?(wood?'Fractura de fibres':'Col·lapse per vinclament'):p>=thresholdP?'Vinclament i flexió':'Compressió estable'):brittle?(p>=failureP?'Fractura final':p>=peakP?'Fissuració i fractura':'Càrrega estable'):wood?(p>=failureP?'Col·lapse de fibres':p<.2?'Resposta inicial':p<.68?'Aixafament de fibres':'Densificació'):(eps>m.yield/m.E?'Zona plàstica':'Zona elàstica');
+ $('compressionOutcome').textContent='Resultat previst: '+(buckles?(wood?'vinclament i fractura de fibres':'vinclament'):brittle?'fractura fràgil':wood?'aixafament de fibres':'deformació dúctil')+' · esveltesa L/d = '+n(L0/d,1)+'.';
  $('chartTitle').textContent=buckles?'Vinclament · tensió nominal–deformació':brittle?'Fractura · tensió–deformació':wood?'Aixafament de fibres · tensió–deformació':t.chart;
- $('description').textContent=buckles?(wood?'La peça de fusta paral·lela a les fibres és esvelta: perd estabilitat lateral abans de l’aixafament axial. El model idealitzat mostra flexió creixent i col·lapse, sense pressuposar una fractura neta.':'La barra esvelta perd estabilitat lateral abans d’assolir la resistència del material. El corbament 3D s’amplifica.'):brittle?'La proveta acumula càrrega fins a la resistència màxima, després apareixen fissures i cau la capacitat resistent.':wood?'La fusta comprimida paral·lelament a la fibra passa per resposta inicial, aixafament de fibres i densificació.':'El material dúctil s’escurça, s’eixampla i pot presentar deformació plàstica sense fractura.';
+ $('description').textContent=buckles?(wood?'La peça de fusta paral·lela a les fibres és esvelta: perd estabilitat lateral abans de l’aixafament axial. El model didàctic limita la curvatura i mostra la ruptura de fibres abans d’una flexió exagerada.':'La barra esvelta perd estabilitat lateral abans d’assolir la resistència del material. El corbament 3D s’amplifica.'):brittle?'La proveta acumula càrrega fins a la resistència màxima, després apareixen fissures i cau la capacitat resistent.':wood?'La fusta comprimida paral·lelament a la fibra passa per resposta inicial, aixafament de fibres i densificació.':'El material dúctil s’escurça, s’eixampla i pot presentar deformació plàstica sense fractura.';
  $('formula').textContent=buckles?(wood?'Vinclament elàstic ideal de fusta paral·lela a la fibra: σcr = π²EI/(L₀²A₀), extrems articulats. E i resistència són orientatius; la humitat, els nusos i les imperfeccions alteren la fallada.':'Euler ideal: σcr = π²EI/(L₀²A₀). Model simplificat articulat–articulat; L/d ≥ 10.'):brittle?'Corba qualitativa exagerada: creixement fins a σmax i descens postpic. No són dades experimentals.':wood?'Corba qualitativa en tres etapes. La humitat i la direcció de les fibres alteren la resposta.':t.formula;
  var compressionInfo={mode,L0,thresholdP,stressAt,criticalStress,peakP,failureP,brittle,wood,buckles};
 }
@@ -56,7 +56,7 @@ if(window.updateThosOther3D)window.updateThosOther3D({test:id,progress:p,size:d,
 let grid='',annotations='';
 const fmtAxis=v=>Number(v.toFixed(Math.abs(v)<10?2:Math.abs(v)<100?1:0)).toLocaleString('ca-ES');
 const phaseColors=['#159a80','#e2ae31','#e58b35','#3188c5','#a75caa'];
-const phaseLabels=id==='compressio'?(compressionInfo.buckles?['Estabilitat','Vinclament','Col·lapse']:compressionInfo.brittle?['Càrrega','Fissuració','Fractura final']:compressionInfo.wood?['Inicial','Aixafament','Densificació','Col·lapse']:['Elàstica','Plàstica']):['Evolució de l’assaig'];
+const phaseLabels=id==='compressio'?(compressionInfo.buckles?['Estabilitat','Vinclament',compressionInfo.wood?'Fractura':'Col·lapse']:compressionInfo.brittle?['Càrrega','Fissuració','Fractura final']:compressionInfo.wood?['Inicial','Aixafament','Densificació','Col·lapse']:['Elàstica','Plàstica']):['Evolució de l’assaig'];
 let thresholds=[0,1];
 if(id==='compressio'){
  const cp=compressionInfo.thresholdP;
@@ -91,7 +91,7 @@ if(id==='compressio'){
   annotations+='<circle cx="'+px+'" cy="'+py+'" r="5" fill="#a85d29" stroke="white" stroke-width="2"/>';
   annotations+='<text x="'+Math.min(480,Math.max(75,px+9))+'" y="91" fill="#96551c" font-size="11" font-weight="700">'+(info.buckles?'Càrrega crítica':info.brittle?'Resistència màxima':info.wood?'Inici aixafament':'Límit elàstic')+': '+fmtAxis(curveY(crit))+' MPa</text>';
  }
- if(info.buckles||info.brittle||info.wood){const fx=sx(curveX(info.failureP)),fy=sy(curveY(info.failureP));annotations+='<circle cx="'+fx+'" cy="'+fy+'" r="6" fill="#b33f45" stroke="white" stroke-width="2"/><text x="'+Math.max(90,fx-118)+'" y="'+Math.max(105,fy-12)+'" fill="#a52e39" font-size="11" font-weight="700">'+(info.brittle?'Fractura final':info.wood?'Col·lapse de fibres':'Col·lapse')+'</text>';}
+ if(info.buckles||info.brittle||info.wood){const fx=sx(curveX(info.failureP)),fy=sy(curveY(info.failureP));annotations+='<circle cx="'+fx+'" cy="'+fy+'" r="6" fill="#b33f45" stroke="white" stroke-width="2"/><text x="'+Math.max(90,fx-118)+'" y="'+Math.max(105,fy-12)+'" fill="#a52e39" font-size="11" font-weight="700">'+(info.brittle?'Fractura final':info.wood?'Ruptura de fibres':'Col·lapse')+'</text>';}
 }
 let legendSvg='',lx=72;
 for(let i=0;i<Math.min(phaseLabels.length,thresholds.length-1);i++){
@@ -105,11 +105,11 @@ const status='<rect x="390" y="37" width="242" height="26" rx="6" fill="'+stateC
 $('chart').innerHTML=grid+legendSvg+status+annotations+line(62,70,62,310,'#637f8b',2)+line(62,310,642,310,'#637f8b',2)+coloredCurves+'<circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="7" fill="#ee8b35" stroke="white" stroke-width="2"/><text x="350" y="351" text-anchor="middle" fill="#183644" font-size="14">'+t.x+'</text><text transform="translate(18 190) rotate(-90)" text-anchor="middle" fill="#183644" font-size="14">'+t.y+'</text><text x="70" y="43" font-size="11" fill="#58727f">Model didàctic aproximat · '+m.name+'</text>';
 if(id==='compressio'){
  const info=compressionInfo;
- $('chartExplanation').textContent=info.buckles?(p<info.thresholdP?'Compressió estable fins al llindar crític.':p<info.failureP?'Vinclament progressiu: augmenta la flexió lateral i disminueix la càrrega.':info.wood?'Col·lapse per inestabilitat i dany local de fibres; no implica necessàriament una fractura neta.':'Col·lapse final per inestabilitat i plastificació local; no implica necessàriament fractura.'):info.brittle?(p<info.peakP?'Material fràgil: augment de càrrega fins a la resistència màxima.':p<info.failureP?'Apareixen fissures i fragments; la resistència disminueix.':'Fractura final: la proveta ha perdut gairebé tota la capacitat de càrrega.'):info.wood?(p<.2?'Resposta inicial de les fibres.':p<.68?'Aixafament progressiu de les fibres.':p<info.failureP?'Densificació de les fibres.':'Col·lapse final per dany acumulat a les fibres (model didàctic).'):(phase==='Zona plàstica'?'Deformació plàstica amb enduriment aproximat.':'Resposta elàstica inicial: σ ≈ E·ε.');
+ $('chartExplanation').textContent=info.buckles?(p<info.thresholdP?'Compressió estable fins al llindar crític.':p<info.failureP?'Vinclament progressiu: augmenta la flexió lateral i disminueix la càrrega.':info.wood?'Fractura de fibres després del vinclament: la peça deixa de corbar-se i perd capacitat resistent. Llindar didàctic, no experimental.':'Col·lapse final per inestabilitat i plastificació local; no implica necessàriament fractura.'):info.brittle?(p<info.peakP?'Material fràgil: augment de càrrega fins a la resistència màxima.':p<info.failureP?'Apareixen fissures i fragments; la resistència disminueix.':'Fractura final: la proveta ha perdut gairebé tota la capacitat de càrrega.'):info.wood?(p<.2?'Resposta inicial de les fibres.':p<.68?'Aixafament progressiu de les fibres.':p<info.failureP?'Densificació de les fibres.':'Col·lapse final per dany acumulat a les fibres (model didàctic).'):(phase==='Zona plàstica'?'Deformació plàstica amb enduriment aproximat.':'Resposta elàstica inicial: σ ≈ E·ε.');
  $('chartExplanation').textContent+=' Longitud '+L0+' mm · diàmetre '+d+' mm.';
 }else $('chartExplanation').textContent='Corba didàctica orientativa. El punt taronja indica l’estat instantani de l’assaig.';
 $('metric1Name').textContent=t.m1;$('metric2Name').textContent=t.m2;$('metric1').textContent=unit1;$('metric2').textContent=unit2;$('metric3').textContent=Math.round(p*100)+' %';$('metric4Name').textContent=id==='compressio'?'Fase':'Fase';$('metric4').textContent=phase;}
 function stop(){playing=false;cancelAnimationFrame(raf);$('play').textContent='▶ Inicia';}
 $('play').onclick=()=>{if(playing){stop();return;}if(progress>=1)return;playing=true;last=0;$('play').textContent='Ⅱ Pausa';function tick(now){if(!playing)return;if(last)progress=Math.min(1,progress+Math.min((now-last)/1000,.05)/18);last=now;render();if(progress>=1){stop();$('play').textContent='✓ Assaig finalitzat';}else raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick)};
 $('reset').onclick=()=>{stop();progress=0;render()};$('load').oninput=()=>{stop();progress=+$('load').value/1000;render()};$('size').oninput=()=>{stop();render()};$('material').onchange=()=>{stop();progress=0;render()};$('length').oninput=()=>{stop();progress=0;render()};render();
-</script><script type="module" src="other-tests3d.js?v=compressio-fusta-vinclament-1"></script></body></html>
+</script><script type="module" src="other-tests3d.js?v=fusta-fractura-postvinclament-1"></script></body></html>
