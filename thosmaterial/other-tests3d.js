@@ -20,7 +20,32 @@ function sphere(r,mat,x=0,y=0,z=0){return add(new THREE.SphereGeometry(r,24,16),
 function rod(a,b,r,mat){const d=new THREE.Vector3().subVectors(b,a),mid=new THREE.Vector3().addVectors(a,b).multiplyScalar(.5);const mesh=add(new THREE.CylinderGeometry(r,r,d.length(),18),mat,mid.x,mid.y,mid.z);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return mesh}
 function clear(){group.traverse(o=>{if(o.geometry)o.geometry.dispose()});group.clear()}
 function grid(){const g=new THREE.GridHelper(7,14,0x3c687b,0x2c5366);g.position.y=-1.7;group.add(g)}
-function compression(p,scale){const h=2.65*(1-.34*p),r=.47*scale*(1+.22*p);box(2.4,.25,2.1,hardware,0,-1.42,0);box(2.4,.25,2.1,hardware,0,-1.42+h+.25,0);cyl(r,r,h,specimen,0,-1.42+.125+h/2,0);for(let j=0;j<4;j++)cyl(r*1.008,r*1.008,.022,stripe,0,-1.42+.125+h*(j+1)/5,0);box(.24,.55,.24,dark,0,-1.42+h+.65,0)}
+function compression(p,scale){
+ // Amplificació didàctica ×20: deformació real màxima 1,2 %, visual màxima 24 %.
+ const visualStrain=.012*p*20;
+ const h0=2.65,h=h0*(1-visualStrain),bottom=-1.45;
+ const radius0=.47*scale,volumeRadius=radius0/Math.sqrt(1-visualStrain);
+ const points=[],segments=48;
+ // Perfil lleugerament abarrilat, amb volum aproximadament conservat.
+ const bulge=.11*p;
+ for(let i=0;i<=segments;i++){
+  const t=i/segments,localY=-h/2+t*h;
+  const factor=1+bulge*Math.pow(Math.sin(Math.PI*t),2);
+  const normalization=1+bulge*.5;
+  points.push(new THREE.Vector2(volumeRadius*factor/normalization,localY));
+ }
+ const body=add(new THREE.LatheGeometry(points,48),specimen,0,bottom+.13+h/2,0);
+ box(2.4,.25,2.1,hardware,0,bottom,0);
+ box(2.4,.25,2.1,hardware,0,bottom+.25+h,0);
+ // Eix de càrrega, solidari amb el plat superior.
+ cyl(.14,.14,.6,dark,0,bottom+.25+h+.43,0);
+ // Marques de superfície que segueixen l'escurçament.
+ for(let j=1;j<=4;j++){
+  const t=j/5,r=volumeRadius*(1+bulge*Math.pow(Math.sin(Math.PI*t),2))/(1+bulge*.5);
+  const mark=cyl(r*1.008,r*1.008,.018,stripe,0,bottom+.13+h*t,0);
+  mark.material=stripe;
+ }
+}
 function flexion(p,scale){const L=4.5,def=.85*p;for(const x of [-2.12,2.12]){const support=cyl(.34,.34,.75,hardware,x,-1.12,0);support.rotation.x=Math.PI/2;box(.9,.2,1.1,dark,x,-1.6,0)}
  const sections=42;const verts=[],norm=[],indices=[];const w=.44*scale,h=.42*scale;
  for(let i=0;i<=sections;i++){const x=-L/2+L*i/sections,y=.05-def*Math.pow(Math.sin(Math.PI*i/sections),2);for(const [yy,zz] of [[-h/2,-w/2],[-h/2,w/2],[h/2,w/2],[h/2,-w/2]])verts.push(x,y+yy,zz)}
