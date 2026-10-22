@@ -24,6 +24,7 @@ function compression(p,scale){
  const mode=current.compressionMode||"axial",threshold=current.thresholdP??1;
  if(mode==="buckling")return compressionBuckling(p,scale,threshold);
  if(mode==="fracture")return compressionFracture(p,scale,threshold);
+ if(mode==="wood")return compressionWood(p,scale);
  // Deformació 3D amplificada ×20, amb contorn de referència de la proveta original.
  const visualStrain=.012*p*20,h0=2.65,h=h0*(1-visualStrain),bottom=-1.45;
  const radius0=.47*scale,volumeRadius=radius0/Math.sqrt(1-visualStrain);
@@ -64,6 +65,18 @@ function compression(p,scale){
   const ring=add(new THREE.TorusGeometry(r,.012,8,64),stripe,0,bottom+.125+h*t,0);
   ring.rotation.x=Math.PI/2;
  }
+}
+function compressionWood(p,scale){
+ const bottom=-1.45,h0=2.65,h=h0*(1-.28*p),r=.47*scale*(1+.09*p);
+ box(2.4,.25,2.1,hardware,0,bottom,0);
+ cyl(r,r,h,specimen,0,bottom+.125+h/2,0);
+ box(2.4,.25,2.1,hardware,0,bottom+.25+h,0);
+ for(let k=0;k<7;k++){
+  const a=k*Math.PI*2/7;
+  const fiber=add(new THREE.CylinderGeometry(.012,.012,h*.94,8),stripe,r*.98*Math.cos(a),bottom+.125+h/2,r*.98*Math.sin(a));
+  fiber.rotation.z=p>.2?Math.sin(k*2)*.11*p:0;
+ }
+ if(p>.2)for(let k=0;k<5;k++){const y=bottom+.125+h*(k+1)/6;const ring=add(new THREE.TorusGeometry(r*.99,.012,6,40),accent,0,y,0);ring.rotation.x=Math.PI/2;}
 }
 function compressionBuckling(p,scale,threshold){
  const bottom=-1.45,top=1.25,r=.24*scale;
