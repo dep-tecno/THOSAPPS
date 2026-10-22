@@ -4,20 +4,20 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const host=document.getElementById('specimen3d');
 if(!host)throw new Error('No hi ha contenidor 3D');
 const scene=new THREE.Scene();
-scene.background=new THREE.Color('#f1f7f9');
+scene.background=new THREE.Color(0x17384a);
 const camera=new THREE.PerspectiveCamera(38,1,.1,100);
-camera.position.set(3.7,2.5,6.8);
+camera.position.set(5,3.3,7.8);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 host.appendChild(renderer.domElement);
 const orbit=new OrbitControls(camera,renderer.domElement);
-orbit.enableDamping=true;orbit.minDistance=3.5;orbit.maxDistance=12;orbit.target.set(0,0,0);
-scene.add(new THREE.HemisphereLight(0xffffff,0x718b9b,2.2));
-const light=new THREE.DirectionalLight(0xffffff,3);light.position.set(3,5,4);scene.add(light);
-const steel=new THREE.MeshStandardMaterial({color:0x9bbbc7,metalness:.77,roughness:.28,side:THREE.DoubleSide});
-const jaws=new THREE.MeshStandardMaterial({color:0x395867,metalness:.55,roughness:.35});
-const detail=new THREE.MeshStandardMaterial({color:0x7596a4,metalness:.55,roughness:.38});
+orbit.enableDamping=true;orbit.minDistance=3.3;orbit.maxDistance=13;orbit.target.set(0,0,0);
+scene.add(new THREE.HemisphereLight(0xffffff,0x446579,2.5));
+const light=new THREE.DirectionalLight(0xffffff,3);light.position.set(3,7,6);scene.add(light);
+const steel=new THREE.MeshStandardMaterial({color:0x54c7d6,metalness:.65,roughness:.32,side:THREE.DoubleSide});
+const jaws=new THREE.MeshStandardMaterial({color:0x8ca4b1,metalness:.75,roughness:.32});
+const detail=new THREE.MeshStandardMaterial({color:0x344f60,metalness:.65,roughness:.4});
 function cylinder(r,h,mat){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,40),mat);return o;}
 const upper=new THREE.Group(),lower=new THREE.Group();scene.add(upper,lower);
 for(const g of [upper,lower]){
