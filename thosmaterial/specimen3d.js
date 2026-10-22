@@ -46,11 +46,13 @@ let current={strain:0,maxStrain:.28,diameter:10,broken:false,neckStart:.17,fragi
 let peakStrain=0;
 function renderSpecimen(){
  const {strain,maxStrain,diameter,broken,neckStart,fragile,unloading,plastic}=current;
- const length=2.65*(1+strain);
+ // Escala visual amplificada: els càlculs i el diagrama conserven la deformació real.
+ const visualStrain=strain*1.8;
+ const length=2.65*(1+visualStrain);
  // Aproximació de conservació del volum durant la deformació plàstica.
- const radius=.19*diameter/10/Math.sqrt(1+Math.max(0,strain));
+ const radius=.19*diameter/10/Math.sqrt(1+Math.max(0,visualStrain));
  const retainedNeckStrain=unloading?Math.max(plastic,peakStrain):strain;
- const neck=fragile?1:Math.max(.48,1-.5*Math.max(0,(retainedNeckStrain-neckStart)/(maxStrain-neckStart||1)));
+ const neck=fragile?1:Math.max(.30,1-.7*Math.max(0,(retainedNeckStrain-neckStart)/(maxStrain-neckStart||1)));
  upper.position.y=length/2+.18;lower.position.y=-length/2-.18;
  clearBody();
  if(broken){
