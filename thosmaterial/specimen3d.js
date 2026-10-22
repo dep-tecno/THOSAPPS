@@ -25,7 +25,6 @@ for(const g of [upper,lower]){
  for(const x of [-.42,.42]){const jaw=new THREE.Mesh(new THREE.BoxGeometry(.30,.5,.83),detail);jaw.position.set(x,0,0);g.add(jaw);}
 }
 const body=new THREE.Group();scene.add(body);
-const originalGuide=new THREE.Mesh(new THREE.CylinderGeometry(.205,.205,2.65,48,1,true),new THREE.MeshBasicMaterial({color:0x278b9d,transparent:true,opacity:.16,wireframe:true,depthWrite:false}));scene.add(originalGuide);
 let meshes=[];
 function clearBody(){for(const mesh of meshes){body.remove(mesh);mesh.geometry.dispose();}meshes=[];}
 function profileMesh(start,end,length,radius,neck,fracture,topPiece){
@@ -50,7 +49,6 @@ function renderSpecimen(){
  const length=2.65*(1+strain);
  // Aproximació de conservació del volum durant la deformació plàstica.
  const radius=.19*diameter/10/Math.sqrt(1+Math.max(0,strain));
- originalGuide.scale.x=diameter/10;originalGuide.scale.z=diameter/10;originalGuide.visible=unloading&&!broken&&plastic>0.00001;
  const retainedNeckStrain=unloading?Math.max(plastic,peakStrain):strain;
  const neck=fragile?1:Math.max(.48,1-.5*Math.max(0,(retainedNeckStrain-neckStart)/(maxStrain-neckStart||1)));
  upper.position.y=length/2+.18;lower.position.y=-length/2-.18;
