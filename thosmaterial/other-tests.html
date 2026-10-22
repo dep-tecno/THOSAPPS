@@ -48,8 +48,8 @@ if(id==='compressio'){
  $('formula').textContent=buckles?(wood?'Vinclament elàstic ideal de fusta paral·lela a la fibra: σcr = π²EI/(L₀²A₀), extrems articulats. E i resistència són orientatius; la humitat, els nusos i les imperfeccions alteren la fallada.':'Euler ideal: σcr = π²EI/(L₀²A₀). Model simplificat articulat–articulat; L/d ≥ 10.'):brittle?'Corba qualitativa exagerada: creixement fins a σmax i descens postpic. No són dades experimentals.':wood?'Corba qualitativa en tres etapes. La humitat i la direcció de les fibres alteren la resposta.':t.formula;
  var compressionInfo={mode,L0,thresholdP,stressAt,criticalStress,peakP,failureP,brittle,wood,buckles};
 }
-if(id==='flexio'){const L=300,h=d*.9,delta=65*p,load=m.E*d*d*d*delta/(4*300**3);scene=rect(90,255,20,20,'#7e9ca9')+rect(390,255,20,20,'#7e9ca9')+'<path d="M100 250 Q250 '+(250+delta*2)+' 400 250" fill="none" stroke="#39a9bd" stroke-width="'+Math.max(12,h)+'" stroke-linecap="round"/>'+line(250,90,250,205+delta,'#f4ad54',6);x=delta;y=load;xmax=70;ymax=Math.max(100,load/Math.max(.01,p)*1.2);unit1=n(load)+' N';unit2=n(delta)+' mm';}
-if(id==='torsio'){const angle=75*p,G=m.E/2.6,L=200,J=Math.PI*d**4/32,T=G*J*(angle*Math.PI/180)/L/1000;scene=rect(90,145,35,100,'#7e9ca9')+rect(125,166,250,58,'#39a9bd')+rect(375,145,35,100,'#7e9ca9')+'<ellipse cx="375" cy="195" rx="20" ry="29" fill="#5ac5d5"/><path d="M370 145 A55 55 0 '+(p>.5?1:0)+' 1 '+(370+45*Math.sin(p*1.5))+' '+(145+45*(1-Math.cos(p*1.5)))+'" fill="none" stroke="#f4ad54" stroke-width="6"/>';x=angle;y=T;xmax=80;ymax=Math.max(1,T/Math.max(.01,p)*1.2);unit1=n(T,2)+' N·m';unit2=n(angle)+'°';}
+if(id==='flexio'){const L=L0,h=d*.9,delta=65*p,load=m.E*d**4*delta/(4*L**3);scene=rect(90,255,20,20,'#7e9ca9')+rect(390,255,20,20,'#7e9ca9')+'<path d="M100 250 Q250 '+(250+delta*2)+' 400 250" fill="none" stroke="#39a9bd" stroke-width="'+Math.max(12,h)+'" stroke-linecap="round"/>'+line(250,90,250,205+delta,'#f4ad54',6);x=delta;y=load;xmax=70;ymax=Math.max(100,load/Math.max(.01,p)*1.2);unit1=n(load)+' N';unit2=n(delta)+' mm';}
+if(id==='torsio'){const angle=75*p,G=m.E/2.6,L=L0,J=Math.PI*d**4/32,T=G*J*(angle*Math.PI/180)/L/1000;scene=rect(90,145,35,100,'#7e9ca9')+rect(125,166,250,58,'#39a9bd')+rect(375,145,35,100,'#7e9ca9')+'<ellipse cx="375" cy="195" rx="20" ry="29" fill="#5ac5d5"/><path d="M370 145 A55 55 0 '+(p>.5?1:0)+' 1 '+(370+45*Math.sin(p*1.5))+' '+(145+45*(1-Math.cos(p*1.5)))+'" fill="none" stroke="#f4ad54" stroke-width="6"/>';x=angle;y=T;xmax=80;ymax=Math.max(1,T/Math.max(.01,p)*1.2);unit1=n(T,2)+' N·m';unit2=n(angle)+'°';}
 if(id==='duresa'){const depth=3*p,force=(m.hard*15)*p*p;scene=rect(100,245,300,90,'#39a9bd')+'<path d="M225 '+(75+depth*38)+' L275 '+(75+depth*38)+' L250 '+(155+depth*38)+' Z" fill="#b5c6ce"/>'+line(250,40,250,70+depth*38,'#f4ad54',6);x=depth;y=force;xmax=3.2;ymax=m.hard*17;unit1=n(force)+' N';unit2=n(depth,2)+' mm';phase=p<.2?'Contacte':p<.8?'Penetració':'Empremta';}
 if(id==='impacte'){const theta=(1-p)*(-65)+p*48,rad=theta*Math.PI/180,cx=250+180*Math.sin(rad),cy=65+180*Math.cos(rad),energy=80*(1-Math.cos(Math.PI*Math.min(p,1)))/2;scene=line(250,55,cx,cy,'#b5c6ce',7)+'<circle cx="'+cx+'" cy="'+cy+'" r="27" fill="#f4ad54"/>'+rect(185,280,130,16,'#7e9ca9')+rect(230,252,40,28,'#39a9bd');x=p*100;y=energy;xmax=100;ymax=90;unit1=n(energy)+' J';unit2=n(theta)+'°';phase=p<.4?'Caiguda':p<.65?'Impacte':'Ascens';}
 if(window.updateThosOther3D)window.updateThosOther3D({test:id,progress:p,size:d,material:$('material').value,compressionMode:id==='compressio'?compressionInfo.mode:'axial',length:L0,thresholdP:id==='compressio'?(compressionInfo.buckles?compressionInfo.thresholdP:compressionInfo.peakP):1,failureP:id==='compressio'?compressionInfo.failureP:1});
@@ -71,7 +71,7 @@ for(let i=0;i<=5;i++){
  grid+='<text x="'+gx+'" y="330" text-anchor="middle" font-size="11" fill="#496675">'+fmtAxis(xmax*i/5)+'</text>';
  grid+='<text x="52" y="'+(gy+4)+'" text-anchor="end" font-size="11" fill="#496675">'+fmtAxis(ymax*i/5)+'</text>';
 }
-const curveY=q=>{if(id==='compressio')return compressionInfo.stressAt(q);if(id==='flexio')return m.E*d**3*(65*q)/(4*300**3);if(id==='torsio')return (m.E/2.6)*(Math.PI*d**4/32)*(75*q*Math.PI/180)/200/1000;if(id==='duresa')return m.hard*15*q*q;return 80*(1-Math.cos(Math.PI*q))/2};
+const curveY=q=>{if(id==='compressio')return compressionInfo.stressAt(q);if(id==='flexio')return m.E*d**4*(65*q)/(4*L0**3);if(id==='torsio')return (m.E/2.6)*(Math.PI*d**4/32)*(75*q*Math.PI/180)/L0/1000;if(id==='duresa')return m.hard*15*q*q;return 80*(1-Math.cos(Math.PI*q))/2};
 const curveX=q=>id==='compressio'?1.2*q:id==='flexio'?65*q:id==='torsio'?75*q:id==='duresa'?3*q:100*q;
 let coloredCurves='';
 for(let i=0;i<thresholds.length-1;i++){
@@ -109,6 +109,12 @@ if(id==='compressio'){
  $('chartExplanation').textContent+=' Longitud '+L0+' mm · diàmetre '+d+' mm.';
 }else $('chartExplanation').textContent='Corba didàctica orientativa. El punt taronja indica l’estat instantani de l’assaig.';
 $('metric1Name').textContent=t.m1;$('metric2Name').textContent=t.m2;$('metric1').textContent=unit1;$('metric2').textContent=unit2;$('metric3').textContent=Math.round(p*100)+' %';$('metric4Name').textContent=id==='compressio'?'Fase':'Fase';$('metric4').textContent=phase;}
+// La longitud és un paràmetre geomètric també en flexió i torsió.
+if(id==='flexio'||id==='torsio'){
+ $('compressionOptions').style.display='block';
+ const note=$('compressionOutcome');
+ note.textContent=id==='flexio'?'La longitud entre suports modifica la rigidesa a flexió.':'La longitud de la proveta modifica la rigidesa torsional.';
+}
 function stop(){playing=false;cancelAnimationFrame(raf);$('play').textContent='▶ Inicia';}
 $('play').onclick=()=>{if(playing){stop();return;}if(progress>=1)return;playing=true;last=0;$('play').textContent='Ⅱ Pausa';function tick(now){if(!playing)return;if(last)progress=Math.min(1,progress+Math.min((now-last)/1000,.05)/18);last=now;render();if(progress>=1){stop();$('play').textContent='✓ Assaig finalitzat';}else raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick)};
 $('reset').onclick=()=>{stop();progress=0;render()};$('load').oninput=()=>{stop();progress=+$('load').value/1000;render()};$('size').oninput=()=>{stop();render()};$('material').onchange=()=>{stop();progress=0;render()};$('length').oninput=()=>{stop();progress=0;render()};render();
