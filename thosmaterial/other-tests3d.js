@@ -81,30 +81,60 @@ function compressionWood(p,scale,failureP){
 }
 function compressionBuckling(p,scale,threshold,failureP,isWood){
  const bottom=-1.45,top=1.25,r=.24*scale;
- const after=Math.max(0,Math.min(1,(p-threshold)/Math.max(.05,failureP-threshold)));
- const deflection=(isWood?.32:1.28)*Math.sqrt(after);
+ const after=Math.max(0,Math.min(1,(p-threshold)/Math.max(.01,failureP-threshold)));
+ const deflection=(isWood?.29:1.28)*Math.sqrt(after);
  box(2.4,.22,2.1,hardware,0,bottom,0);
  box(2.4,.22,2.1,hardware,0,top+.22,0);
- const rings=50,around=32,vertices=[],indices=[];
+ const low=bottom+.12,high=top+.12,mid=(low+high)/2;
  const broken=isWood&&p>=failureP;
- const gap=broken?.13:0;
- for(let i=0;i<=rings;i++){
-  const t=i/rings,y=bottom+.12+(top-bottom-.02)*t;
-  const bend=deflection*Math.sin(Math.PI*t);
-  for(let j=0;j<=around;j++){
-   const a=j/around*Math.PI*2;
-   vertices.push(bend+r*Math.cos(a)+(broken?(t>.5?.11:-.11):0),y+(broken?(t>.5?gap:-gap):0),r*Math.sin(a));
+ if(broken){
+  // Fractura inequívoca: dos trams físicament separats, amb cares de ruptura visibles.
+  // No continuar augmentant la curvatura després de la fallada.
+  const breakGap=.34,offset=.23,half=(high-low)/2;
+  const lower=add(new THREE.CylinderGeometry(r,r,half,40),specimen,
+   deflection*.47-offset*.5,low+half/2-breakGap*.20,0);
+  const upper=add(new THREE.CylinderGeometry(r,r,half,40),specimen,
+   deflection*.47+offset*.5,mid+half/2+breakGap*.70,0);
+  lower.rotation.z=-.13;upper.rotation.z=.18;
+  for(const sign of [-1,1]){
+   const x=deflection*.47+sign*offset*.5;
+   const y=mid+(sign>0?breakGap*.70:-breakGap*.20);
+   const face=cyl(r*.98,r*.98,.045,dark,x,y,0);
+   face.rotation.z=sign*.16;
+  }
+  for(let k=0;k<7;k++){
+   const angle=k*2*Math.PI/7;
+   const fragment=box(.04,.16+.055*(k%3),.035,accent,
+    deflection*.47+.23*Math.cos(angle),mid+.05+.13*Math.sin(angle),.14*Math.sin(angle));
+   fragment.rotation.z=angle;
+  }
+ }else{
+  const rings=50,around=32,vertices=[],indices=[];
+  for(let i=0;i<=rings;i++){
+   const t=i/rings,y=low+(high-low)*t;
+   const bend=deflection*Math.sin(Math.PI*t);
+   for(let j=0;j<=around;j++){
+    const angle=j/around*Math.PI*2;
+    vertices.push(bend+r*Math.cos(angle),y,r*Math.sin(angle));
+   }
+  }
+  for(let i=0;i<rings;i++)for(let j=0;j<around;j++){
+   const u=i*(around+1)+j,v=u+around+1;
+   indices.push(u,v,u+1,u+1,v,v+1);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geo.setIndex(indices);geo.computeVertexNormals();add(geo,specimen);
+  if(after>.68&&!isWood){
+   const hinge=box(.16,.16,.13,accent,deflection*.99,mid,r*.8);
+   hinge.rotation.z=-after*.7;
   }
  }
- for(let i=0;i<rings;i++)for(let j=0;j<around;j++){
-  if(broken&&i===Math.floor(rings/2))continue;
-  const a=i*(around+1)+j,b=a+around+1;
-  indices.push(a,b,a+1,a+1,b,b+1);
- }
- if(broken){for(let j=0;j<around;j++){const a=j/around*Math.PI*2;const z=r*Math.sin(a);const x=deflection+r*Math.cos(a);const splinter=box(.025,.19,.025,accent,x+(j%2?.13:-.13),.01+(j%3)*.025,z);splinter.rotation.z=(j%2?1:-1)*.4;}}
- const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();add(geo,specimen);
- if(after>.68&&!isWood){const hinge=box(.16,.16,.13,accent,deflection*.99, (bottom+top)/2, r*.8);hinge.rotation.z=-after*.7;}
- const reference=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,bottom+.12,0),new THREE.Vector3(0,top+.22,0)]),new THREE.LineDashedMaterial({color:0xa9e6ef,dashSize:.12,gapSize:.08,transparent:true,opacity:.5}));reference.computeLineDistances();group.add(reference);
+ const reference=new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,low,0),new THREE.Vector3(0,high,0)]),
+  new THREE.LineDashedMaterial({color:0xa9e6ef,dashSize:.12,gapSize:.08,transparent:true,opacity:.5})
+ );
+ reference.computeLineDistances();group.add(reference);
 }
 function compressionFracture(p,scale,threshold,failureP){
  const bottom=-1.45,h=2.65*(1-.14*Math.min(1,p/Math.max(.01,threshold))),r=.47*scale;
