@@ -47,10 +47,11 @@ let peakStrain=0;
 function renderSpecimen(){
  const {strain,maxStrain,diameter,broken,neckStart,fragile,unloading,plastic}=current;
  // Escala visual amplificada: els càlculs i el diagrama conserven la deformació real.
- const visualStrain=strain*1.8;
+ const visualFactor=fragile?12:1.8;
+ const visualStrain=strain*visualFactor;
  const length=2.65*(1+visualStrain);
  // Aproximació de conservació del volum durant la deformació plàstica.
- const radius=.19*diameter/10/Math.sqrt(1+Math.max(0,visualStrain));
+ const radius=.19*diameter/10/Math.sqrt(1+Math.max(0,fragile?strain:visualStrain));
  const retainedNeckStrain=unloading?Math.max(plastic,peakStrain):strain;
  const neck=fragile?1:Math.max(.30,1-.7*Math.max(0,(retainedNeckStrain-neckStart)/(maxStrain-neckStart||1)));
  upper.position.y=length/2+.18;lower.position.y=-length/2-.18;
@@ -61,7 +62,7 @@ function renderSpecimen(){
   upper.position.y+=.13;lower.position.y-=.13;
  }else profileMesh(-length/2,length/2,length,radius,neck,false,false);
  const status=document.getElementById('specimenStatus');
- if(status)status.textContent=broken?'Proveta fracturada':unloading?(Math.abs(strain-plastic)<1e-6?'Deformació permanent: '+(plastic*100).toFixed(2)+' %':'Recuperació elàstica…'):fragile?'Comportament fràgil':strain>neckStart?'Estricció localitzada':strain>0?'Allargament axial':'Proveta inicial';
+ if(status)status.textContent=broken?'Proveta fracturada':unloading?(Math.abs(strain-plastic)<1e-6?'Deformació permanent: '+(plastic*100).toFixed(2)+' %':'Recuperació elàstica…'):fragile?'Comportament fràgil · deformació visual ×12':strain>neckStart?'Estricció localitzada':strain>0?'Allargament axial':'Proveta inicial';
 }
 window.updateThosSpecimen3D=state=>{if(!state.unloading&&state.strain===0)peakStrain=0;else if(!state.unloading)peakStrain=Math.max(peakStrain,state.strain);current={...current,...state};renderSpecimen();};
 renderSpecimen();
