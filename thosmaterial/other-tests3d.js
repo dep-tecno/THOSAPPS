@@ -21,6 +21,9 @@ function rod(a,b,r,mat){const d=new THREE.Vector3().subVectors(b,a),mid=new THRE
 function clear(){group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material?.isLineDashedMaterial)o.material.dispose()});group.clear()}
 function grid(){const g=new THREE.GridHelper(7,14,0x3c687b,0x2c5366);g.position.y=-1.7;group.add(g)}
 function compression(p,scale){
+ const mode=current.compressionMode||"axial",threshold=current.thresholdP??1;
+ if(mode==="buckling")return compressionBuckling(p,scale,threshold);
+ if(mode==="fracture")return compressionFracture(p,scale,threshold);
  // Deformació 3D amplificada ×20, amb contorn de referència de la proveta original.
  const visualStrain=.012*p*20,h0=2.65,h=h0*(1-visualStrain),bottom=-1.45;
  const radius0=.47*scale,volumeRadius=radius0/Math.sqrt(1-visualStrain);
@@ -61,6 +64,51 @@ function compression(p,scale){
   const ring=add(new THREE.TorusGeometry(r,.012,8,64),stripe,0,bottom+.125+h*t,0);
   ring.rotation.x=Math.PI/2;
  }
+}
+function compressionBuckling(p,scale,threshold){
+ const bottom=-1.45,top=1.25,r=.24*scale;
+ const after=Math.max(0,(p-threshold)/Math.max(.05,1-threshold));
+ const deflection=.95*Math.sqrt(after);
+ box(2.4,.22,2.1,hardware,0,bottom,0);
+ box(2.4,.22,2.1,hardware,0,top+.22,0);
+ const rings=50,around=32,vertices=[],indices=[];
+ for(let i=0;i<=rings;i++){
+  const t=i/rings,y=bottom+.12+(top-bottom-.02)*t;
+  const bend=deflection*Math.sin(Math.PI*t);
+  for(let j=0;j<=around;j++){
+   const a=j/around*Math.PI*2;
+   vertices.push(bend+r*Math.cos(a),y,r*Math.sin(a));
+  }
+ }
+ for(let i=0;i<rings;i++)for(let j=0;j<around;j++){
+  const a=i*(around+1)+j,b=a+around+1;
+  indices.push(a,b,a+1,a+1,b,b+1);
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();add(geo,specimen);
+ const reference=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,bottom+.12,0),new THREE.Vector3(0,top+.22,0)]),new THREE.LineDashedMaterial({color:0xa9e6ef,dashSize:.12,gapSize:.08,transparent:true,opacity:.5}));reference.computeLineDistances();group.add(reference);
+}
+function compressionFracture(p,scale,threshold){
+ const bottom=-1.45,h=2.65*(1-.12*Math.min(1,p/Math.max(.01,threshold))),r=.47*scale;
+ const fracture=Math.max(0,Math.min(1,(p-threshold)/Math.max(.05,1-threshold)*3));
+ box(2.4,.25,2.1,hardware,0,bottom,0);
+ box(2.4,.25,2.1,hardware,0,bottom+.25+h,0);
+ const centerY=bottom+.125+h/2;
+ if(fracture===0){cyl(r,r,h,specimen,0,centerY,0);}
+ else{
+  // Dues meitats separades per un pla oblic de fractura esquemàtic.
+  const halves=[];
+  for(const upper of [false,true]){
+   const shape=new THREE.Shape();
+   const points=upper?[[0,0],[r*2,0],[r*2,h/2],[0,h/2]]:[[0,-h/2],[r*2,-h/2],[r*2,0],[0,0]];
+   for(let i=0;i<points.length;i++){const [x,y]=points[i];if(i===0)shape.moveTo(x,y);else shape.lineTo(x,y)}
+   const geo=new THREE.CylinderGeometry(r,r,h/2,40);
+   const mesh=add(geo,specimen,(upper?1:-1)*fracture*.24,centerY+(upper?1:-1)*h/4,0);
+   mesh.rotation.z=(upper?1:-1)*fracture*.13;
+   halves.push(mesh);
+  }
+  const crack=box(r*1.8,.035,.035,dark,0,centerY, r*.65);crack.rotation.z=-.32;
+ }
+ cyl(.14,.14,.6,dark,0,bottom+.25+h+.43,0);
 }
 function flexion(p,scale){const L=4.5,def=.85*p;for(const x of [-2.12,2.12]){const support=cyl(.34,.34,.75,hardware,x,-1.12,0);support.rotation.x=Math.PI/2;box(.9,.2,1.1,dark,x,-1.6,0)}
  const sections=42;const verts=[],norm=[],indices=[];const w=.44*scale,h=.42*scale;
