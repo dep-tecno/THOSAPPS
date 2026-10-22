@@ -14,7 +14,7 @@ $('compressionMaterials').hidden=id!=='compressio';if(id!=='compressio')$('compr
 const compressionStress=(m,eps)=>{const ey=m.yield/m.E;return eps<=ey?m.E*eps:m.yield+m.E*.035*(eps-ey)};
 const n=(x,d=1)=>Number(x).toFixed(d),line=(x1,y1,x2,y2,color='#62d5e7',w=4)=>'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+color+'" stroke-width="'+w+'" stroke-linecap="round"/>';
 const rect=(x,y,w,h,fill='#39a9bd',r=4)=>'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+r+'" fill="'+fill+'"/>';
-function render(){const L0=+$('length').value;$('compressionOptions').hidden=id!=='compressio';$('lengthOut').textContent=L0+' mm';const p=progress,m=models[$('material').value],d=+$('size').value,t=tests[id];$('load').value=Math.round(p*1000);$('loadOut').textContent=Math.round(p*100)+' %';$('sizeOut').textContent=d+' mm';$('sceneTitle').textContent=t.name+' · proveta';$('selectedMaterial').textContent='Material: '+m.name;$('materialReference').textContent='Referència de la taula: E = '+(m.E/1000).toLocaleString('ca-ES')+' GPa; '+(m.brittle?'resistència orientativa a compressió':'límit elàstic orientatiu')+' = '+m.yield.toLocaleString('ca-ES')+' MPa. Valors didàctics aproximats, no experimentals.';$('chartTitle').textContent=t.chart;$('description').textContent=t.description;$('formula').textContent=t.formula;
+function render(){const L0=+$('length').value;$('compressionOptions').hidden=!['compressio','flexio','torsio'].includes(id);$('lengthOut').textContent=L0+' mm';const p=progress,m=models[$('material').value],d=+$('size').value,t=tests[id];$('load').value=Math.round(p*1000);$('loadOut').textContent=Math.round(p*100)+' %';$('sizeOut').textContent=d+' mm';$('sceneTitle').textContent=t.name+' · proveta';$('selectedMaterial').textContent='Material: '+m.name;$('materialReference').textContent='Referència de la taula: E = '+(m.E/1000).toLocaleString('ca-ES')+' GPa; '+(m.brittle?'resistència orientativa a compressió':'límit elàstic orientatiu')+' = '+m.yield.toLocaleString('ca-ES')+' MPa. Valors didàctics aproximats, no experimentals.';$('chartTitle').textContent=t.chart;$('description').textContent=t.description;$('formula').textContent=t.formula;
 let scene='',x=0,y=0,xmax=1,ymax=1,unit1='',unit2='',phase=p<.25?'Inici':p<.65?'Deformació':'Fase final';
 if(id==='compressio'){
  const area=Math.PI*d*d/4,epsMax=.012,eps=epsMax*p;
@@ -111,7 +111,6 @@ if(id==='compressio'){
 $('metric1Name').textContent=t.m1;$('metric2Name').textContent=t.m2;$('metric1').textContent=unit1;$('metric2').textContent=unit2;$('metric3').textContent=Math.round(p*100)+' %';$('metric4Name').textContent=id==='compressio'?'Fase':'Fase';$('metric4').textContent=phase;}
 // La longitud és un paràmetre geomètric també en flexió i torsió.
 if(id==='flexio'||id==='torsio'){
- $('compressionOptions').style.display='block';
  const note=$('compressionOutcome');
  note.textContent=id==='flexio'?'La longitud entre suports modifica la rigidesa a flexió.':'La longitud de la proveta modifica la rigidesa torsional.';
 }
