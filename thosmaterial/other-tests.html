@@ -23,7 +23,7 @@ if(id==='compressio'){
  const buckles=!brittle&&L0/d>=10&&criticalStress<m.yield;
  const mode=buckles?'buckling':brittle?'fracture':wood?'wood':'axial';
  const peakP=brittle?Math.max(.15,Math.min(.75,m.yield/m.E/epsMax*2.5)):wood?.38:Math.min(.92,m.yield/m.E/epsMax);
- const thresholdP=buckles?Math.max(.08,Math.min(.72,criticalStress/(m.E*epsMax))):peakP;
+ const thresholdP=buckles?Math.max(.005,Math.min(.72,criticalStress/(m.E*epsMax))):peakP;
  const failureP=brittle?Math.min(.98,peakP+.23*(1-peakP)):buckles?Math.min(.98,thresholdP+(wood?.19:.73)*(1-thresholdP)):wood?.93:1;
  const axialStress=q=>{
   if(brittle){const r=q/peakP;return r<=1?m.yield*(2*r-r*r):m.yield*Math.max(.035,Math.exp(-9*(q-peakP)/(1-peakP)));}
@@ -32,14 +32,14 @@ if(id==='compressio'){
  };
  const stressAt=q=>{
   if(brittle&&q>=failureP)return m.yield*.035;
-  if(wood&&q>=failureP)return m.yield*.18;
+  if(wood&&!buckles&&q>=failureP)return m.yield*.18;
   if(!buckles)return axialStress(q);
   if(q<=thresholdP)return criticalStress*q/thresholdP;
   const r=(q-thresholdP)/(failureP-thresholdP);
-  return criticalStress*(r>=1?(wood?.025:.08):1-(wood?.75:.92)*Math.pow(Math.max(0,r),1.3));
+  return criticalStress*(r>=1?(wood?.025:.08):1-(wood?.975:.92)*Math.pow(Math.max(0,r),1.3));
  };
  const s=stressAt(p),F=s*area/1000;
- x=eps*100;y=s;xmax=epsMax*100;ymax=Math.max(20,buckles?criticalStress*1.22:brittle||wood?m.yield*1.25:axialStress(1)*1.15);
+ x=eps*100;y=s;xmax=epsMax*100;ymax=Math.max(20,brittle||wood?m.yield*1.25:axialStress(1)*1.15);
  unit1=n(F)+' kN';unit2=n(eps*L0,2)+' mm';
  phase=p===0?'Inici':buckles?(p>=failureP?(wood?'Fractura de fibres':'Col·lapse per vinclament'):p>=thresholdP?'Vinclament i flexió':'Compressió estable'):brittle?(p>=failureP?'Fractura final':p>=peakP?'Fissuració i fractura':'Càrrega estable'):wood?(p>=failureP?'Col·lapse de fibres':p<.2?'Resposta inicial':p<.68?'Aixafament de fibres':'Densificació'):(eps>m.yield/m.E?'Zona plàstica':'Zona elàstica');
  $('compressionOutcome').textContent='Resultat previst: '+(buckles?(wood?'vinclament i fractura de fibres':'vinclament'):brittle?'fractura fràgil':wood?'aixafament de fibres':'deformació dúctil')+' · esveltesa L/d = '+n(L0/d,1)+'.';
