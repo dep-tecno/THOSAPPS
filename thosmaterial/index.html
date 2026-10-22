@@ -34,10 +34,12 @@ for(const [id,family,name,Eg,yieldMPa,ultimate,elong] of materialTable){
   points=[[0,0],[e0,E*e0],[end*.18,ultimate*.5],[end*.55,ultimate*.88],[end*.8,ultimate],[end,ultimate*.82]];
   zones=[e0,end*.18,end*.55,end*.8,end];
  }else{
-  const e0=yieldMPa/E,peak=end*.7;
-  // La taula no especifica la tensió exacta a la ruptura.
-  points=[[0,0],[e0,yieldMPa],[Math.max(e0*1.8,end*.035),yieldMPa*1.02],[end*.18,yieldMPa+(ultimate-yieldMPa)*.48],[peak,ultimate],[end,ultimate*.82]];
-  zones=[e0,Math.max(e0*1.8,end*.035),end*.18,peak,end];
+  const eYield=yieldMPa/E,peak=end*.7;
+  // A és un límit de proporcionalitat estimat; B és el límit elàstic de referència.
+  // Les corbes no són mesures experimentals: són esquemes continus de l'assaig.
+  const a=eYield*.78,b=eYield,c=Math.max(b*1.7,end*.13);
+  points=[[0,0],[a,E*a],[b,yieldMPa],[c,yieldMPa+(ultimate-yieldMPa)*.35],[peak,ultimate],[end,ultimate*.82]];
+  zones=[a,b,c,peak,end];
  }
  materials[id]={id,family,name,E,end,points,zones,kind:id==='rubber'?'elastomer':yieldMPa===null?'polymer':'metal',note:'Referència de la taula: E = '+Eg+' GPa; '+(yieldMPa===null?'límit elàstic no especificat':'límit elàstic = '+yieldMPa+' MPa')+'; resistència = '+ultimate+' MPa; allargament = '+elong+' %. Corba didàctica aproximada, no experimental.'};
 }
@@ -73,18 +75,18 @@ function curveAt(points,x){
  return points[n-1][1];
 }
 function stressAt(x){return curveAt(m.points,x);}
-function phase(x){const z=m.zones;if(x<=0)return ['Origen','La proveta no està sotmesa a tracció.'];if(broken)return ['E · Trencament','La proveta s’ha fracturat; la força transmesa és nul·la.'];if(m.kind==='elastomer')return ['Comportament elastomèric','Model aproximat de gran deformació: la relació tensió–deformació no és lineal en tot el recorregut.'];if(m.kind==='polymer')return ['Deformació del polímer','Resposta idealitzada del polímer; les propietats reals depenen de la temperatura i la velocitat de l’assaig.'];if(x<=z[0])return ['O–A · Zona elàstica','La deformació és reversible i la tensió és proporcional a la deformació.'];if(x<=z[1])return ['A–B · Límit elàstic','Comença la transició cap a la deformació permanent.'];if(x<=z[2])return ['B–C · Fluència','El material es deforma plàsticament; en alguns acers la tensió varia poc.'];if(x<=z[3])return ['C–D · Enduriment','Cal una tensió creixent per continuar deformant la proveta.'];return ['D–E · Estricció','La secció es redueix localment i baixa la tensió nominal.'];}
+function phase(x){const z=m.zones;if(x<=0)return ['Origen','La proveta no està sotmesa a tracció.'];if(broken)return ['E · Trencament','La proveta s’ha fracturat; la força transmesa és nul·la.'];if(m.kind==='elastomer')return ['Comportament elastomèric','Model aproximat de gran deformació: la relació tensió–deformació no és lineal en tot el recorregut.'];if(m.kind==='polymer')return ['Deformació del polímer','Resposta idealitzada del polímer; les propietats reals depenen de la temperatura i la velocitat de l’assaig.'];if(x<=z[0])return ['O–A · Zona proporcional','La tensió i la deformació són proporcionals. A és el límit de proporcionalitat estimat.'];if(x<=z[1])return ['A–B · Tram elàstic no proporcional','La relació deixa de ser estrictament lineal, però el model encara considera la deformació reversible.'];if(x<=z[2])return m.id.startsWith('steel')?['B–C · Fluència esquemàtica','S’ha superat el límit elàstic B. La deformació plàstica augmenta; la fluència es representa de manera accentuada.']:['B–C · Deformació plàstica','S’ha superat el límit elàstic B; no es pressuposa un altiplà de fluència.'];if(x<=z[3])return ['C–D · Enduriment','Cal una tensió creixent per continuar deformant la proveta.'];return ['D–E · Estricció','La secció es redueix localment i baixa la tensió nominal.'];}
 function xPhaseLabel(x){
  if(x<=0)return 'PROVETA SENSE CÀRREGA';
  const z=m.zones;
  if(m.kind==='elastomer')return 'RESPOSTA ELASTOMÈRICA · MODEL';
  if(m.kind==='polymer')return x<=z[0]?'INICI DE DEFORMACIÓ':x<z[3]?'DEFORMACIÓ DEL POLÍMER':'RESISTÈNCIA MÀXIMA / RUPTURA';
- if(x<=z[0])return 'ZONA ELÀSTICA LINEAL';
- if(x<=z[1])return 'TRANSICIÓ AL RÈGIM PLÀSTIC';
- if(x<=z[2])return m.id.startsWith('steel')?'FLUÈNCIA · MODEL IDEALITZAT':'DEFORMACIÓ PLÀSTICA';
- if(x<z[3])return 'ENDURIMENT PER DEFORMACIÓ';
+ if(x<=z[0])return 'O–A · ZONA PROPORCIONAL';
+ if(x<=z[1])return 'A–B · ELÀSTIC NO PROPORCIONAL';
+ if(x<=z[2])return m.id.startsWith('steel')?'B–C · FLUÈNCIA ESQUEMÀTICA':'B–C · DEFORMACIÓ PLÀSTICA';
+ if(x<z[3])return 'C–D · ENDURIMENT';
  if(Math.abs(x-z[3])<m.end*.005)return 'RESISTÈNCIA NOMINAL MÀXIMA';
- return 'ESTRICCIÓ · TENSIÓ NOMINAL DECREIXENT';
+ return 'D–E · ESTRICCIÓ';
 }
 function smoothPath(points,fx,fy){
  const samples=240,last=points[points.length-1][0];let result='';
@@ -95,9 +97,9 @@ function draw(){const L=+$('length').value,d=+$('diameter').value,area=Math.PI*d
  const px=x=>66+580*x/(m.end*1.06),py=y=>306-215*y/(Math.max(...m.points.map(p=>p[1]))*1.13);
  let g='<path d="M66 76V306H655" fill="none" stroke="#637f8b" stroke-width="2"/>';for(let i=0;i<=5;i++){let x=66+580*i/5,y=306-215*i/5;g+='<path d="M'+x+' 306V38M66 '+y+'H650" stroke="#dce8ec" stroke-width="1"/><text x="'+x+'" y="326" text-anchor="middle" font-size="12" fill="#536e7a">'+fmt(m.end*1.06*i/5*100,1)+'</text><text x="58" y="'+(y+4)+'" text-anchor="end" font-size="12" fill="#536e7a">'+Math.round(Math.max(...m.points.map(p=>p[1]))*1.13*i/5)+'</text>';}
  g+='<text x="350" y="351" text-anchor="middle" font-size="14" fill="#183644">Deformació nominal ε (%)</text><text transform="translate(18 183) rotate(-90)" text-anchor="middle" font-size="14" fill="#183644">Tensió nominal σ (MPa)</text>';
- const elasticLimit=m.zones[0],limitX=px(elasticLimit),limitY=py(stressAt(elasticLimit)),isElastic=!broken&&eps<=elasticLimit;
+ const elasticLimit=m.kind==='metal'?m.zones[1]:m.zones[0],limitX=px(elasticLimit),limitY=py(stressAt(elasticLimit)),isElastic=!broken&&eps<=elasticLimit;
 
- const zoneNames=['Elàstica','Límit','Fluència','Enduriment','Estricció'];
+ const zoneNames=m.kind==='metal'?['Proporcional','Elàstica','Plàstica','Enduriment','Estricció']:['Inicial','Transició','Deformació','Resistència','Final'];
  const zoneColors=['#159a80','#e2ae31','#e58b35','#3188c5','#a75caa'];
  const bounds=[0,...m.zones];const totalWidth=px(m.end)-px(0);
  for(let i=0;i<zoneNames.length;i++){
