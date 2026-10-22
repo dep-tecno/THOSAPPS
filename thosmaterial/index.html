@@ -74,6 +74,18 @@ function curveAt(points,x){
 }
 function stressAt(x){return curveAt(m.points,x);}
 function phase(x){const z=m.zones;if(x<=0)return ['Origen','La proveta no està sotmesa a tracció.'];if(broken)return ['E · Trencament','La proveta s’ha fracturat; la força transmesa és nul·la.'];if(m.kind==='elastomer')return ['Comportament elastomèric','Model aproximat de gran deformació: la relació tensió–deformació no és lineal en tot el recorregut.'];if(m.kind==='polymer')return ['Deformació del polímer','Resposta idealitzada del polímer; les propietats reals depenen de la temperatura i la velocitat de l’assaig.'];if(x<=z[0])return ['O–A · Zona elàstica','La deformació és reversible i la tensió és proporcional a la deformació.'];if(x<=z[1])return ['A–B · Límit elàstic','Comença la transició cap a la deformació permanent.'];if(x<=z[2])return ['B–C · Fluència','El material es deforma plàsticament; en alguns acers la tensió varia poc.'];if(x<=z[3])return ['C–D · Enduriment','Cal una tensió creixent per continuar deformant la proveta.'];return ['D–E · Estricció','La secció es redueix localment i baixa la tensió nominal.'];}
+function xPhaseLabel(x){
+ if(x<=0)return 'PROVETA SENSE CÀRREGA';
+ const z=m.zones;
+ if(m.kind==='elastomer')return 'RESPOSTA ELASTOMÈRICA · MODEL';
+ if(m.kind==='polymer')return x<=z[0]?'INICI DE DEFORMACIÓ':x<z[3]?'DEFORMACIÓ DEL POLÍMER':'RESISTÈNCIA MÀXIMA / RUPTURA';
+ if(x<=z[0])return 'ZONA ELÀSTICA LINEAL';
+ if(x<=z[1])return 'TRANSICIÓ AL RÈGIM PLÀSTIC';
+ if(x<=z[2])return m.id.startsWith('steel')?'FLUÈNCIA · MODEL IDEALITZAT':'DEFORMACIÓ PLÀSTICA';
+ if(x<z[3])return 'ENDURIMENT PER DEFORMACIÓ';
+ if(Math.abs(x-z[3])<m.end*.005)return 'RESISTÈNCIA NOMINAL MÀXIMA';
+ return 'ESTRICCIÓ · TENSIÓ NOMINAL DECREIXENT';
+}
 function smoothPath(points,fx,fy){
  const samples=240,last=points[points.length-1][0];let result='';
  for(let i=0;i<=samples;i++){const x=last*i/samples;result+=(i?'L':'M')+fx(x).toFixed(2)+' '+fy(curveAt(points,x)).toFixed(2)+' ';}
@@ -103,7 +115,7 @@ function draw(){const L=+$('length').value,d=+$('diameter').value,area=Math.PI*d
  let lx=70;for(let i=0;i<zoneNames.length;i++){const label=zoneNames[i],step=[106,91,110,129,115][i];g+='<rect x="'+lx+'" y="11" width="10" height="10" rx="2" fill="'+zoneColors[i]+'"/><text x="'+(lx+15)+'" y="21" font-size="11" font-weight="600" fill="#345261">'+label+'</text>';lx+=step;}
  g+='<circle cx="'+limitX+'" cy="'+limitY+'" r="5" fill="#a85d29" stroke="#fff" stroke-width="2"/>';
  g+='<text x="'+Math.max(90,limitX+10)+'" y="'+Math.max(100,limitY-25)+'" font-size="12" font-weight="700" fill="#96551c">Límit elàstic ('+fmt(elasticLimit*100,2)+' %)</text>';
- g+='<rect x="365" y="40" width="268" height="26" rx="6" fill="'+(broken?'#e9edf0':isElastic?'#dff4e9':'#fff0dc')+'"/><text x="499" y="58" text-anchor="middle" font-size="12" font-weight="700" fill="'+(broken?'#536e7a':isElastic?'#176b57':'#96551c')+'">'+(broken?'PROVETA FRACTURADA':isElastic?'DEFORMACIÓ REVERSIBLE':'LÍMIT SUPERAT · DEFORMACIÓ PERMANENT')+'</text>';
+ g+='<rect x="365" y="40" width="268" height="26" rx="6" fill="'+(broken?'#e9edf0':isElastic?'#dff4e9':'#fff0dc')+'"/><text x="499" y="58" text-anchor="middle" font-size="12" font-weight="700" fill="'+(broken?'#536e7a':isElastic?'#176b57':'#96551c')+'">'+(broken?'PROVETA FRACTURADA':unloading?'DESCÀRREGA · RECUPERACIÓ':xPhaseLabel(eps))+'</text>';
  if(m.id==='steel'){let labels=[['O',0,0],['A',m.points[1][0],m.points[1][1]],['B',m.points[2][0],m.points[2][1]],['C',m.points[3][0],m.points[3][1]],['D',m.points[4][0],m.points[4][1]],['E',m.points[5][0],m.points[5][1]]];for(let [t,x,y] of labels){let dx=t==='A'?14:t==='B'?26:8,dy=t==='A'?17:t==='B'?-17:-9;g+='<circle cx="'+px(x)+'" cy="'+py(y)+'" r="3.5" fill="#007c90"/><text x="'+(px(x)+dx)+'" y="'+(py(y)+dy)+'" font-size="13" font-weight="700" fill="#183644">'+t+'</text>';}}
  if(unloading&&!broken){g+='<path d="M'+px(plastic)+' '+py(0)+'L'+px(unloadStart)+' '+py(unloadStress)+'" stroke="#e18a39" stroke-width="2.5" stroke-dasharray="7 5"/>';g+='<circle cx="'+px(plastic)+'" cy="'+py(0)+'" r="4" fill="#e18a39"/><text x="'+(px(plastic)+8)+'" y="'+py(0-0)+'" font-size="12" fill="#a35d20">ε permanent</text>';}
  g+='<circle cx="'+px(eps)+'" cy="'+py(s)+'" r="7" fill="#ee8b35" stroke="white" stroke-width="2"/>';$('plotContent').innerHTML=g;
