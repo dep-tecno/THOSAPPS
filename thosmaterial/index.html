@@ -31,14 +31,47 @@ const materials={
 };
 const $=id=>document.getElementById(id);let m=materials.steel,eps=0,plastic=0,unloading=false,broken=false,playing=false,raf=0,last=0;
 const fmt=(n,d=2)=>n.toLocaleString('ca-ES',{maximumFractionDigits:d,minimumFractionDigits:d});
-function stressAt(x){const p=m.points;if(x<=0)return 0;for(let i=1;i<p.length;i++){if(x<=p[i][0]){let a=p[i-1],b=p[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);}}return p.at(-1)[1];}
+// Interpolació cúbica de Hermite que preserva la forma de les dades (PCHIP).
+// Evita oscil·lacions i màxims artificials entre punts experimentals idealitzats.
+function slopes(points){
+ const n=points.length,h=[],delta=[],d=new Array(n).fill(0);
+ for(let i=0;i<n-1;i++){h[i]=points[i+1][0]-points[i][0];delta[i]=(points[i+1][1]-points[i][1])/h[i];}
+ if(n===2)return [delta[0],delta[0]];
+ const edge=(h0,h1,a,b)=>{let v=((2*h0+h1)*a-h0*b)/(h0+h1);if(Math.sign(v)!==Math.sign(a))return 0;if(Math.sign(a)!==Math.sign(b)&&Math.abs(v)>3*Math.abs(a))return 3*a;return v;};
+ d[0]=edge(h[0],h[1],delta[0],delta[1]);
+ d[n-1]=edge(h[n-2],h[n-3],delta[n-2],delta[n-3]);
+ for(let i=1;i<n-1;i++){
+  if(delta[i-1]===0||delta[i]===0||Math.sign(delta[i-1])!==Math.sign(delta[i])){d[i]=0;continue;}
+  const w1=2*h[i]+h[i-1],w2=h[i]+2*h[i-1];
+  d[i]=(w1+w2)/(w1/delta[i-1]+w2/delta[i]);
+ }
+ return d;
+}
+function curveAt(points,x){
+ if(x<=points[0][0])return points[0][1];
+ const n=points.length;if(x>=points[n-1][0])return points[n-1][1];
+ const d=slopes(points);
+ for(let i=0;i<n-1;i++){
+  const a=points[i],b=points[i+1];
+  if(x<=b[0]){
+   const h=b[0]-a[0],t=(x-a[0])/h,t2=t*t,t3=t2*t;
+   return (2*t3-3*t2+1)*a[1]+(t3-2*t2+t)*h*d[i]+(-2*t3+3*t2)*b[1]+(t3-t2)*h*d[i+1];
+  }
+ }
+ return points[n-1][1];
+}
+function stressAt(x){return curveAt(m.points,x);}
 function phase(x){const z=m.zones;if(x<=0)return ['Origen','La proveta no està sotmesa a tracció.'];if(broken)return ['E · Trencament','La proveta s’ha fracturat; la força transmesa és nul·la.'];if(m===materials.brittle)return ['Comportament fràgil','La ruptura es produeix amb una deformació plàstica molt reduïda.'];if(x<=z[0])return ['O–A · Zona elàstica','La deformació és reversible i la tensió és proporcional a la deformació.'];if(x<=z[1])return ['A–B · Límit elàstic','Comença la transició cap a la deformació permanent.'];if(x<=z[2])return ['B–C · Fluència','El material es deforma plàsticament; en alguns acers la tensió varia poc.'];if(x<=z[3])return ['C–D · Enduriment','Cal una tensió creixent per continuar deformant la proveta.'];return ['D–E · Estricció','La secció es redueix localment i baixa la tensió nominal.'];}
-function path(points,fx,fy){return points.map((p,i)=>(i?'L':'M')+fx(p[0]).toFixed(2)+' '+fy(p[1]).toFixed(2)).join(' ');}
+function smoothPath(points,fx,fy){
+ const samples=240,last=points[points.length-1][0];let result='';
+ for(let i=0;i<=samples;i++){const x=last*i/samples;result+=(i?'L':'M')+fx(x).toFixed(2)+' '+fy(curveAt(points,x)).toFixed(2)+' ';}
+ return result;
+}
 function draw(){const L=+$('length').value,d=+$('diameter').value,area=Math.PI*d*d/4;let s=broken?0:unloading?Math.max(0,m.E*(eps-plastic)):stressAt(eps);const force=s*area/1000;let z=phase(eps);if(unloading&&!broken)z=['Descàrrega elàstica','La tensió disminueix seguint un pendent aproximat E. La deformació residual és '+fmt(plastic*100,2)+' %.'];$('lengthValue').textContent=L+' mm';$('diameterValue').textContent=d+' mm';$('strainValue').textContent=fmt(eps*100,2)+' %';$('forceMetric').textContent=fmt(force)+' kN';$('stressMetric').textContent=fmt(s,1)+' MPa';$('strainMetric').textContent=fmt(eps*100,2)+' %';$('extensionMetric').textContent=fmt(eps*L,2)+' mm';$('zoneName').textContent=z[0];$('zoneText').textContent=z[1];$('zoneDescription').textContent=z[0]+' · '+z[1];$('materialNote').textContent=m.note;
  const px=x=>66+580*x/(m.end*1.06),py=y=>306-260*y/(Math.max(...m.points.map(p=>p[1]))*1.13);
  let g='<path d="M66 32V306H655" fill="none" stroke="#637f8b" stroke-width="2"/>';for(let i=0;i<=5;i++){let x=66+580*i/5,y=306-260*i/5;g+='<path d="M'+x+' 306V38M66 '+y+'H650" stroke="#dce8ec" stroke-width="1"/><text x="'+x+'" y="326" text-anchor="middle" font-size="12" fill="#536e7a">'+fmt(m.end*1.06*i/5*100,1)+'</text><text x="58" y="'+(y+4)+'" text-anchor="end" font-size="12" fill="#536e7a">'+Math.round(Math.max(...m.points.map(p=>p[1]))*1.13*i/5)+'</text>';}
  g+='<text x="350" y="351" text-anchor="middle" font-size="14" fill="#183644">Deformació nominal ε (%)</text><text transform="translate(18 183) rotate(-90)" text-anchor="middle" font-size="14" fill="#183644">Tensió nominal σ (MPa)</text>';
- g+='<path d="'+path(m.points,px,py)+'" stroke="#007c90" stroke-width="3.5" fill="none" stroke-linejoin="round"/>';
+ g+='<path d="'+smoothPath(m.points,px,py)+'" stroke="#007c90" stroke-width="3.5" fill="none" stroke-linejoin="round"/>';
  if(m===materials.steel){let labels=[['O',0,0],['A',.0012,252],['B',.0015,285],['C',.025,260],['D',.17,455],['E',.28,325]];for(let [t,x,y] of labels){g+='<circle cx="'+px(x)+'" cy="'+py(y)+'" r="3.5" fill="#007c90"/><text x="'+(px(x)+8)+'" y="'+(py(y)-9)+'" font-size="13" font-weight="700" fill="#183644">'+t+'</text>';}}
  if(unloading&&!broken){const top=stressAt(plastic+stressAt(eps)/m.E);g+='<path d="M'+px(plastic)+' '+py(0)+'L'+px(eps)+' '+py(s)+'" stroke="#8196a1" stroke-width="2" stroke-dasharray="7 5"/>';}
  g+='<circle cx="'+px(eps)+'" cy="'+py(s)+'" r="7" fill="#ee8b35" stroke="white" stroke-width="2"/>';$('plotContent').innerHTML=g;
