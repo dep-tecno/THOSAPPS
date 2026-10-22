@@ -162,12 +162,16 @@ function compressionFracture(p,scale,threshold,failureP){
  }
  cyl(.14,.14,.6,dark,0,bottom+.25+h+.43,0);
 }
-function flexion(p,scale){const L=4.5,def=.85*p;for(const x of [-2.12,2.12]){const support=cyl(.34,.34,.75,hardware,x,-1.12,0);support.rotation.x=Math.PI/2;box(.9,.2,1.1,dark,x,-1.6,0)}
- const sections=42;const verts=[],norm=[],indices=[];const w=.44*scale,h=.42*scale;
- for(let i=0;i<=sections;i++){const x=-L/2+L*i/sections,y=.05-def*Math.pow(Math.sin(Math.PI*i/sections),2);for(const [yy,zz] of [[-h/2,-w/2],[-h/2,w/2],[h/2,w/2],[h/2,-w/2]])verts.push(x,y+yy,zz)}
- for(let i=0;i<sections;i++)for(let k=0;k<4;k++){const a=4*i+k,b=4*i+(k+1)%4,c=a+4,d=b+4;indices.push(a,b,c,b,d,c)}
- const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();add(geo,specimen);
- cyl(.19,.19,.85,hardware,0,1.45-def,0);box(.9,.24,.9,accent,0,.94-def,0)}
+function flexion(p,scale){
+ const span=4.3,L=Math.max(40,current.length||120),def=Math.min(.85,(current.deflection||0)/L*span*3),failure=!!current.flexionFailure&&p>=current.failureP;
+ const w=.44*scale,h=.42*scale,verts=[],inds=[],N=60;
+ for(const x of [-span/2,span/2]){const roller=cyl(.18,.18,.85,hardware,x,-.77,0);roller.rotation.x=Math.PI/2;box(.75,.22,1.05,dark,x,-1.15,0)}
+ for(let i=0;i<=N;i++){const t=i/N,x=span*(t-.5),u=Math.min(t,1-t),shape=u*(3-4*u*u),y=-.37-def*shape;for(const [yy,zz] of [[-h/2,-w/2],[-h/2,w/2],[h/2,w/2],[h/2,-w/2]])verts.push(x,y+yy,zz)}
+ for(let i=0;i<N;i++){if(failure&&i===N/2)continue;for(let k=0;k<4;k++){const a=i*4+k,b=i*4+(k+1)%4,c=a+4,d=b+4;inds.push(a,b,c,b,d,c)}}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(inds);geo.computeVertexNormals();add(geo,specimen);
+ if(failure){box(.09,h*.92,w*.9,dark,0,-.37-def,0);for(let k=0;k<4;k++){const chip=box(.07,.08,.07,accent,(k-1.5)*.12,-.52-def-.06*(k%2),.1*(k%2?1:-1));chip.rotation.z=k*.3}}
+ const tip=cyl(.17,.17,.6,hardware,0,.66-def,0);tip.rotation.z=Math.PI/2;box(.72,.22,.7,accent,0,.22-def,0);
+}
 function torsion(p,scale){const length=3.8,r=.45*scale;const n=64,around=24,verts=[],inds=[];
  for(let i=0;i<=n;i++){const x=-length/2+length*i/n,angle=p*1.45*i/n;for(let j=0;j<=around;j++){const a=j/around*Math.PI*2+angle;verts.push(x,r*Math.cos(a),r*Math.sin(a))}}
  for(let i=0;i<n;i++)for(let j=0;j<around;j++){const a=i*(around+1)+j,b=a+around+1;inds.push(a,b,a+1,a+1,b,b+1)}
