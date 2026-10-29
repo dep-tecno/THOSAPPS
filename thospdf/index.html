@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Uneix i separa PDF per intervals amb previsualització. Processament local en el teu dispositiu amb THOSPDF.">
+  <title>THOSPDF · Uneix i separa PDF</title>
+  <meta name="theme-color" content="#0f1722">
+  <link rel="icon" type="image/svg+xml" href="thospdf.svg">
+  <link rel="stylesheet" href="styles.css?v=20261029-1">
+  <script defer src="vendor/pdf-lib.min.js?v=20261029-1"></script>
+  <script type="module" src="app.mjs?v=20261029-1"></script>
+</head>
+<body>
+<header class="app-header"><a class="app-brand" href="https://tecno-apps.cat/" target="_top" title="Torna a tecno-apps" aria-label="THOSPDF · Torna a la pàgina principal de Tecno-apps"><img src="thospdf.svg" width="44" height="44" alt=""><span class="brand-copy"><span class="brand-name">THOS<span>PDF</span></span><small>Uneix i separa documents</small></span></a></header>
+<main>
+  <div class="intro"><p class="privacy">✓ Els teus PDF es processen en el teu dispositiu, sense pujar-los a cap servidor.</p></div>
+  <div class="tabs" role="group" aria-label="Operació"><button id="merge-tab" aria-pressed="true">Unir PDF</button><button id="split-tab" aria-pressed="false">Separar PDF</button></div>
+  <section id="merge-panel" class="panel" aria-labelledby="merge-title">
+    <h2 id="merge-title">Un sol PDF, en l’ordre que tu vulguis</h2><p>Afegeix els documents, revisa’n l’ordre i crea el PDF final.</p>
+    <label class="picker">＋ Afegeix fitxers PDF<input id="merge-input" type="file" accept=".pdf,application/pdf" multiple></label>
+    <div class="toolbar"><span id="summary">Cap document afegit</span><button id="sort" class="secondary">Ordena A–Z</button><button id="clear" class="secondary">Buida la llista</button></div>
+    <ol id="files" class="files"></ol>
+    <label class="field">Nom del PDF final<input id="merge-name" value="documents-unificats.pdf" maxlength="160"></label>
+    <button id="merge" class="primary" disabled>Uneix els PDF</button>
+  </section>
+  <section id="split-panel" class="panel" aria-labelledby="split-title" hidden>
+    <h2 id="split-title">Queda’t amb les pàgines que necessites</h2><p>Selecciona un PDF i indica les pàgines o els intervals.</p>
+    <label class="picker">＋ Selecciona un PDF<input id="split-input" type="file" accept=".pdf,application/pdf"></label>
+    <p id="split-info">Cap document seleccionat</p>
+    <fieldset id="interval-controls"><legend>Pàgines que vols extreure</legend><div id="intervals"></div><button id="add-interval" class="secondary" type="button">＋ Interval</button></fieldset>
+    <p id="range-help" class="hint">Comença per la pàgina 1. Es respecta l’ordre indicat; les pàgines repetides s’inclouen una sola vegada.</p>
+    <label class="field">Com vols el resultat?<select id="split-mode"><option value="selected">Tots els intervals en un sol PDF</option><option value="interval">Un PDF per cada interval</option><option value="each">Un PDF per cada pàgina del document</option></select></label>
+    <label class="field">Nom del resultat<input id="split-name" value="pagines-extretes.pdf" maxlength="160"></label>
+    <button id="split" class="primary" disabled>Separa el PDF</button>
+  </section>
+  <p id="status" role="status" aria-live="polite"></p>
+  <section id="results" class="panel results" aria-label="Fitxers generats" hidden><h2>Ja ho tens!</h2><p>Descarrega els fitxers generats. Els originals es conserven.</p><div id="downloads"></div></section>
+  <details><summary>Com funciona i què cal tenir en compte?</summary><p>Per unir: afegeix dos PDF o més, ordena’ls amb les fletxes i prem «Uneix els PDF». Per separar: selecciona un document, indica la pàgina inicial i final i afegeix més intervals amb «＋ Interval» i prem «Separa el PDF».</p><p>No admet PDF protegits amb contrasenya. La mida màxima depèn de la memòria del dispositiu. Copia les pàgines: no garanteix conservar signatures digitals, marcadors ni camps de formulari interactius. Si un document no es pot llegir, l’operació s’atura i t’ho indica.</p><p>Adaptació del Google Apps Script facilitat per l’usuari. Motor PDF: <a href="https://pdf-lib.js.org/" target="_blank" rel="noopener">PDF-LIB, d’Andrew Dillon</a> (llicència MIT).</p></details>
+</main>
+<footer>THOSPDF · Departament de Tecnologia</footer>
+</body></html>

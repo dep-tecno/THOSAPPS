@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+<title id="title">THOSPDF</title><desc id="desc">Documents PDF que es combinen i pàgines seleccionades per intervals.</desc>
+<defs><radialGradient id="bg" cx="50%" cy="40%" r="75%"><stop stop-color="#26374a"/><stop offset="1" stop-color="#171b27"/></radialGradient><filter id="shadow"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-opacity=".3"/></filter></defs>
+<rect width="960" height="540" fill="url(#bg)"/>
+<g fill="#00e676" opacity=".15"><circle cx="80" cy="60" r="3"/><circle cx="160" cy="60" r="3"/><circle cx="240" cy="60" r="3"/><circle cx="320" cy="60" r="3"/><circle cx="400" cy="60" r="3"/><circle cx="480" cy="60" r="3"/><circle cx="560" cy="60" r="3"/><circle cx="640" cy="60" r="3"/><circle cx="720" cy="60" r="3"/><circle cx="800" cy="60" r="3"/><circle cx="880" cy="60" r="3"/></g>
+<g filter="url(#shadow)">
+<g transform="translate(100 135) rotate(-8 65 90)"><rect width="130" height="182" rx="12" fill="#c6d9e7"/><path d="M25 44h80M25 64h60M25 84h80M25 104h70" stroke="#789aaf" stroke-width="7" stroke-linecap="round"/></g>
+<g transform="translate(175 165) rotate(7 65 90)"><rect width="130" height="182" rx="12" fill="#eaf4fa"/><path d="M25 44h80M25 64h60M25 84h80M25 104h70" stroke="#9db8cb" stroke-width="7" stroke-linecap="round"/></g>
+<path d="M335 246h58m-17-18 18 18-18 18" fill="none" stroke="#68e1ba" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<g transform="translate(425 124)"><rect width="150" height="224" rx="14" fill="#193f3b" stroke="#69e5bd" stroke-width="4"/><path d="M31 47h88M31 68h65M31 89h88" stroke="#72bda9" stroke-width="7" stroke-linecap="round"/><text x="75" y="164" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="37" font-weight="800" fill="#dcfff0">PDF</text></g>
+<path d="M607 246h58m-17-18 18 18-18 18" fill="none" stroke="#68e1ba" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="697" y="155" width="178" height="185" rx="16" fill="#162b32" stroke="#42615e" stroke-width="3"/>
+<g fill="#ecf6f7" stroke="#6fe4be" stroke-width="3"><rect x="714" y="175" width="65" height="100" rx="5"/><rect x="794" y="175" width="65" height="100" rx="5"/></g>
+<g font-family="Segoe UI,sans-serif" font-size="30" font-weight="700" text-anchor="middle" fill="#22755f"><text x="746" y="237">2</text><text x="826" y="237">3</text></g>
+<text x="786" y="313" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="18" fill="#91e3cb">INTERVAL 2–3</text>
+</g>
+<text x="48" y="483" font-family="Segoe UI,sans-serif" font-size="44" font-weight="800" fill="#fff"><tspan fill="#00e676">THOS</tspan>PDF</text>
+<text x="912" y="478" text-anchor="end" font-family="Segoe UI,sans-serif" font-size="20" fill="#a8b3c2">Unir · Separar · Previsualitzar</text>
+</svg>
