@@ -18,6 +18,19 @@ jobs:
       - name: Compilar ESM per al navegador
         working-directory: thosscan
         run: npx --yes vite@7.1.0 build --base=./ --config vite.config.mjs
+      - name: Incloure models OCR locals (cat, spa, eng)
+        working-directory: thosscan
+        run: |
+          set -euo pipefail
+          mkdir -p dist/models
+          for lang in cat spa eng; do
+            curl --fail --location --retry 3 --silent --show-error \
+              "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/${lang}.traineddata" \
+              -o "dist/models/${lang}.traineddata"
+            test "$(stat -c%s "dist/models/${lang}.traineddata")" -gt 100000
+            gzip -n "dist/models/${lang}.traineddata"
+            gzip -t "dist/models/${lang}.traineddata.gz"
+          done
       - name: Comprovar resultat
         run: |
           test -f thosscan/dist/index.html
