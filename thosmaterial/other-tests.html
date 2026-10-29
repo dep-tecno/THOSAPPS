@@ -118,4 +118,4 @@ if(id==='flexio'||id==='torsio'){
 function stop(){playing=false;cancelAnimationFrame(raf);$('play').textContent='▶ Inicia';}
 $('play').onclick=()=>{if(playing){stop();return;}if(progress>=1)return;playing=true;last=0;$('play').textContent='Ⅱ Pausa';function tick(now){if(!playing)return;if(last)progress=Math.min(1,progress+Math.min((now-last)/1000,.05)/18);last=now;render();if(progress>=1){stop();$('play').textContent='✓ Assaig finalitzat';}else raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick)};
 $('reset').onclick=()=>{stop();progress=0;render()};$('load').oninput=()=>{stop();progress=+$('load').value/1000;render()};$('size').oninput=()=>{stop();render()};$('material').onchange=()=>{stop();progress=0;render()};$('length').oninput=()=>{stop();progress=0;render()};render();
-</script><script type="module" src="other-tests3d.js?v=fusta-fractura-postvinclament-1"></script></body></html>
+</script><script type="module" src="other-tests3d.js?v=flexio-visible-20261029"></script></body></html>

@@ -163,7 +163,7 @@ function compressionFracture(p,scale,threshold,failureP){
  cyl(.14,.14,.6,dark,0,bottom+.25+h+.43,0);
 }
 function flexion(p,scale){
- const span=4.3,L=Math.max(40,current.length||120),def=Math.min(.85,(current.deflection||0)/L*span*3),failure=!!current.flexionFailure&&p>=current.failureP;
+ const span=4.3,L=Math.max(40,current.length||120),def=Math.min(1.35,Math.max(0,(current.deflection||0)/L)*span*12),failure=!!current.flexionFailure&&p>=current.failureP;
  const w=.44*scale,h=.42*scale,verts=[],inds=[],N=60;
  for(const x of [-span/2,span/2]){const roller=cyl(.18,.18,.85,hardware,x,-.77,0);roller.rotation.x=Math.PI/2;box(.75,.22,1.05,dark,x,-1.15,0)}
  for(let i=0;i<=N;i++){const t=i/N,x=span*(t-.5),u=Math.min(t,1-t),shape=u*(3-4*u*u),y=-.37-def*shape;for(const [yy,zz] of [[-h/2,-w/2],[-h/2,w/2],[h/2,w/2],[h/2,-w/2]])verts.push(x,y+yy,zz)}
