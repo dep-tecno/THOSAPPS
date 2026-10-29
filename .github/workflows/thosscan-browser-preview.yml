@@ -1,0 +1,30 @@
+name: THOSsCAN · Compilar navegador (prova)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Instal·lar dependències
+        working-directory: thosscan
+        run: npm install --no-audit --no-fund
+      - name: Compilar ESM per al navegador
+        working-directory: thosscan
+        run: npx --yes vite@7.1.0 build --base=./
+      - name: Comprovar resultat
+        run: |
+          test -f thosscan/dist/index.html
+          test -d thosscan/dist/assets
+          find thosscan/dist -type f -printf '%p %s bytes\n' | sort
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thosscan-browser-preview
+          path: thosscan/dist/
+          retention-days: 7
