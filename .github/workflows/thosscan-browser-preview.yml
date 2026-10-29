@@ -17,7 +17,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Compilar ESM per al navegador
         working-directory: thosscan
-        run: npx --yes vite@7.1.0 build --base=./
+        run: npx --yes vite@7.1.0 build --base=./ --config vite.config.mjs
       - name: Comprovar resultat
         run: |
           test -f thosscan/dist/index.html
