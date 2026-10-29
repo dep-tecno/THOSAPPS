@@ -11,14 +11,14 @@
 <body>
 <header><a href="https://tecno-apps.cat/" aria-label="Torna a Tecno-Apps"><h1>THOS<span>sCAN</span></h1></a><small>Documents escanejats → documents editables</small></header>
 <main>
-<section class="card"><h2>Converteix un document</h2><p>Carrega un PDF o una imatge i tria el format de sortida. Els documents es processaran al teu navegador quan s'hagi integrat el motor OCR.</p>
+<section class="card"><h2>Converteix un document</h2><p>Carrega un PDF o una imatge i tria el format de sortida. La conversió es fa al navegador. Aquesta versió encara està en fase de proves i pot presentar errors.</p>
 <label class="drop" id="drop" for="file"><strong>📄 Arrossega aquí el document</strong><small>o clica per seleccionar un PDF, JPG o PNG</small><span id="filename">Cap fitxer seleccionat</span></label>
 <input id="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
 <div class="row"><div><label for="lang">Idioma</label><select id="lang"><option value="cat">Català</option><option value="spa">Castellà</option><option value="eng">Anglès</option></select></div><div><label for="format">Format de sortida</label><select id="format"><option value="docx">Word (.docx)</option><option value="xlsx">Excel (.xlsx)</option></select></div></div>
-<div class="actions"><button id="convert" disabled>Convertir (pendent d'integració OCR)</button><button id="download" hidden disabled>📥 Descarregar</button><button id="drive" hidden type="button">☁️ Obrir Google Drive</button></div>
+<div class="actions"><button id="convert" disabled>Convertir</button><button id="download" hidden disabled>📥 Descarregar</button><button id="drive" hidden type="button">☁️ Obrir Google Drive</button></div>
 <p id="status" class="status" role="status" aria-live="polite">Selecciona un document per preparar la conversió.</p>
 </section>
-<div class="notice" role="note"><strong>Versió de desenvolupament.</strong> La interfície ja està preparada, però la conversió encara no està disponible: falta incorporar Scribe.js, els models OCR i validar les llicències. No s'ha executat cap OCR.</div>
+<div class="notice" role="note"><strong>Versió de desenvolupament.</strong> Scribe.js ja es compila i els models lingüístics s'estan integrant. Encara no s'han verificat conversions reals a Word o Excel. No utilitzis aquesta versió amb documents sensibles.</div>
 </main>
 <footer>© Tecno-Apps · THOSsCAN · Motor previst: <a href="https://github.com/scribeocr/scribe.js" target="_blank" rel="noopener noreferrer">Scribe.js (AGPL-3.0)</a> · <a href="./THOSsCAN.md">Especificació del projecte</a></footer>
 <script type="module" src="./app.js"></script>
