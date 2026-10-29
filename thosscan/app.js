@@ -1,5 +1,6 @@
 // THOSsCAN — adaptador Scribe.js. El paquet ESM s'ha de distribuir localment.
 // Vegeu docs/guide.md de scribeocr/scribe.js. No s'utilitzen CDNs.
+import { exportWord } from './word-export.js';
 const fileInput = document.querySelector('#file');
 const convert = document.querySelector('#convert');
 const download = document.querySelector('#download');
@@ -73,11 +74,12 @@ convert.addEventListener('click', async () => {
     doc = await scribe.openDocument([input]);
     fase = 'reconeixement OCR';
     status.textContent = 'Reconeixent el contingut…';
-    await doc.recognize({ langs: [lang.value], modeAdv: 'lstm' });
+    // Conservar el text nadiu dels PDF; aplicar OCR només on calgui.
+    await doc.recognize({ langs: [lang.value], modeAdv: 'lstm', ocrPages: 'auto' });
     fase = 'exportació del document';
     status.textContent = 'Preparant el document editable…';
     const ext = format.value;
-    const bytes = await doc.exportData(ext);
+    const bytes = ext === 'docx' ? await exportWord(doc, scribe) : await doc.exportData(ext);
     output = {
       blob: new Blob([bytes], { type: ext === 'docx'
         ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -109,3 +111,4 @@ convert.addEventListener('click', async () => {
     convert.disabled = false;
   }
 });
+
