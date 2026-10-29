@@ -163,14 +163,70 @@ function compressionFracture(p,scale,threshold,failureP){
  cyl(.14,.14,.6,dark,0,bottom+.25+h+.43,0);
 }
 function flexion(p,scale){
- const span=4.3,L=Math.max(40,current.length||120),def=Math.min(1.35,Math.max(0,(current.deflection||0)/L)*span*12),failure=!!current.flexionFailure&&p>=current.failureP;
- const w=.44*scale,h=.42*scale,verts=[],inds=[],N=60;
- for(const x of [-span/2,span/2]){const roller=cyl(.18,.18,.85,hardware,x,-.77,0);roller.rotation.x=Math.PI/2;box(.75,.22,1.05,dark,x,-1.15,0)}
- for(let i=0;i<=N;i++){const t=i/N,x=span*(t-.5),u=Math.min(t,1-t),shape=u*(3-4*u*u),y=-.37-def*shape;for(const [yy,zz] of [[-h/2,-w/2],[-h/2,w/2],[h/2,w/2],[h/2,-w/2]])verts.push(x,y+yy,zz)}
- for(let i=0;i<N;i++){if(failure&&i===N/2)continue;for(let k=0;k<4;k++){const a=i*4+k,b=i*4+(k+1)%4,c=a+4,d=b+4;inds.push(a,b,c,b,d,c)}}
- const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(inds);geo.computeVertexNormals();add(geo,specimen);
- if(failure){box(.09,h*.92,w*.9,dark,0,-.37-def,0);for(let k=0;k<4;k++){const chip=box(.07,.08,.07,accent,(k-1.5)*.12,-.52-def-.06*(k%2),.1*(k%2?1:-1));chip.rotation.z=k*.3}}
- const tip=cyl(.17,.17,.6,hardware,0,.66-def,0);tip.rotation.z=Math.PI/2;box(.72,.22,.7,accent,0,.22-def,0);
+ // Assaig a tres punts: mateix llenguatge visual i materials que compressió.
+ const span=4.3,L=Math.max(40,current.length||120);
+ const def=Math.min(1.12,Math.max(0,(current.deflection||0)/L)*span*12);
+ const failure=!!current.flexionFailure&&p>=current.failureP;
+ const w=.44*scale,h=.42*scale,N=64,baseY=-.37;
+ const shape=t=>{const u=Math.min(t,1-t);return u*(3-4*u*u)};
+ const yAt=t=>baseY-def*shape(t);
+ const verts=[],inds=[];
+ // Rodets, bases i eixos en els mateixos materials metàl·lics de la resta d'assajos.
+ for(const x of [-span/2,span/2]){
+  const roller=cyl(.18,.18,w+0.32,hardware,x,baseY-h/2-.18,0);
+  roller.rotation.x=Math.PI/2;
+  box(.85,.19,w+.55,dark,x,baseY-h/2-.48,0);
+  box(.18,.23,.18,hardware,x,baseY-h/2-.28,0);
+ }
+ // Referència de la proveta sense càrrega, com a Compressió.
+ if(p>.001){
+  const ghost=new THREE.LineDashedMaterial({color:0xa9e6ef,transparent:true,opacity:.46,dashSize:.10,gapSize:.075,depthTest:false});
+  for(const yy of [-h/2,h/2])for(const zz of [-w/2,w/2]){
+   const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-span/2,baseY+yy,zz),new THREE.Vector3(span/2,baseY+yy,zz)
+   ]),ghost);line.computeLineDistances();group.add(line);
+  }
+ }
+ for(let i=0;i<=N;i++){
+  const t=i/N,x=span*(t-.5),y=yAt(t);
+  for(const [yy,zz] of [[-h/2,-w/2],[-h/2,w/2],[h/2,w/2],[h/2,-w/2]])verts.push(x,y+yy,zz);
+ }
+ for(let i=0;i<N;i++){
+  if(failure&&(i===N/2-1||i===N/2))continue;
+  for(let k=0;k<4;k++){const a=i*4+k,b=i*4+(k+1)%4,c=a+4,d=b+4;inds.push(a,b,c,b,d,c)}
+ }
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+ geo.setIndex(inds);geo.computeVertexNormals();add(geo,specimen);
+ // Tapes de les dues cares i línies de referència que segueixen la flexió.
+ for(const i of [0,N]){
+  const x=span*(i/N-.5),y=yAt(i/N);
+  box(.018,h,w,specimen,x,y,0);
+ }
+ for(const zz of [-w/2-.009,w/2+.009]){
+  const pts=[];
+  for(let i=0;i<=N;i++){const t=i/N;pts.push(new THREE.Vector3(span*(t-.5),yAt(t)+h*.16,zz))}
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),stripe);group.add(line);
+ }
+ // Marques transversals per observar la deformació de la superfície.
+ for(let i=1;i<=7;i++){
+  const t=i/8,x=span*(t-.5),y=yAt(t);
+  const mark=box(.016,h*.92,.014,stripe,x,y,w/2+.012);
+  const slope=(yAt(Math.min(1,t+.005))-yAt(Math.max(0,t-.005)))/(.01*span);
+  mark.rotation.z=Math.atan(slope);
+ }
+ if(failure){
+  box(.06,h*.86,w*.88,dark,0,yAt(.5),0);
+  for(let k=0;k<4;k++){
+   const chip=box(.075,.07,.08,accent,(k-1.5)*.12,yAt(.5)-h*.45-.05*(k%2),.1*(k%2?1:-1));
+   chip.rotation.z=k*.3;
+  }
+ }
+ // El punxó central segueix exactament la cara superior de la proveta.
+ const top=yAt(.5)+h/2;
+ const nose=cyl(.17,.17,w+.32,hardware,0,top+.17,0);nose.rotation.x=Math.PI/2;
+ box(.76,.23,w+.42,accent,0,top+.46,0);
+ cyl(.13,.13,.62,dark,0,top+.88,0);
 }
 function torsion(p,scale){const length=3.8,r=.45*scale;const n=64,around=24,verts=[],inds=[];
  for(let i=0;i<=n;i++){const x=-length/2+length*i/n,angle=p*1.45*i/n;for(let j=0;j<=around;j++){const a=j/around*Math.PI*2+angle;verts.push(x,r*Math.cos(a),r*Math.sin(a))}}
