@@ -1,0 +1,39 @@
+name: THOSsCAN · Preparar OCR (validació)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ocr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: thosscan
+    steps:
+      - name: Obtenir repositori
+        uses: actions/checkout@v4
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instal·lar Scribe.js (versió fixada)
+        run: npm install --no-audit --no-fund
+      - name: Verificar fitxers d'entrada
+        run: |
+          test -f node_modules/scribe.js-ocr/scribe.js
+          node -e "const p=require('./node_modules/scribe.js-ocr/package.json'); if(p.version!=='0.17.0') process.exit(1); console.log('Scribe.js',p.version)"
+      - name: Inventari de dependències
+        run: |
+          npm ls --all --json > dependency-tree.json || true
+          find node_modules/scribe.js-ocr -type f | sort > scribe-file-list.txt
+      - name: Publicar informes com a artefactes privats del workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: thosscan-dependency-audit
+          path: |
+            thosscan/dependency-tree.json
+            thosscan/scribe-file-list.txt
+          retention-days: 7
