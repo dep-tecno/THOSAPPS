@@ -1,6 +1,4 @@
-import { defineConfig } from 'vite';
-
-export default defineConfig({
+export default {
   base: './',
   worker: { format: 'es' },
-});
+};
