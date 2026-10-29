@@ -1,8 +1,14 @@
 name: THOSsCAN · Compilar navegador (prova)
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "thosscan/index.html"
+      - ".github/workflows/thosscan-browser-preview.yml"
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -36,6 +42,19 @@ jobs:
           test -f thosscan/dist/index.html
           test -d thosscan/dist/assets
           find thosscan/dist -type f -printf '%p %s bytes\n' | sort
+      - name: Publicar versió de proves sense alterar el codi font
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          mkdir -p thosscan/live
+          rsync -a --delete thosscan/dist/ thosscan/live/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add thosscan/live
+          if ! git diff --cached --quiet; then
+            git commit -m "build(thosscan): publish OCR browser preview [skip ci]"
+            git push origin HEAD:main
+          fi
       - uses: actions/upload-artifact@v5
         with:
           name: thosscan-browser-preview
