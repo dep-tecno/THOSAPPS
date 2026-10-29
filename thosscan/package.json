@@ -1,0 +1,10 @@
+{
+  "name": "thosscan",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "THOSsCAN — integració OCR local en desenvolupament",
+  "dependencies": {
+    "scribe.js-ocr": "0.17.0"
+  }
+}
