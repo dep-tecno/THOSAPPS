@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="THOSsCAN: conversió local de documents escanejats a Word i Excel.">
+<title>THOSsCAN · Conversió de documents</title>
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color:#e8f5fa;background:#0d2635}*{box-sizing:border-box}body{margin:0}header{background:#102c3e;border-bottom:2px solid #205267;padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}header a{color:inherit;text-decoration:none}h1{font-size:24px;margin:0}h1 span{color:#63d5e5}header small{color:#b4cfda}main{max-width:860px;margin:45px auto;padding:0 18px}.card{background:#163547;border:1px solid #35596b;border-radius:15px;padding:26px;margin-bottom:18px}h2{margin:0 0 12px;font-size:23px}p{line-height:1.6;color:#bdd5de}.drop{border:2px dashed #4b8495;border-radius:12px;text-align:center;padding:34px 20px;background:#102e40;cursor:pointer}.drop.drag{border-color:#69e4f4;background:#1b4b5a}.drop strong{display:block;font-size:18px}.drop small{display:block;margin:8px;color:#afcad5}input[type=file]{position:absolute;width:1px;height:1px;opacity:0}label{display:block;font-weight:650;margin:18px 0 8px}select,button{font:inherit;border-radius:9px;padding:12px 14px}select{width:100%;background:#102b3d;color:#fff;border:1px solid #527386}.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}button{border:0;background:#007c97;color:white;font-weight:700;cursor:pointer}button:disabled{background:#416473;color:#b4cad3;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.notice{border-left:4px solid #e3ad51;padding:10px 14px;background:#3b3940;color:#ffe9bc}.status{margin-top:16px;color:#bcd4dc}footer{text-align:center;color:#92b6c5;font-size:13px;padding:28px}footer a{color:#7dd9e9}@media(max-width:600px){.row{grid-template-columns:1fr}.card{padding:18px}}
+</style>
+</head>
+<body>
+<header><a href="https://tecno-apps.cat/" aria-label="Torna a Tecno-Apps"><h1>THOS<span>sCAN</span></h1></a><small>Documents escanejats → documents editables</small></header>
+<main>
+<section class="card"><h2>Converteix un document</h2><p>Carrega un PDF o una imatge i tria el format de sortida. Els documents es processaran al teu navegador quan s'hagi integrat el motor OCR.</p>
+<label class="drop" id="drop" for="file"><strong>📄 Arrossega aquí el document</strong><small>o clica per seleccionar un PDF, JPG o PNG</small><span id="filename">Cap fitxer seleccionat</span></label>
+<input id="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+<div class="row"><div><label for="lang">Idioma</label><select id="lang"><option value="cat">Català</option><option value="spa">Castellà</option><option value="eng">Anglès</option></select></div><div><label for="format">Format de sortida</label><select id="format"><option value="docx">Word (.docx)</option><option value="xlsx">Excel (.xlsx)</option></select></div></div>
+<div class="actions"><button id="convert" disabled>Convertir (pendent d'integració OCR)</button><button id="download" hidden disabled>📥 Descarregar</button><button id="drive" hidden type="button">☁️ Obrir Google Drive</button></div>
+<p id="status" class="status" role="status" aria-live="polite">Selecciona un document per preparar la conversió.</p>
+</section>
+<div class="notice" role="note"><strong>Versió de desenvolupament.</strong> La interfície ja està preparada, però la conversió encara no està disponible: falta incorporar Scribe.js, els models OCR i validar les llicències. No s'ha executat cap OCR.</div>
+</main>
+<footer>© Tecno-Apps · THOSsCAN · Motor previst: <a href="https://github.com/scribeocr/scribe.js" target="_blank" rel="noopener noreferrer">Scribe.js (AGPL-3.0)</a> · <a href="./THOSsCAN.md">Especificació del projecte</a></footer>
+<script>
+const file=document.getElementById('file'),drop=document.getElementById('drop'),name=document.getElementById('filename'),status=document.getElementById('status');
+function showFile(f){if(!f)return;const ok=/\.(pdf|jpe?g|png)$/i.test(f.name);name.textContent=f.name+' · '+(f.size/1048576).toFixed(2)+' MB';status.textContent=ok?'Fitxer seleccionat. El motor OCR encara no està integrat.':'Format no admès: tria PDF, JPG o PNG.'}
+file.addEventListener('change',()=>showFile(file.files[0]));
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');if(e.dataTransfer.files.length){file.files=e.dataTransfer.files;showFile(file.files[0])}});
+document.getElementById('drive').addEventListener('click',()=>window.open('https://drive.google.com/drive/u/0/my-drive','_blank','noopener,noreferrer'));
+</script>
+</body></html>
