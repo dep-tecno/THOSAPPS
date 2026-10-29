@@ -21,13 +21,5 @@
 <div class="notice" role="note"><strong>Versió de desenvolupament.</strong> La interfície ja està preparada, però la conversió encara no està disponible: falta incorporar Scribe.js, els models OCR i validar les llicències. No s'ha executat cap OCR.</div>
 </main>
 <footer>© Tecno-Apps · THOSsCAN · Motor previst: <a href="https://github.com/scribeocr/scribe.js" target="_blank" rel="noopener noreferrer">Scribe.js (AGPL-3.0)</a> · <a href="./THOSsCAN.md">Especificació del projecte</a></footer>
-<script>
-const file=document.getElementById('file'),drop=document.getElementById('drop'),name=document.getElementById('filename'),status=document.getElementById('status');
-function showFile(f){if(!f)return;const ok=/\.(pdf|jpe?g|png)$/i.test(f.name);name.textContent=f.name+' · '+(f.size/1048576).toFixed(2)+' MB';status.textContent=ok?'Fitxer seleccionat. El motor OCR encara no està integrat.':'Format no admès: tria PDF, JPG o PNG.'}
-file.addEventListener('change',()=>showFile(file.files[0]));
-drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
-drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
-drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');if(e.dataTransfer.files.length){file.files=e.dataTransfer.files;showFile(file.files[0])}});
-document.getElementById('drive').addEventListener('click',()=>window.open('https://drive.google.com/drive/u/0/my-drive','_blank','noopener,noreferrer'));
-</script>
+<script type="module" src="./app.js"></script>
 </body></html>
