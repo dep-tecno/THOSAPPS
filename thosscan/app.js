@@ -66,11 +66,15 @@ convert.addEventListener('click', async () => {
   download.hidden = true;
   drive.hidden = true;
   let doc;
+  let fase = 'obertura del document';
+  output = null;
   try {
     status.textContent = 'Obrint document…';
     doc = await scribe.openDocument([input]);
+    fase = 'reconeixement OCR';
     status.textContent = 'Reconeixent el contingut…';
-    await doc.recognize({ langs: [lang.value] });
+    await doc.recognize({ langs: [lang.value], modeAdv: 'lstm' });
+    fase = 'exportació del document';
     status.textContent = 'Preparant el document editable…';
     const ext = format.value;
     const bytes = await doc.exportData(ext);
@@ -86,10 +90,22 @@ convert.addEventListener('click', async () => {
     status.textContent = 'Conversió completada. Descarrega el fitxer.';
   } catch (error) {
     output = null;
-    status.textContent = 'No s’ha pogut completar la conversió: ' + (error?.message || 'error desconegut');
-    console.error(error);
+    const cause = error?.error ?? error?.reason ?? error;
+    let detall = cause?.message || error?.message;
+    if (!detall) {
+      if (typeof cause === 'string') detall = cause;
+      else {
+        try { detall = JSON.stringify(cause); } catch { /* Pot contenir referències circulars. */ }
+        if (!detall || detall === '{}') detall = String(cause);
+      }
+    }
+    status.textContent = `Error durant ${fase}: ${detall || 'Error sense informació'}`;
+    console.error(`THOSsCAN — ${fase}`, error);
   } finally {
-    if (doc) await doc.close().catch(console.error);
+    if (doc) {
+      try { await doc.close(); }
+      catch (error) { console.warn('THOSsCAN — tancament del document', error); }
+    }
     convert.disabled = false;
   }
 });

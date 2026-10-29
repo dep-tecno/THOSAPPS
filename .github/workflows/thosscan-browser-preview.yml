@@ -6,6 +6,7 @@ on:
     paths:
       - "index.html"
       - "thosscan/index.html"
+      - "thosscan/app.js"
       - ".github/workflows/thosscan-browser-preview.yml"
 permissions:
   contents: write
