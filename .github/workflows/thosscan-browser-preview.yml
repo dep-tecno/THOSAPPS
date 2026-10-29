@@ -23,7 +23,7 @@ jobs:
           test -f thosscan/dist/index.html
           test -d thosscan/dist/assets
           find thosscan/dist -type f -printf '%p %s bytes\n' | sort
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: thosscan-browser-preview
           path: thosscan/dist/
