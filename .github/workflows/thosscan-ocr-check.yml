@@ -14,9 +14,9 @@ jobs:
         working-directory: thosscan
     steps:
       - name: Obtenir repositori
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Configurar Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Instal·lar Scribe.js (versió fixada)
@@ -30,7 +30,7 @@ jobs:
           npm ls --all --json > dependency-tree.json || true
           find node_modules/scribe.js-ocr -type f | sort > scribe-file-list.txt
       - name: Publicar informes com a artefactes privats del workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: thosscan-dependency-audit
           path: |
