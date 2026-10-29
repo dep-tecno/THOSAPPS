@@ -46,10 +46,10 @@ download.addEventListener('click', () => {
 });
 try {
   // Cal empaquetar scribe.js-ocr al mateix origen, inclosos workers i models.
-  const module = await import('./vendor/scribe/scribe.js');
+  const module = await import('scribe.js-ocr');
   scribe = module.default;
   scribe.opt.workerN = 2;
-  scribe.opt.langPath = new URL('./models/', import.meta.url).href;
+  scribe.opt.langPath = new URL('./models/', document.baseURI).href;
   scribe.opt.progressHandler = msg => {
     if (msg.type === 'recognize') status.textContent = 'Reconeixement OCR en curs…';
   };
@@ -81,6 +81,7 @@ convert.addEventListener('click', async () => {
       name: input.name.replace(/\.[^.]+$/, '') + '.' + ext,
     };
     download.hidden = false;
+    download.disabled = false;
     drive.hidden = false;
     status.textContent = 'Conversió completada. Descarrega el fitxer.';
   } catch (error) {
