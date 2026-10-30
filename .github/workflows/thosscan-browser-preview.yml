@@ -1,11 +1,11 @@
-name: THOSsCAN · Compilar navegador (prova)
+name: THOSsCAN · Compilar navegador
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - "index.html"
-      - "thosscan/index.html"
+      - "thosscan/src/index.html"
       - "thosscan/app.js"
       - "thosscan/word-export.js"
       - "thosscan/word-export.test.mjs"
@@ -30,7 +30,7 @@ jobs:
         run: node --test word-export.test.mjs
       - name: Compilar ESM per al navegador
         working-directory: thosscan
-        run: npx --yes vite@7.1.0 build --base=./ --config vite.config.mjs
+        run: npx --yes vite@7.1.0 build src --outDir ../dist --emptyOutDir --base=./ --config vite.config.mjs
       - name: Incloure models OCR locals (cat, spa, eng)
         working-directory: thosscan
         run: |
@@ -55,21 +55,23 @@ jobs:
           test -f thosscan/dist/index.html
           test -d thosscan/dist/assets
           find thosscan/dist -type f -printf '%p %s bytes\n' | sort
-      - name: Publicar versió de proves sense alterar el codi font
+      - name: Publicar aplicació a la ruta oficial
         if: github.ref == 'refs/heads/main'
         run: |
           set -euo pipefail
-          mkdir -p thosscan/live
-          rsync -a --delete thosscan/dist/ thosscan/live/
+          mkdir -p thosscan/assets thosscan/models
+          rsync -a --delete thosscan/dist/assets/ thosscan/assets/
+          rsync -a --delete thosscan/dist/models/ thosscan/models/
+          cp thosscan/dist/index.html thosscan/index.html
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add thosscan/live
+          git add thosscan/index.html thosscan/assets thosscan/models
           if ! git diff --cached --quiet; then
-            git commit -m "build(thosscan): publish OCR browser preview [skip ci]"
+            git commit -m "build(thosscan): publish OCR browser app [skip ci]"
             git push origin HEAD:main
           fi
       - uses: actions/upload-artifact@v5
         with:
-          name: thosscan-browser-preview
+          name: thosscan-browser
           path: thosscan/dist/
           retention-days: 7
