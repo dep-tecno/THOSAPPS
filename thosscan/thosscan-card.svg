@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+<title id="title">THOSsCAN</title>
+<desc id="desc">Un document escanejat es transforma en text Word i taules Excel editables.</desc>
+<defs>
+  <radialGradient id="bg" cx="47%" cy="39%" r="76%"><stop stop-color="#204657"/><stop offset="1" stop-color="#131d2b"/></radialGradient>
+  <linearGradient id="beam" x1="0" x2="1"><stop stop-color="#63d5e5" stop-opacity="0"/><stop offset=".5" stop-color="#83f6f7"/><stop offset="1" stop-color="#63d5e5" stop-opacity="0"/></linearGradient>
+  <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#63d5e5" stop-opacity=".02"/><stop offset="1" stop-color="#63d5e5" stop-opacity=".24"/></linearGradient>
+  <pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="16" cy="16" r="1.1" fill="#82d9e5" opacity=".13"/></pattern>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dy="9" stdDeviation="11" flood-color="#03121d" flood-opacity=".5"/></filter>
+  <filter id="glow" x="-40%" y="-200%" width="180%" height="500%"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+<rect width="960" height="540" fill="url(#bg)"/>
+<rect width="960" height="432" fill="url(#dots)"/>
+<circle cx="453" cy="218" r="168" fill="none" stroke="#63d5e5" stroke-opacity=".07" stroke-width="38"/>
+<circle cx="453" cy="218" r="137" fill="none" stroke="#63d5e5" stroke-opacity=".13" stroke-dasharray="3 12" stroke-width="2"/>
+<g filter="url(#shadow)">
+  <g transform="translate(92 119) rotate(-9 88 115)">
+    <rect x="-12" y="12" width="170" height="228" rx="12" fill="#688796" opacity=".65"/>
+    <rect width="170" height="228" rx="12" fill="#e9f3f6"/>
+    <rect x="22" y="25" width="67" height="21" rx="5" fill="#d6e7ec"/>
+    <text x="55" y="40" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="700" fill="#446575">PDF / JPG</text>
+    <path d="M23 67h121M23 82h99M23 97h110" stroke="#8ba8b5" stroke-width="5" stroke-linecap="round"/>
+    <rect x="23" y="121" width="122" height="69" rx="3" fill="#d5e5eb"/>
+    <path d="m36 174 23-27 23 18 21-30 28 39Z" fill="#8dabb8"/>
+    <circle cx="53" cy="135" r="7" fill="#a9c4ce"/>
+    <path d="M23 206h96" stroke="#8ba8b5" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <path d="M289 227h45m-15-15 16 15-16 15" fill="none" stroke="#63d5e5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="365" y="101" width="174" height="248" rx="17" fill="#123544" stroke="#3b7183" stroke-width="2"/>
+  <rect x="385" y="122" width="134" height="196" rx="7" fill="#194a59"/>
+  <path d="M404 148h91M404 166h69M404 184h88" stroke="#b9ecf1" stroke-width="6" stroke-linecap="round"/>
+  <g fill="none" stroke="#78e9f2" stroke-width="5" stroke-linecap="round"><path d="M352 140v-35h35m130 0h35v35M352 310v35h35m130 0h35v-35"/></g>
+  <path d="M385 199h134v83H385z" fill="url(#glass)"/>
+  <rect x="334" y="262" width="237" height="6" rx="3" fill="#63d5e5" filter="url(#glow)"/>
+  <rect x="334" y="263" width="237" height="3" rx="1.5" fill="url(#beam)"/>
+  <text x="452" y="235" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="34" font-weight="800" letter-spacing="3" fill="#e4fdff">OCR</text>
+  <path d="M573 227h39m-15-15 16 15-16 15" fill="none" stroke="#63d5e5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(651 101)">
+    <rect width="209" height="112" rx="13" fill="#18364c" stroke="#70bdf4" stroke-width="2"/>
+    <rect x="15" y="17" width="38" height="38" rx="8" fill="#235b89"/>
+    <text x="34" y="44" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="25" font-weight="800" fill="#e5f5ff">W</text>
+    <text x="68" y="42" font-family="Segoe UI,sans-serif" font-size="24" font-weight="700" fill="#d8efff">Word</text>
+    <path d="M19 73h146M19 89h115" stroke="#7aaecf" stroke-width="5" stroke-linecap="round"/>
+    <path d="M171 65v30m-5-30h10m-10 30h10" stroke="#c6eeff" stroke-width="2"/>
+  </g>
+  <g transform="translate(651 238)">
+    <rect width="209" height="112" rx="13" fill="#163e3d" stroke="#79e4b8" stroke-width="2"/>
+    <rect x="15" y="16" width="38" height="38" rx="8" fill="#246c54"/>
+    <text x="34" y="43" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="25" font-weight="800" fill="#e0fff0">X</text>
+    <text x="68" y="41" font-family="Segoe UI,sans-serif" font-size="24" font-weight="700" fill="#d7ffeb">Excel</text>
+    <path d="M19 68h171v28H19zM19 82h171M75 68v28m57-28v28" fill="none" stroke="#68bd9c" stroke-width="2"/>
+    <rect x="132" y="82" width="58" height="14" fill="#79e4b8" fill-opacity=".22" stroke="#a1f5d0" stroke-width="2"/>
+  </g>
+</g>
+<rect x="352" y="373" width="200" height="27" rx="13.5" fill="#63d5e5" fill-opacity=".1"/>
+<text x="452" y="392" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="15" font-weight="600" letter-spacing="1.5" fill="#9de4ec">TEXT · TAULES · IMATGES</text>
+<path d="M48 432h864" stroke="#a3dce5" stroke-opacity=".12"/>
+<text x="48" y="486" font-family="Segoe UI,sans-serif" font-size="44" font-weight="800" fill="#fff"><tspan fill="#00e676">THOS</tspan>sCAN</text>
+<text x="912" y="480" text-anchor="end" font-family="Segoe UI,sans-serif" font-size="20" fill="#a8bdca">Del paper al document editable</text>
+</svg>
