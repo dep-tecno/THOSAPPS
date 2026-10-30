@@ -141,7 +141,7 @@
             </div>
             
             <!-- Download Button -->
-            <button id="downloadBtn" class="btn-neon flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-pink-400 border border-pink-900 px-3 py-1.5 rounded-full text-sm font-bold" title="Descarregar Imatge">
+            <button id="downloadBtn" class="btn-neon flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-pink-400 border border-pink-900 px-3 py-1.5 rounded-full text-sm font-bold" title="Descarregar imatge amb el codi i el dibuix">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 <span class="hidden sm:inline">IMATGE</span>
             </button>
@@ -288,8 +288,46 @@ REPETEIX 36 [
 
         // --- DOWNLOAD SYSTEM ---
         downloadBtn.addEventListener('click', () => {
-            // 1. Convert Canvas to DataURL
-            const image = canvas.toDataURL("image/png");
+            // Compose the complete source on the left and the current drawing on the right.
+            const capture = document.createElement('canvas');
+            const captureCtx = capture.getContext('2d');
+            const padding = 24;
+            const headingHeight = 56;
+            const lineHeight = 21;
+            const codeWidth = Math.max(320, Math.round(canvas.width / 2));
+            captureCtx.font = '14px monospace';
+            const lines = [];
+            for (const sourceLine of codeArea.value.replace(/\r\n?/g, '\n').split('\n')) {
+                let line = '';
+                for (const character of sourceLine.replace(/\t/g, '    ')) {
+                    if (line && captureCtx.measureText(line + character).width > codeWidth - padding * 2) {
+                        lines.push(line);
+                        line = '';
+                    }
+                    line += character;
+                }
+                lines.push(line);
+            }
+            capture.width = codeWidth + canvas.width;
+            capture.height = Math.max(canvas.height + headingHeight, headingHeight + padding * 2 + lines.length * lineHeight);
+            captureCtx.fillStyle = '#0f172a';
+            captureCtx.fillRect(0, 0, capture.width, capture.height);
+            captureCtx.fillStyle = '#1e293b';
+            captureCtx.fillRect(0, headingHeight, codeWidth, capture.height - headingHeight);
+            captureCtx.fillStyle = '#000000';
+            captureCtx.fillRect(codeWidth, headingHeight, canvas.width, capture.height - headingHeight);
+            captureCtx.font = 'bold 16px monospace';
+            captureCtx.fillStyle = '#22d3ee';
+            captureCtx.fillText('THOSLOGO · CODI', padding, 34);
+            captureCtx.fillText('DIBUIX', codeWidth + padding, 34);
+            captureCtx.font = '14px monospace';
+            captureCtx.textBaseline = 'top';
+            captureCtx.fillStyle = '#e2e8f0';
+            lines.forEach((line, index) => {
+                captureCtx.fillText(line, padding, headingHeight + padding + index * lineHeight);
+            });
+            captureCtx.drawImage(canvas, codeWidth, headingHeight);
+            const image = capture.toDataURL('image/png');
             
             // 2. Create link and click
             const link = document.createElement('a');
@@ -299,7 +337,7 @@ REPETEIX 36 [
             link.click();
             document.body.removeChild(link);
             
-            log("Imatge descarregada!", 'success');
+            log("Imatge amb el codi i el dibuix descarregada!", 'success');
         });
 
         // --- PERSISTENCE ---
