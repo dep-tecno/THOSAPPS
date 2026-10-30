@@ -100,7 +100,7 @@ test('an endpoint on a deck makes a shared joint that carries the train load',()
   assert.equal(addBeam(b,{x:0,y:0},{x:0,y:2},'bar',level),null);
   assert.equal(b.nodes.length,count+1);
 });
-test('nodes built on the terrain act as supports during the standard train simulation',()=>{
+test('terrain joints do not invent anchors or support a floating bridge',()=>{
   const level={...copy(first),left:-2,right:2,budget:1000,anchors:[],terrain:[
     {x:-4,y:0},{x:-2,y:0},{x:-1,y:-2},{x:0,y:-2},{x:1,y:-2},{x:2,y:0},{x:4,y:0}
   ]};
@@ -112,11 +112,11 @@ test('nodes built on the terrain act as supports during the standard train simul
     [{x:0,y:0},{x:0,y:2},'bar']
   ])assert.equal(addBeam(deck,a,z,type,level),null);
   const sim=new Simulation(level,deck);
-  assert.ok(sim.nodes.some(n=>n.groundSupport&&n.x0===-2));
-  assert.ok(sim.nodes.some(n=>n.groundSupport&&n.x0===2));
+  assert.ok(sim.nodes.every(n=>!n.fixed));
+  assert.equal(sim.status,'failed');assert.match(sim.reason,/ancoratge/);
   assert.ok(sim.nodes.some(n=>!n.fixed&&n.x0===0&&n.y0===0));
   const result=simulate(level,deck);
-  assert.equal(result.status,'passed');assert.equal(result.broken,0);
+  assert.equal(result.status,'failed');assert.equal(result.broken,0);
 });
 test('geometric crossings stay separate unless an endpoint explicitly creates a junction',()=>{
   const level={...copy(first),budget:2000},b=emptyBridge(level);
@@ -353,4 +353,18 @@ test('inclined legacy bascule designs remain importable but require adaptation',
   const l=levels.find(l=>l.id==='old-15'),b=makeDeck({...l,bascule:undefined},emptyBridge(l)).bridge;
   for(const n of b.nodes)if(!n.fixed)n.y=(n.x+8)/10;
   const original=copy(b),s=new Simulation(l,b);assert.equal(s.status,'failed');assert.match(s.reason,/horitzontal/);assert.deepEqual(b,original);
+});
+
+
+test('a terrain foot connected to a valid bridge remains free and a detached component blocks both tests',()=>{
+  const level={...copy(first),budget:3000,terrain:[{x:-10,y:-2},{x:10,y:-2}]},b=demo(level);
+  assert.equal(addBeam(b,{x:0,y:0},{x:0,y:-2},'bar',level),null);
+  const before=copy(b),s=new Simulation(level,b);
+  assert.equal(s.status,'running');assert.equal(s.nodes.find(n=>n.x0===0&&n.y0===-2).fixed,false);
+  assert.equal(s.nodes.filter(n=>n.fixed).length,level.anchors.length);
+  assert.deepEqual(b,before);
+  assert.equal(addBeam(b,{x:6,y:-2},{x:8,y:-2},'bar',level),null);
+  for(const test of [new Simulation(level,b),assessBridge(level,b)]){
+    assert.equal(test.status,'failed');assert.match(test.reason,/ancoratge/);assert.equal(test.time,0);
+  }
 });

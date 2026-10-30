@@ -280,9 +280,9 @@ export class Simulation {
     this.mode=options.mode==='stress'?'stress':'train';
     this.level=level;this.design=copy(bridge);this.time=0;this.weight=weight;this.loadFactor=0;this.maxAllowedSag=maxSagForLevel(level);
     this.nodes=bridge.nodes.map(n=>{
-      // A drawn joint placed on the level terrain is a real support in the solve.
-      const groundSupport=!level.bascule&&!n.fixed&&Math.abs(n.y-terrainAt(level,n.x))<=0.05;
-      return {...n,fixed:n.fixed||groundSupport,groundSupport,x0:n.x,y0:n.y,vx:0,vy:0,mass:0.35,fx:0,fy:0};
+      // Only the level's explicit anchors fix the structure. Terrain contact
+      // never creates a new anchor, including on the riverbed or a bank.
+      return {...n,x0:n.x,y0:n.y,vx:0,vy:0,mass:0.35,fx:0,fy:0};
     });
     this.byId=new Map(this.nodes.map(n=>[n.id,n]));
     this.beams=bridge.beams.map(e=>{const a=this.byId.get(e.a),b=this.byId.get(e.b),length=Math.hypot(b.x-a.x,b.y-a.y);
@@ -305,10 +305,15 @@ export class Simulation {
     if(level.bascule&&this.status==='running'&&(!this.landing||Math.abs(this.landing.x0-level.bascule.landingX)>.025)){
       this.status='failed';this.failureKind='route';this.reason='Completa la via horitzontal des de l’ancoratge fins a x = '+level.bascule.landingX+'. El contrapès l’aixecarà fins a la riba.';
     }
-    if(level.bascule){
-      const connected=new Set([this.pivot.id]);let grew=true;
-      while(grew){grew=false;for(const e of this.beams){if(connected.has(e.a)&&!connected.has(e.b)){connected.add(e.b);grew=true;}if(connected.has(e.b)&&!connected.has(e.a)){connected.add(e.a);grew=true;}}}
-      if(this.nodes.some(n=>!connected.has(n.id))){this.status='failed';this.failureKind='structure';this.reason='Uneix tots els reforços i el contrapès a l’ancoratge: els elements solts no equilibren el pont.';}
+    // A floating component cannot borrow support from the linear solver's
+    // numerical regularizer. Every structural component must reach an anchor.
+    const connected=new Set(this.nodes.filter(n=>n.fixed).map(n=>n.id));let grew=true;
+    while(grew){grew=false;for(const e of this.beams){
+      if(connected.has(e.a)&&!connected.has(e.b)){connected.add(e.b);grew=true;}
+      if(connected.has(e.b)&&!connected.has(e.a)){connected.add(e.a);grew=true;}
+    }}
+    if(this.beams.some(e=>!connected.has(e.a)||!connected.has(e.b))){
+      this.status='failed';this.failureKind='structure';this.reason='Hi ha trams sense connexió amb cap ancoratge. Uneix l’estructura als punts de suport marcats: el terreny no crea ancoratges nous.';
     }
     this.trainMass=Math.max(4,Math.min(24,(level.source.trainWeight||40000)/5000))*weight;
   }
@@ -442,7 +447,7 @@ export class Simulation {
 // Calculate on an isolated copy, then return a heat map on the undeformed design.
 export function assessBridge(level,bridge,weight=1){
   const assessment=new Simulation(level,bridge,weight,{mode:'stress'});
-  if(!assessment.beams.length)return assessment;
+  if(!assessment.beams.length||!assessment.active)return assessment;
   for(let step=0;step<1500&&assessment.active;step++)assessment.step();
   assessment.analysisWarning=assessment.status!=='assessed';
   assessment.reason=assessment.analysisWarning?'Mapa d’esforços: s’han detectat trams febles o una deformació excessiva. Reforça el pont abans de provar el tren.':'Mapa d’esforços calculat. Del groc al vermell: de menys a més esforç. Pots reforçar el pont o fer passar el tren.';

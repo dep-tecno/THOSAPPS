@@ -81,7 +81,7 @@ La capçalera BGL completa i els tres camps enters finals es conserven com a met
 3. **Seleccionar:** veure longitud i tipus d’un tram, canviar-lo entre barra i tauler o esborrar-lo.
 4. **Esborrar:** eliminar trams i els nodes lliures que quedin sense connexions. Els ancoratges del nivell es conserven.
 
-Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Si es dibuixa a prop del terreny, el punt s’ajusta al perfil i actua com a suport fix durant la simulació. Cada tram nou costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
+Els trams es creen clicant dos punts o arrossegant entre ells. Els punts nous s’ajusten a la graella; els ancoratges existents tenen prioritat en l’ajust. Els punts nous segueixen la graella. Només els ancoratges marcats del nivell fixen l’estructura: tocar una riba o el fons del riu no crea cap suport nou. Cada tram nou costa **100 unitats de pressupost**, independentment de la longitud, i la longitud màxima web és de **4,5 unitats de graella**.
 
 Amb l’eina **Via** es pot dibuixar directament d’una riba a l’altra. El traç es divideix en trams vàlids, reutilitza els nodes existents que hi coincideixen i mostra el nombre de trams i el cost abans de crear-los. A No miris · Nivell 1, el traç de 8 unitats es divideix en dos trams de 4 unitats i costa 200. Repassar una cadena de barres amb Via les converteix en trams transitables sense duplicar-les ni tornar a cobrar-les. Si falta pressupost, tota l’operació es descarta.
 
@@ -135,7 +135,7 @@ La força axial depèn de l’allargament del tram i de la velocitat relativa de
 
 Per als BGL, el valor recuperat a l’offset 28 s’escala com `pes / 5.000`, limitat entre 4 i 24 unitats de massa. Per als LVL, sense aquest camp, s’utilitza una referència de 40.000 i per tant una massa web base de 8. El selector de pes aplica factors del 50%, 100%, 150% o 200%. Aquest escalat és una decisió de THOSBRIDGE, **no una equivalència demostrada amb el tren original**.
 
-Durant el càlcul, un node lliure dibuixat a menys de 0,05 unitats de graella del terreny actua com a suport fix; cal dibuixar-hi el node i connectar-hi l’estructura. No s’afegeixen suports invisibles ni punts arbitraris. El límit de descens és comú a totes les famílies i s’adapta a la llum del nivell: `clamp(0,03 × (right − left), 0,25, 4,5)` unitats de graella. És un llindar didàctic del motor web, no una propietat física ni una garantia que el nivell tingui una solució. L’aigua es representa com a context del nivell i no aplica flotabilitat ni forces hidrodinàmiques. Les barres treballen axialment: no es modelen flexió de bigues, moments als nusos, vinclament específic ni propietats de materials reals.
+Durant el càlcul, només els ancoratges explícits del nivell són suports fixos. Els nodes lliures continuen sent lliures encara que toquin el terreny. Qualsevol conjunt de trams sense connexió amb un ancoratge impedeix iniciar la prova, també al test d’esforços. Les unions entre barres continuen permeses i no creen ancoratges. Els ponts desats no es modifiquen, però els que depenien de suports de terreny automàtics poden deixar de superar la prova. El límit de descens és comú a totes les famílies i s’adapta a la llum del nivell: `clamp(0,03 × (right − left), 0,25, 4,5)` unitats de graella. És un llindar didàctic del motor web, no una propietat física ni una garantia que el nivell tingui una solució. L’aigua es representa com a context del nivell i no aplica flotabilitat ni forces hidrodinàmiques. Les barres treballen axialment: no es modelen flexió de bigues, moments als nusos, vinclament específic ni propietats de materials reals.
 
 ### Recorregut i resultat
 
@@ -204,7 +204,7 @@ La prova que contrasta els fitxers originals requereix tenir-los accessibles. Al
 
 ## Validació i límits d’aquesta primera versió
 
-**Comprovacions tècniques realitzades:** 48 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents, estabilitat numèrica, el límit de descens proporcional a la llum i el suport de nodes en contacte amb el terreny. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
+**Comprovacions tècniques realitzades:** 48 proves automàtiques aprovades a la carpeta original. Inclouen els hashes i la conversió dels 30 nivells, coordenades i pressupostos, recorreguts connectats i desconnectats, pressupost i longitud màxima, eliminació, importació JSON, càrregues diferents, estabilitat numèrica, el límit de descens proporcional a la llum i el rebuig de suports inventats en contacte amb el terreny. Els exemples dels dos primers nivells passen amb el tren estàndard; un tauler sense reforços falla a la mateixa prova.
 
 Aquestes comprovacions **no demostren que tots els nivells tinguin una solució viable amb les regles del motor web** ni que el resultat coincideixi amb Bridge Building Game. La conversió preserva dades geomètriques i pressupostos; les regles especials i la fidelitat de la jugabilitat encara s’han de contrastar.
 
