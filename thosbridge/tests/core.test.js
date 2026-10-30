@@ -104,13 +104,14 @@ test('terrain joints do not invent anchors or support a floating bridge',()=>{
   const level={...copy(first),left:-2,right:2,budget:1000,anchors:[],terrain:[
     {x:-4,y:0},{x:-2,y:0},{x:-1,y:-2},{x:0,y:-2},{x:1,y:-2},{x:2,y:0},{x:4,y:0}
   ]};
-  const b=emptyBridge(level),deck=makeDeck(level,b).bridge;
+  const constructionLevel={...level,terrain:[{x:-10,y:-20},{x:10,y:-20}]};
+  const b=emptyBridge(level),deck=makeDeck(constructionLevel,b).bridge;
   assert.ok(deck);
   for(const [a,z,type] of [
     [{x:-2,y:0},{x:0,y:2},'bar'],
     [{x:2,y:0},{x:0,y:2},'bar'],
     [{x:0,y:0},{x:0,y:2},'bar']
-  ])assert.equal(addBeam(deck,a,z,type,level),null);
+  ])assert.equal(addBeam(deck,a,z,type,constructionLevel),null);
   const sim=new Simulation(level,deck);
   assert.ok(sim.nodes.every(n=>!n.fixed));
   assert.equal(sim.status,'failed');assert.match(sim.reason,/ancoratge/);
@@ -241,7 +242,7 @@ test('a long deck stroke rolls back completely when it exceeds the budget',()=>{
   assert.match(result.error,/pressupost/);assert.deepEqual(b,before);
 });
 test('long inclined deck strokes keep grid points and respect each segment limit',()=>{
-  const level={...copy(first),budget:2000,left:-6,right:6},b=emptyBridge(level);
+  const level={...copy(first),budget:2000,left:-6,right:6,terrain:[{x:-10,y:-20},{x:10,y:-20}]},b=emptyBridge(level);
   for(const end of [{x:6,y:4},{x:6,y:1},{x:6,y:6}]){
     const result=addDeckSpan(b,{x:-6,y:0},end,level);assert.equal(result.error,undefined);
     assert.ok(result.bridge.nodes.filter(n=>!n.fixed).every(n=>Number.isInteger(n.x)&&Number.isInteger(n.y)));
@@ -358,13 +359,19 @@ test('inclined legacy bascule designs remain importable but require adaptation',
 
 test('a terrain foot connected to a valid bridge remains free and a detached component blocks both tests',()=>{
   const level={...copy(first),budget:3000,terrain:[{x:-10,y:-2},{x:10,y:-2}]},b=demo(level);
-  assert.equal(addBeam(b,{x:0,y:0},{x:0,y:-2},'bar',level),null);
+  assert.equal(addBeam(b,{x:0,y:0},{x:0,y:-2},'bar',{...level,terrain:[{x:-10,y:-20},{x:10,y:-20}]}),null);
   const before=copy(b),s=new Simulation(level,b);
   assert.equal(s.status,'running');assert.equal(s.nodes.find(n=>n.x0===0&&n.y0===-2).fixed,false);
   assert.equal(s.nodes.filter(n=>n.fixed).length,level.anchors.length);
   assert.deepEqual(b,before);
-  assert.equal(addBeam(b,{x:6,y:-2},{x:8,y:-2},'bar',level),null);
+  assert.equal(addBeam(b,{x:6,y:-2},{x:8,y:-2},'bar',{...level,terrain:[{x:-10,y:-20},{x:10,y:-20}]}),null);
   for(const test of [new Simulation(level,b),assessBridge(level,b)]){
     assert.equal(test.status,'failed');assert.match(test.reason,/ancoratge/);assert.equal(test.time,0);
   }
+});
+
+test('construction rejects ground and buried joints atomically but permits air and marked anchors',()=>{
+ const l=levels.find(l=>l.id==='new-01'),b=emptyBridge(l),before=copy(b);
+ for(const y of [terrainAt(l,0),terrainAt(l,0)-1]){assert.match(addBeam(b,{x:0,y},{x:1,y:y+1},'bar',l),/terreny/);assert.deepEqual(b,before);assert.match(addDeckSpan(b,{x:0,y},{x:1,y:y+1},l).error,/terreny/);}
+ assert.equal(addBeam(b,l.anchors[0],{x:0,y:2},'bar',l),null);
 });

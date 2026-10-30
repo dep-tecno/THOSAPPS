@@ -79,6 +79,11 @@ function constructionLimit(bridge,level){
   if(bridge.nodes.length>RULES.maxNodes||bridge.beams.length>RULES.maxBeams)return 'Has arribat al límit d’elements.';
   return null;
 }
+function terrainConstructionError(level,p){
+  const anchor=[...level.anchors,...(level.extraAnchors||[])].some(a=>Math.hypot(a.x-p.x,a.y-p.y)<.025);
+  const basculeRail=level.bascule&&Math.abs(p.y)<.025&&p.x>=level.anchors[0].x&&p.x<=level.bascule.landingX;
+  return !anchor&&!basculeRail&&p.y<=terrainAt(level,p.x)+.025?'Aquest punt és al terreny i no és un ancoratge. Construeix a l’aire o connecta amb un suport marcat.':null;
+}
 export function addBeam(bridge,a,b,type='bar',level) {
   const bound=Math.max(150,level.right-level.left+50);
   if(!['bar','deck'].includes(type)||[a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return 'Escull punts dins l’àrea de construcció.';
@@ -86,6 +91,7 @@ export function addBeam(bridge,a,b,type='bar',level) {
   const length=Math.hypot(a.x-b.x,a.y-b.y);
   if(length<0.1) return 'Escull dos punts diferents.';
   if(length>RULES.maxLength+1e-6) return 'La longitud màxima és de 4,5 unitats de graella.';
+  const terrainError=terrainConstructionError(level,a)||terrainConstructionError(level,b);if(terrainError)return terrainError;
   const na=nodeAt(bridge,a),nb=nodeAt(bridge,b);
   if(na&&nb&&bridge.beams.some(e=>(e.a===na.id&&e.b===nb.id)||(e.a===nb.id&&e.b===na.id))) return 'Aquests punts ja estan units.';
   const draft=copy(bridge),n1=connectPoint(draft,a),n2=connectPoint(draft,b);
@@ -141,6 +147,7 @@ export function addDeckSpan(bridge,a,b,level) {
   const bound=Math.max(150,level.right-level.left+50);
   if([a,b].some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>bound||Math.abs(p.y)>bound))return {error:'Escull punts dins l’àrea de construcció.'};
   if(level.bascule&&(Math.abs(a.y)>0.025||Math.abs(b.y)>0.025||Math.min(a.x,b.x)<level.anchors[0].x-.025||Math.max(a.x,b.x)>level.bascule.landingX+.025))return {error:'En aquest pont basculant, construeix la via horitzontal a l’altura de l’ancoratge. El contrapès l’aixecarà durant la prova.'};
+  const terrainError=terrainConstructionError(level,a)||terrainConstructionError(level,b);if(terrainError)return {error:terrainError};
   const plan=planDeckSpan(bridge,a,b);if(plan.error)return plan;
   const draft=plan.draft;
   for(const segment of plan.segments){
