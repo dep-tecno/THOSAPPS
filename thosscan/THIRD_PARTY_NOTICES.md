@@ -26,6 +26,12 @@
   Reutilitza les estructures de dades, els estils i zip.js; no incorpora
   un altre motor OCR. Limitacions i comprovacions: `WORD_EXPORT.md`.
 
+30/10/2026: la capa Word incorpora també les regions d'imatge del PDF
+identificades per Scribe.js, utilitzant el seu renderitzador i adaptador de
+canvas. Les imatges es retallen i s'empaqueten localment com a PNG dins del
+DOCX. No s'ha afegit cap dependència ni s'ha modificat el repositori original
+de Scribe.js.
+
 ## zip.js inclòs a Scribe.js
 
 - Autor: Copyright (c) 2022 Gildas Lormeau. All rights reserved.

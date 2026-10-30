@@ -21,6 +21,12 @@ dades de Scribe.js. No modifica l'exportador Excel ni afegeix dependències.
   Les imatges s'ajusten proporcionalment dins d'una pàgina A4.
 - Es reutilitza zip.js, ja inclòs a Scribe.js, per empaquetar el DOCX al navegador.
   Els documents no s'envien a cap servei de conversió.
+- Imatges PDF (30/10/2026): es recuperen les zones d'imatge identificades per
+  Scribe.js, es renderitzen localment a 150 dpi i s'incorporen com a PNG al
+  DOCX amb la seva mida i posició aproximades. Cada pàgina es renderitza una
+  sola vegada i s'alliberen els recursos. El text fora de les imatges i les
+  taules es mantenen editables. El text que forma part d'una imatge queda
+  dins de la imatge i no es duplica com a text OCR.
 
 ## Verificació
 
@@ -33,6 +39,13 @@ dades de Scribe.js. No modifica l'exportador Excel ni afegeix dependències.
   superposades, text anterior i posterior, documents sense taules,
   múltiples pàgines i dades de taula procedents d'imatges.
 - Compilació Vite local correcta. El PDF privat d'exemple no s'incorpora al repositori.
+- PDF d'exemple amb imatges: cinc PNG incorporats, dues seccions de pàgina,
+  285 paraules natives conservades; relectura independent amb python-docx.
+  S'han inspeccionat visualment les dues capçaleres i les tres figures
+  recuperades. La prova completa del resultat a Word correspon a l'usuari.
+- Proves d'imatges: vinculació dels fitxers PNG, deduplicació de posicions,
+  text OCR dins de la figura, conservació de la taula editable, exclusió
+  d'escanejos de pàgina completa i errors de renderització explícits.
 - La prova visual a Word i la comprovació a la web corresponen a l'usuari.
   Les proves de dades d'imatges són sintètiques; no equivalen a una nova
   prova OCR real amb una imatge de l'usuari.
@@ -41,11 +54,15 @@ dades de Scribe.js. No modifica l'exportador Excel ni afegeix dependències.
 
 No és una reproducció exacta de la maquetació. La detecció de taules depèn
 de Scribe.js; no s'inventen taules quan no hi ha dades de cel·les. No es
-reconstrueixen cel·les combinades, imatges incrustades, capçaleres/peus
+reconstrueixen cel·les combinades, dibuixos vectorials sense imatge raster,
+la disposició exacta d'imatges superposades o dins de cel·les, capçaleres/peus
 vinculats, enllaços o notes a peu amb referències automàtiques. Les llistes
 conserven el text i els marcadors, però no es converteixen en numeració Word
 automàtica. Les fonts han d'estar disponibles al dispositiu que obre el DOCX.
 Word pot redistribuir línies i pàgines, especialment després d'editar.
+Les imatges grans que ocupen almenys el 80% de la pàgina no s'insereixen
+com una fotografia de tota la pàgina: es manté el resultat OCR editable.
+No s'afegeix detecció de figures dins d'una fotografia o d'un escaneig.
 
 ## Autoria i llicències
 
