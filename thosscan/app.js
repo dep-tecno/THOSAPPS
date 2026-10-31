@@ -1,6 +1,7 @@
 // THOSsCAN — adaptador Scribe.js. El paquet ESM s'ha de distribuir localment.
 // Vegeu docs/guide.md de scribeocr/scribe.js. No s'utilitzen CDNs.
 import { exportWord } from './word-export.js';
+import { exportExcelTables } from './excel-export.js';
 const fileInput = document.querySelector('#file');
 const convert = document.querySelector('#convert');
 const download = document.querySelector('#download');
@@ -12,6 +13,8 @@ const lang = document.querySelector('#lang');
 const format = document.querySelector('#format');
 const cancel = document.querySelector('#cancel');
 const progress = document.querySelector('#progress');
+const excelOptions = document.querySelector('#excelOptions');
+const separateTables = document.querySelector('#separateTables');
 let scribe = null;
 let output = null;
 let active = null;
@@ -28,6 +31,7 @@ function lockControls(busy) {
   fileInput.disabled = busy;
   lang.disabled = busy;
   format.disabled = busy;
+  separateTables.disabled = busy;
   convert.disabled = busy || !scribe || !supported.test(fileInput.files[0]?.name || '');
   cancel.hidden = !busy;
   cancel.disabled = false;
@@ -66,6 +70,8 @@ function updateFile(file) {
     scribe ? 'Preparat per convertir.' : 'Motor OCR pendent d’instal·lar.';
 }
 fileInput.addEventListener('change', () => updateFile(fileInput.files[0]));
+format.addEventListener('change', () => { excelOptions.hidden = format.value !== 'xlsx'; });
+excelOptions.hidden = format.value !== 'xlsx';
 drop.addEventListener('dragover', event => { event.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
 drop.addEventListener('drop', event => {
@@ -140,6 +146,15 @@ convert.addEventListener('click', async () => {
         if (stage === 'packaging') showProgress('Empaquetant el document Word…');
         else showProgress(`${label} · pàgines: ${completed} de ${total}.`, completed, total);
       },
+    }) : separateTables.checked ? await exportExcelTables(doc, scribe, {
+      signal: run.controller.signal,
+      onProgress: ({stage,completed,total}) => {
+        if (active !== run || run.controller.signal.aborted) return;
+        if (stage === 'packaging') {
+          run.sheetCount = total;
+          showProgress(`Empaquetant Excel · ${total} ${total === 1 ? 'pestanya' : 'pestanyes'}…`);
+        } else showProgress(`Separant taules · revisades: ${completed} de ${total}.`, completed, total);
+      },
     }) : await doc.exportData(ext);
     run.controller.signal.throwIfAborted();
     candidate = {
@@ -184,7 +199,7 @@ convert.addEventListener('click', async () => {
     download.hidden = false;
     download.disabled = false;
     drive.hidden = false;
-    showProgress('Conversió completada. Descarrega el fitxer.', 1, 1);
+    showProgress(run.sheetCount ? `Conversió completada · ${run.sheetCount} ${run.sheetCount === 1 ? 'pestanya' : 'pestanyes'}. Descarrega el fitxer.` : 'Conversió completada. Descarrega el fitxer.', 1, 1);
   }
 });
 

@@ -8,6 +8,8 @@ on:
       - "thosscan/src/index.html"
       - "thosscan/app.js"
       - "thosscan/app.test.mjs"
+      - "thosscan/excel-export.js"
+      - "thosscan/excel-export.test.mjs"
       - "thosscan/word-export.js"
       - "thosscan/word-export.test.mjs"
       - "thosscan/vite.config.mjs"
@@ -28,7 +30,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Comprovar conversió i cancel·lació
         working-directory: thosscan
-        run: node --test app.test.mjs word-export.test.mjs
+        run: node --test app.test.mjs excel-export.test.mjs word-export.test.mjs
       - name: Compilar ESM per al navegador
         working-directory: thosscan
         run: npx --yes vite@7.1.0 build src --outDir ../dist --emptyOutDir --base=./ --config vite.config.mjs

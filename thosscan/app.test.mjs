@@ -5,14 +5,15 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('./app.js', import.meta.url), 'utf8')
   .replace("import { exportWord } from './word-export.js';", 'const exportWord = exportWordStub;')
+  .replace("import { exportExcelTables } from './excel-export.js';", 'const exportExcelTables = exportExcelTablesStub;')
   .replace("await import('scribe.js-ocr')", '({ default: engine })');
 const deferred = () => { let resolve, reject; const promise=new Promise((a,b)=>{resolve=a;reject=b;}); return {promise,resolve,reject}; };
-async function setup({ opening, recognize, word, excel, close } = {}) {
+async function setup({ opening, recognize, word, excel, sheets, close } = {}) {
   const elements = new Map();
   const get = key => {
     if (!elements.has(key)) elements.set(key, {
       value: key === '#lang' ? 'cat' : 'docx', files: [{name:'prova.pdf',size:4000}],
-      hidden: ['#download','#drive','#cancel','#progress'].includes(key),
+      hidden: ['#download','#drive','#cancel','#progress','#excelOptions'].includes(key), checked:false,
       disabled: false, textContent: '', handlers: {}, attributes: {},
       classList: {add(){},remove(){}},
       addEventListener(type,handler){this.handlers[type]=handler;},
@@ -21,7 +22,7 @@ async function setup({ opening, recognize, word, excel, close } = {}) {
     });
     return elements.get(key);
   };
-  const calls={open:0,ocr:0,word:0,excel:0,close:0,errors:0};
+  const calls={open:0,ocr:0,word:0,excel:0,sheets:0,close:0,errors:0};
   const doc={inputData:{pageCount:3},
     async recognize(options){calls.ocr++;return recognize?.(options,doc,get);},
     async exportData(ext){calls.excel++;assert.equal(ext,'xlsx');return excel ? excel(doc,get) : new Uint8Array([80,75]);},
@@ -30,6 +31,7 @@ async function setup({ opening, recognize, word, excel, close } = {}) {
   const engine={opt:{},async openDocument(){calls.open++;return opening ? opening(doc) : doc;}};
   const context=vm.createContext({document:{querySelector:get,baseURI:'https://tecno-apps.cat/thosscan/'},
     engine,exportWordStub:async(d,s,options)=>{calls.word++;return word ? word(options,d,get) : new Uint8Array([80,75]);},
+    exportExcelTablesStub:async(d,s,options)=>{calls.sheets++;return sheets ? sheets(options,d,get) : new Uint8Array([80,75]);},
     Blob,URL,AbortController,setTimeout,
     console:{info(){},warn(){},error(){calls.errors++;}},
   });
@@ -124,4 +126,28 @@ test('an empty rejection cannot be mistaken for a successful conversion',async()
   assert.match(s.get('#status').textContent,/Error durant reconeixement OCR/);
   assert.equal(s.get('#download').hidden,true);
   assert.equal(s.get('#convert').disabled,false);
+});
+test('table-per-sheet is opt-in and appears only for Excel',async()=>{
+  const s=await setup();
+  assert.equal(s.get('#excelOptions').hidden,true);assert.equal(s.get('#separateTables').checked,false);
+  s.get('#format').value='xlsx';s.get('#format').handlers.change();
+  assert.equal(s.get('#excelOptions').hidden,false);
+  await s.start();assert.equal(s.calls.excel,1);assert.equal(s.calls.sheets,0);
+  s.get('#format').value='docx';s.get('#format').handlers.change();
+  assert.equal(s.get('#excelOptions').hidden,true);
+});
+test('selected Excel separation uses its exporter, progress and summary',async()=>{
+  const s=await setup({sheets({signal,onProgress},doc,get){
+    assert.equal(get('#separateTables').disabled,true);assert.equal(signal.aborted,false);
+    onProgress({stage:'tables',completed:1,total:2});assert.equal(get('#progress').value,1);
+    onProgress({stage:'packaging',total:2});return new Uint8Array([80,75]);
+  }});
+  s.get('#format').value='xlsx';s.get('#separateTables').checked=true;
+  await s.start();assert.equal(s.calls.sheets,1);assert.equal(s.calls.excel,0);
+  assert.match(s.get('#status').textContent,/2 pestanyes/);
+  assert.equal(s.get('#separateTables').disabled,false);
+});
+test('a checked Excel option does not change Word conversion',async()=>{
+  const s=await setup();s.get('#separateTables').checked=true;
+  await s.start();assert.equal(s.calls.word,1);assert.equal(s.calls.sheets,0);
 });

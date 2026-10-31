@@ -11,6 +11,9 @@
 <style>
 progress{display:block;width:100%;height:10px;margin-top:20px;accent-color:#63d5e5}progress[hidden]{display:none}#cancel{background:transparent;border:1px solid #638b9b;color:#d9edf4}#cancel:disabled{opacity:.6}.drop[aria-disabled="true"]{opacity:.65;cursor:wait}
 </style>
+<style>
+.excel-options{margin-top:18px;padding:14px 16px;border:1px solid #35596b;border-radius:9px;background:#102e40}.excel-options .check{display:flex;align-items:center;gap:10px;margin:0;cursor:pointer}.check input{width:18px;height:18px;accent-color:#63d5e5;flex:none}.excel-options p{font-size:13px;margin:7px 0 0}
+</style>
 </head>
 <body>
 <header><a class="app-brand" href="https://tecno-apps.cat/" target="_top" aria-label="THOSsCAN · Torna a tecno-apps.cat"><img src="/thosscan/thosscan.svg" width="32" height="32" alt=""><h1>THOS<span>sCAN</span></h1></a></header>
@@ -19,6 +22,7 @@ progress{display:block;width:100%;height:10px;margin-top:20px;accent-color:#63d5
 <label class="drop" id="drop" for="file"><strong>📄 Arrossega aquí el document</strong><small>o clica per seleccionar un PDF, JPG o PNG</small><span id="filename">Cap fitxer seleccionat</span></label>
 <input id="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
 <div class="row"><div><label for="lang">Idioma</label><select id="lang"><option value="cat">Català</option><option value="spa">Castellà</option><option value="eng">Anglès</option></select></div><div><label for="format">Format de sortida</label><select id="format"><option value="docx">Word (.docx)</option><option value="xlsx">Excel (.xlsx)</option></select></div></div>
+<div id="excelOptions" class="excel-options" hidden><label class="check"><input id="separateTables" type="checkbox" aria-describedby="excelHelp">Una taula per pestanya</label><p id="excelHelp">Separa les taules detectades en pestanyes d’Excel. Les continuacions reconegudes es mantenen juntes.</p></div>
 <div class="actions"><button id="convert" disabled>Convertir</button><button id="cancel" type="button" hidden>Cancel·lar</button><button id="download" hidden disabled>📥 Descarregar</button><button id="drive" hidden type="button">☁️ Obrir Google Drive</button></div>
 <progress id="progress" aria-label="Progrés de la fase actual" hidden></progress>
 <p id="status" class="status" role="status" aria-live="polite">Selecciona un document per preparar la conversió.</p>
