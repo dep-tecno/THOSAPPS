@@ -52,6 +52,11 @@ dades de Scribe.js. No modifica l'exportador Excel ni afegeix dependències.
 
 ## Límits
 
+Des del 31/10/2026, `exportWord(doc, scribe, { signal, onProgress })` admet
+cancel·lació i progrés per fases. Les opcions són opcionals i es mantenen
+les crides anteriors. Vegeu `PROGRES.md` per al comportament de cancel·lació
+i les operacions que han d'acabar abans d'aturar-se.
+
 No és una reproducció exacta de la maquetació. La detecció de taules depèn
 de Scribe.js; no s'inventen taules quan no hi ha dades de cel·les. No es
 reconstrueixen cel·les combinades, dibuixos vectorials sense imatge raster,
@@ -72,3 +77,4 @@ La capa Word i l'ajust LSTM durant la compilació es distingeixen del motor
 original. Vegeu `THIRD_PARTY_NOTICES.md` i `licenses/`.
 El codi de la integració és públic a
 https://github.com/dep-tecno/THOSAPPS/tree/main/thosscan.
+

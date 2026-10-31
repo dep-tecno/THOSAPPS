@@ -132,3 +132,34 @@ test('picture rendering failures surface instead of returning a successful Word 
   doc.images={async renderPageImage(){return {ok:false,failReason:'test failure'};}};
   await assert.rejects(()=>exportWord(doc,scribe),/imatges de la pàgina 1: test failure/);
 });
+
+test('Word can be cancelled before starting without creating a partial file',async()=>{
+  const {doc}=fixture();const controller=new AbortController();controller.abort();
+  const events=[];
+  await assert.rejects(()=>exportWord(doc,scribe,{signal:controller.signal,onProgress:e=>events.push(e)}),{name:'AbortError'});
+  assert.equal(events.length,0);
+});
+test('Word reports completed pages and stops before the next page on cancellation',async()=>{
+  const {doc}=fixture();
+  const page=new OcrPage(1,{width:2480,height:3508});line(page,'Pàgina dos',200,150);
+  doc.ocr.active.push(page);doc.pageMetrics.push({dims:page.dims});
+  const controller=new AbortController();const events=[];
+  await assert.rejects(()=>exportWord(doc,scribe,{signal:controller.signal,onProgress:event=>{
+    events.push(event);if(event.stage==='pages'&&event.completed===1)controller.abort();
+  }}),{name:'AbortError'});
+  assert.deepEqual(events.filter(e=>e.stage==='pages').map(e=>[e.completed,e.total]),[[1,2]]);
+  assert.ok(!events.some(e=>e.stage==='packaging'));
+});
+test('Word cancellation at packaging does not return a ZIP',async()=>{
+  const {doc}=fixture();const controller=new AbortController();
+  await assert.rejects(()=>exportWord(doc,scribe,{signal:controller.signal,onProgress:event=>{
+    if(event.stage==='packaging')controller.abort();
+  }}),{name:'AbortError'});
+});
+test('image recovery checks cancellation after the current render',async()=>{
+  const {doc}=fixture();const controller=new AbortController();
+  doc.fillShapes={pages:[{images:[{left:200,top:1000,right:600,bottom:1100}]}]};
+  doc.images={async renderPageImage(){controller.abort();return {ok:true,dataUrl:'unused'};}};
+  await assert.rejects(()=>collectWordImages(doc,{signal:controller.signal}),{name:'AbortError'});
+});
+

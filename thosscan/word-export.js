@@ -18,15 +18,22 @@ const median = numbers => {
   return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
 };
 const twips = (pixels, scale) => Math.max(0, Math.round(pixels * scale * 20));
+// Yield between pages so the browser can handle Cancel and paint real progress.
+async function checkpoint(signal) {
+  signal?.throwIfAborted();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  signal?.throwIfAborted();
+}
 
 // Recover only embedded picture regions, not whole scanned pages. Rendering
 // each source page once preserves PDF clipping, rotation, masks and paint order.
 // The rest of the document still exports as editable text and tables.
-export async function collectWordImages(doc) {
+export async function collectWordImages(doc, { signal, onProgress } = {}) {
   const pages = new Map();
   if (!doc.inputData.pdfMode) return pages;
   let serial = 0;
   for (let n = 0; n < doc.pageMetrics.length; n++) {
+    await checkpoint(signal);
     const dims = doc.pageMetrics[n].dims;
     const seen = new Set();
     const regions = (doc.fillShapes?.pages[n]?.images || []).map(image => ({
@@ -41,14 +48,19 @@ export async function collectWordImages(doc) {
       seen.add(key);
       return true;
     });
-    if (!regions.length) continue;
+    if (!regions.length) {
+      onProgress?.({ stage: 'images', completed: n + 1, total: doc.pageMetrics.length });
+      continue;
+    }
     const rendered = await doc.images.renderPageImage(n, { dpi: 150, format: 'png', colorMode: 'color' });
+    signal?.throwIfAborted();
     if (!rendered.ok || !rendered.dataUrl) {
       throw new Error(`No s'han pogut recuperar les imatges de la pàgina ${n + 1}: ${rendered.failDetail || rendered.failReason || 'renderització fallida'}`);
     }
     const bitmap = await ca.getImageBitmap(rendered.dataUrl);
     try {
       for (const bbox of regions) {
+        await checkpoint(signal);
         const x = Math.max(0, Math.floor(bbox.left / dims.width * bitmap.width));
         const y = Math.max(0, Math.floor(bbox.top / dims.height * bitmap.height));
         const right = Math.min(bitmap.width, Math.ceil(bbox.right / dims.width * bitmap.width));
@@ -74,6 +86,7 @@ export async function collectWordImages(doc) {
         } finally { ca.closeDrawable(canvas); }
       }
     } finally { ca.closeDrawable(bitmap); }
+    onProgress?.({ stage: 'images', completed: n + 1, total: doc.pageMetrics.length });
   }
   return pages;
 }
@@ -243,11 +256,15 @@ function pageXml(page, isPdf) {
   return { body, section: `<w:sectPr><w:type w:val="nextPage"/><w:pgSz w:w="${twips(page.dims.width, scale)}" w:h="${twips(page.dims.height, scale)}"/><w:pgMar w:top="${twips(Math.max(0, bounds.top), scale)}" w:right="${twips(Math.max(0, page.dims.width - right), scale)}" w:bottom="${twips(Math.max(0, page.dims.height - bounds.bottom), scale)}" w:left="${twips(left, scale)}" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr>` };
 }
 
-export async function exportWord(doc, scribe) {
-  const imagePages = await collectWordImages(doc);
+export async function exportWord(doc, scribe, { signal, onProgress } = {}) {
+  await checkpoint(signal);
+  const imagePages = await collectWordImages(doc, { signal, onProgress });
+  signal?.throwIfAborted();
   const pages = buildWordPages(doc, scribe, imagePages);
   let body = '';
-  pages.forEach((page, i) => {
+  for (let i = 0; i < pages.length; i++) {
+    await checkpoint(signal);
+    const page = pages[i];
     const output = pageXml(page, doc.inputData.pdfMode);
     if (!output) {
       body += '<w:p>' + (i < pages.length - 1 ? '<w:r><w:br w:type="page"/></w:r>' : '') + '</w:p>';
@@ -255,7 +272,8 @@ export async function exportWord(doc, scribe) {
       body += output.body;
       body += i === pages.length - 1 ? output.section : `<w:p><w:pPr>${output.section}</w:pPr></w:p>`;
     }
-  });
+    onProgress?.({ stage: 'pages', completed: i + 1, total: pages.length });
+  }
   const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}</w:body></w:document>`;
   const writer = new Uint8ArrayWriter();
   const zip = new ZipWriter(writer);
@@ -270,8 +288,24 @@ export async function exportWord(doc, scribe) {
   files['[Content_Types].xml'] = files['[Content_Types].xml'].replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>');
   const relationships = images.map(image => `<Relationship Id="${image.relationship}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${image.filename}"/>`).join('');
   files['word/_rels/document.xml.rels'] = files['word/_rels/document.xml.rels'].replace('</Relationships>', relationships + '</Relationships>');
-  for (const [name, content] of Object.entries(files)) await zip.add(name, new TextReader(content));
-  for (const image of images) await zip.add(`word/media/${image.filename}`, new Uint8ArrayReader(image.bytes));
-  await zip.close();
-  return writer.getData();
+  onProgress?.({ stage: 'packaging' });
+  let closed = false;
+  try {
+    for (const [name, content] of Object.entries(files)) {
+      signal?.throwIfAborted();
+      await zip.add(name, new TextReader(content), { signal });
+    }
+    for (const image of images) {
+      signal?.throwIfAborted();
+      await zip.add(`word/media/${image.filename}`, new Uint8ArrayReader(image.bytes), { signal });
+    }
+    signal?.throwIfAborted();
+    await zip.close();
+    closed = true;
+    signal?.throwIfAborted();
+    return writer.getData();
+  } finally {
+    if (!closed) await zip.close().catch(() => {});
+  }
 }
+
