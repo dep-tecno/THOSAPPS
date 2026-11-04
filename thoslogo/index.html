@@ -583,7 +583,7 @@ REPETEIX 36 [
                 return (action.traveled >= absTotal);
             } 
             else if (action.type === 'TURN') {
-                if (!action.targetAbs) {
+                if (typeof action.targetAbs === 'undefined') {
                     action.targetAbs = state.angle + action.deg;
                     action.dir = action.deg > 0 ? 1 : -1;
                 }
