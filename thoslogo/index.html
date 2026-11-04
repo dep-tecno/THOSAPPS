@@ -261,6 +261,14 @@ REPETEIX 36 [
                     <tr><td><span class="font-bold text-white">POSACOLOR</span></td><td><span class="code-tag">POSACOLOR "VERMELL"</span></td><td>Canvia el color del traç.</td></tr>
                 </table>
                 <div class="bg-slate-800 p-3 rounded border border-slate-700 mb-6"><strong class="text-cyan-400">Colors disponibles:</strong> "CYAN", "MAGENTA", "LIME", "GROC", "VERMELL", "BLANC".</div>
+                <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">Més eines de dibuix</h3>
+                <table class="w-full mb-6 help-table"><tr><th>Comanda</th><th>Exemple</th><th>Descripció</th></tr>
+                <tr><td><span class="font-bold text-white">GRUIX</span></td><td><span class="code-tag">GRUIX 4</span></td><td>Canvia el gruix dels traços següents. El valor ha de ser més gran que zero; el gruix inicial és 2.</td></tr>
+<tr><td><span class="font-bold text-white">CENTRE</span></td><td><span class="code-tag">CENTRE</span></td><td>Torna a (0, 0) sense dibuixar el desplaçament, esborrar el dibuix ni canviar l’orientació.</td></tr>
+<tr><td><span class="font-bold text-white">ORIENTA</span></td><td><span class="code-tag">ORIENTA 90</span></td><td>Fixa la direcció: 0° amunt, 90° dreta, 180° avall i 270° esquerra. No mou la tortuga.</td></tr>
+<tr><td><span class="font-bold text-white">AMAGATORTUGA</span></td><td><span class="code-tag">AMAGATORTUGA</span></td><td>Amaga la fletxa. La tortuga continua movent-se i dibuixant segons l’estat del llapis.</td></tr>
+<tr><td><span class="font-bold text-white">MOSTRATORTUGA</span></td><td><span class="code-tag">MOSTRATORTUGA</span></td><td>Torna a mostrar la fletxa de la tortuga.</td></tr>
+                </table>
                 <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">🧠 Lògica</h3>
                 <table class="w-full help-table">
                     <tr><th>Comanda</th><th>Sintaxi</th><th>Descripció</th></tr>
@@ -388,7 +396,7 @@ REPETEIX 36 [
         }
 
         // --- SYNTAX HIGHLIGHTER ---
-        const KEYWORDS = ['VESXY', 'AV', 'FD', 'FORWARD', 'RE', 'BK', 'BACK', 'GD', 'RT', 'RIGHT', 'GE', 'LT', 'LEFT', 'NETEJA', 'CS', 'PUJALLAPIS', 'PU', 'BAIXALLAPIS', 'PD', 'POSACOLOR', 'SETPC', 'SETCOLOR', 'REPETEIX', 'REPEAT'];
+        const KEYWORDS = ['GRUIX', 'CENTRE', 'ORIENTA', 'AMAGATORTUGA', 'MOSTRATORTUGA', 'VESXY', 'AV', 'FD', 'FORWARD', 'RE', 'BK', 'BACK', 'GD', 'RT', 'RIGHT', 'GE', 'LT', 'LEFT', 'NETEJA', 'CS', 'PUJALLAPIS', 'PU', 'BAIXALLAPIS', 'PD', 'POSACOLOR', 'SETPC', 'SETCOLOR', 'REPETEIX', 'REPEAT'];
         
         function updateHighlighting() {
             let text = codeArea.value;
@@ -466,7 +474,7 @@ REPETEIX 36 [
         const TURTLE_SPEED = 4;
         const ROTATE_SPEED = 5;
 
-        let state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true };
+        let state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true, thickness: 2 };
         let drawnLines = []; 
         let commandQueue = [];
         let currentAction = null;
@@ -481,7 +489,7 @@ REPETEIX 36 [
         }
         
         function resetSystem() {
-            state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true };
+            state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true, thickness: 2 };
             drawnLines = [];
             commandQueue = [];
             currentAction = null;
@@ -536,6 +544,7 @@ REPETEIX 36 [
             ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             drawnLines.forEach(line => {
+                ctx.lineWidth = line.thickness || 2;
                 ctx.beginPath();
                 ctx.moveTo(t2cX(line.x1), t2cY(line.y1));
                 ctx.lineTo(t2cX(line.x2), t2cY(line.y2));
@@ -596,6 +605,19 @@ REPETEIX 36 [
         }
 
         function updateAction(action) {
+            if (action.type === 'THICKNESS') { state.thickness = action.value; return true; }
+            if (action.type === 'VISIBILITY') { state.visible = action.visible; return true; }
+            if (action.type === 'CENTRE') { state.x = 0; state.y = 0; return true; }
+            if (action.type === 'ORIENT') {
+                if (action.turn === undefined) {
+                    const target = ((action.angle % 360) + 360) % 360;
+                    const current = ((state.angle % 360) + 360) % 360;
+                    action.turn = { type: 'TURN', deg: ((target - current + 540) % 360) - 180 };
+                }
+                const done = updateAction(action.turn);
+                if (done) state.angle = ((action.angle % 360) + 360) % 360;
+                return done;
+            }
             if (action.type === 'GOTO') {
                 if (action.startX === undefined) {
                     action.startX = state.x;
@@ -608,7 +630,7 @@ REPETEIX 36 [
                 const oldX = state.x, oldY = state.y;
                 state.x = action.startX + (action.x - action.startX) * fraction;
                 state.y = action.startY + (action.y - action.startY) * fraction;
-                if (state.penDown) drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color });
+                if (state.penDown) drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color, thickness: state.thickness });
                 return action.traveled >= action.distance;
             }
             if (action.type === 'MOVE') {
@@ -626,7 +648,7 @@ REPETEIX 36 [
                 state.x += Math.cos(mathAngle) * moveStep;
                 state.y += Math.sin(mathAngle) * moveStep;
                 if (state.penDown) {
-                    drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color });
+                    drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color, thickness: state.thickness });
                 }
                 action.traveled += step;
                 return (action.traveled >= absTotal);
@@ -664,6 +686,8 @@ REPETEIX 36 [
 
         // --- PARSER ---
         const COMMANDS = {
+            'GRUIX': 'THICKNESS', 'CENTRE': 'CENTRE', 'ORIENTA': 'ORIENT',
+            'AMAGATORTUGA': 'HIDE', 'MOSTRATORTUGA': 'SHOW',
             'VESXY': 'GOTO',
             'AV': 'FD', 'FD': 'FD', 'FORWARD': 'FD',
             'RE': 'BK', 'BK': 'BK', 'BACK': 'BK',
@@ -707,6 +731,20 @@ REPETEIX 36 [
 
                 try {
                     switch(op) {
+                        case 'THICKNESS':
+                        case 'ORIENT': {
+                            const value = tokenList.shift();
+                            if (!value || !Number.isFinite(Number(value.val))) throw new Error(t + ' necessita un nombre');
+                            const number = Number(value.val);
+                            if (op === 'THICKNESS' && number <= 0) throw new Error('GRUIX necessita un nombre més gran que zero');
+                            cmds.push(op === 'THICKNESS'
+                                ? { type: 'THICKNESS', value: number, line: currentLine }
+                                : { type: 'ORIENT', angle: number, line: currentLine });
+                            break;
+                        }
+                        case 'CENTRE': cmds.push({ type: 'CENTRE', line: currentLine }); break;
+                        case 'HIDE': cmds.push({ type: 'VISIBILITY', visible: false, line: currentLine }); break;
+                        case 'SHOW': cmds.push({ type: 'VISIBILITY', visible: true, line: currentLine }); break;
                         case 'GOTO': {
                             const x = tokenList.shift();
                             const y = tokenList.shift();
