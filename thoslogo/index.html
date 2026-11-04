@@ -120,6 +120,18 @@
         .log-cmd { color: #22d3ee; }
         .log-sys { color: #a3e635; font-style: italic;}
 
+        .position-readout { display: flex; gap: 8px; align-items: center; }
+        .position-card { display: flex; align-items: baseline; gap: 8px; padding: 5px 12px; border: 1px solid #164e63; border-radius: 10px; background: #083344; color: #22d3ee; }
+        .position-card.position-y { background: #2e1065; border-color: #581c87; color: #c084fc; }
+        .position-card strong { font-size: 26px; line-height: 1.15; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+        .position-card label { font-size: 13px; font-weight: bold; }
+        .position-angle { color: #94a3b8; font-size: 12px; white-space: nowrap; }
+        .cursor-coordinates { position: absolute; pointer-events: none; padding: 4px 7px; border-radius: 5px; background: #0f172ae6; border: 1px solid #334155; color: #cbd5e1; font-size: 12px; white-space: nowrap; }
+        @media (max-width: 640px) {
+            header { flex-wrap: wrap; gap: 10px; }
+            .position-card { padding: 4px 7px; gap: 4px; }
+            .position-card strong { font-size: 21px; }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -134,10 +146,10 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <div class="hidden md:flex gap-2 text-xs font-mono text-slate-500 mr-4">
-                <span>X: <span id="dispX" class="text-cyan-400">0</span></span>
-                <span>Y: <span id="dispY" class="text-cyan-400">0</span></span>
-                <span>ANG: <span id="dispAng" class="text-purple-400">0</span></span>
+            <div class="position-readout" aria-label="Posició de la tortuga">
+                <div class="position-card"><label for="dispX">X</label><strong id="dispX">0</strong></div>
+                <div class="position-card position-y"><label for="dispY">Y</label><strong id="dispY">0</strong></div>
+                <span class="position-angle">ANGLE <span id="dispAng">0</span>°</span>
             </div>
             
             <!-- Download Button -->
@@ -212,6 +224,7 @@ REPETEIX 36 [
         <div class="relative w-full md:w-2/3 bg-black flex items-center justify-center overflow-hidden">
             <!-- Canvas handles the background now for export consistency -->
             <canvas id="mainCanvas"></canvas>
+            <div id="cursorCoordinates" class="cursor-coordinates" hidden></div>
             <div id="statusOverlay" class="absolute top-4 right-4 text-xs font-mono text-cyan-500 opacity-50 pointer-events-none">SYSTEM IDLE</div>
         </div>
     </main>
@@ -231,6 +244,7 @@ REPETEIX 36 [
                 <table class="w-full mb-6 help-table">
                     <tr><th>Comanda</th><th>Sintaxi</th><th>Descripció</th></tr>
                     <tr><td><span class="font-bold text-white">AV</span> / FD</td><td><span class="code-tag">AV 100</span></td><td>Avança la tortuga X passos.</td></tr>
+                    <tr><td><span class="font-bold text-white">VESXY</span></td><td><span class="code-tag">VESXY 100 50</span></td><td>Va a X, Y sense canviar l’orientació. Dibuixa si el llapis està abaixat. L’origen és al centre; X creix cap a la dreta i Y cap amunt.</td></tr>
                     <tr><td><span class="font-bold text-white">RE</span> / BK</td><td><span class="code-tag">RE 50</span></td><td>Fa retrocedir la tortuga X passos.</td></tr>
                 </table>
                 <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">🔄 Gir</h3>
@@ -263,6 +277,19 @@ REPETEIX 36 [
     <script>
         const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
+        const cursorCoordinates = document.getElementById('cursorCoordinates');
+        canvas.addEventListener('pointermove', (event) => {
+            if (event.pointerType === 'touch') return;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.round((event.clientX - rect.left) * canvas.width / rect.width - cx);
+            const y = Math.round(cy - (event.clientY - rect.top) * canvas.height / rect.height);
+            cursorCoordinates.textContent = 'X: ' + x + ' · Y: ' + y;
+            cursorCoordinates.hidden = false;
+            const panel = canvas.parentElement.getBoundingClientRect();
+            cursorCoordinates.style.left = Math.max(0, Math.min(event.clientX - panel.left + 14, panel.width - cursorCoordinates.offsetWidth - 8)) + 'px';
+            cursorCoordinates.style.top = Math.max(0, Math.min(event.clientY - panel.top + 14, panel.height - cursorCoordinates.offsetHeight - 8)) + 'px';
+        });
+        canvas.addEventListener('pointerleave', () => { cursorCoordinates.hidden = true; });
         const codeArea = document.getElementById('codeArea');
         const codeHighlight = document.getElementById('codeHighlight');
         const runBtn = document.getElementById('runBtn');
@@ -361,7 +388,7 @@ REPETEIX 36 [
         }
 
         // --- SYNTAX HIGHLIGHTER ---
-        const KEYWORDS = ['AV', 'FD', 'FORWARD', 'RE', 'BK', 'BACK', 'GD', 'RT', 'RIGHT', 'GE', 'LT', 'LEFT', 'NETEJA', 'CS', 'PUJALLAPIS', 'PU', 'BAIXALLAPIS', 'PD', 'POSACOLOR', 'SETPC', 'SETCOLOR', 'REPETEIX', 'REPEAT'];
+        const KEYWORDS = ['VESXY', 'AV', 'FD', 'FORWARD', 'RE', 'BK', 'BACK', 'GD', 'RT', 'RIGHT', 'GE', 'LT', 'LEFT', 'NETEJA', 'CS', 'PUJALLAPIS', 'PU', 'BAIXALLAPIS', 'PD', 'POSACOLOR', 'SETPC', 'SETCOLOR', 'REPETEIX', 'REPEAT'];
         
         function updateHighlighting() {
             let text = codeArea.value;
@@ -498,6 +525,13 @@ REPETEIX 36 [
             }
             ctx.stroke();
 
+            // Discreet origin reference, without axes or numbered grid.
+            ctx.save();
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '11px monospace';
+            ctx.fillText('(0, 0)', cx + 8, cy + 16);
+            ctx.restore();
+
             // 3. Draw User Lines
             ctx.lineWidth = 2;
             ctx.lineCap = 'round';
@@ -562,6 +596,21 @@ REPETEIX 36 [
         }
 
         function updateAction(action) {
+            if (action.type === 'GOTO') {
+                if (action.startX === undefined) {
+                    action.startX = state.x;
+                    action.startY = state.y;
+                    action.distance = Math.hypot(action.x - state.x, action.y - state.y);
+                    action.traveled = 0;
+                }
+                action.traveled = Math.min(action.distance, action.traveled + TURTLE_SPEED);
+                const fraction = action.distance === 0 ? 1 : action.traveled / action.distance;
+                const oldX = state.x, oldY = state.y;
+                state.x = action.startX + (action.x - action.startX) * fraction;
+                state.y = action.startY + (action.y - action.startY) * fraction;
+                if (state.penDown) drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color });
+                return action.traveled >= action.distance;
+            }
             if (action.type === 'MOVE') {
                 const mathAngle = (90 - state.angle) * (Math.PI / 180);
                 const totalDist = action.dist;
@@ -615,6 +664,7 @@ REPETEIX 36 [
 
         // --- PARSER ---
         const COMMANDS = {
+            'VESXY': 'GOTO',
             'AV': 'FD', 'FD': 'FD', 'FORWARD': 'FD',
             'RE': 'BK', 'BK': 'BK', 'BACK': 'BK',
             'GD': 'RT', 'RT': 'RT', 'RIGHT': 'RT',
@@ -657,6 +707,13 @@ REPETEIX 36 [
 
                 try {
                     switch(op) {
+                        case 'GOTO': {
+                            const x = tokenList.shift();
+                            const y = tokenList.shift();
+                            if (!x || !y || !Number.isFinite(Number(x.val)) || !Number.isFinite(Number(y.val))) throw new Error('VESXY necessita dues coordenades: VESXY 100 50');
+                            cmds.push({ type: 'GOTO', x: Number(x.val), y: Number(y.val), line: currentLine });
+                            break;
+                        }
                         case 'FD':
                             let d1 = tokenList.shift();
                             if(!d1 || isNaN(parseFloat(d1.val))) throw new Error(`Falta distància`);
