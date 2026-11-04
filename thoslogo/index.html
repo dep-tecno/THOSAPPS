@@ -262,6 +262,7 @@ REPETEIX 36 [
                 <tr><td><span class="font-bold text-white">GRUIX</span></td><td><span class="code-tag">GRUIX 4</span></td><td>Canvia el gruix dels traços següents. El valor ha de ser més gran que zero; el gruix inicial és 2.</td></tr>
                 </table>
                 <div class="bg-slate-800 p-3 rounded border border-slate-700 mb-6"><strong class="text-cyan-400">Colors disponibles:</strong> "CYAN", "MAGENTA", "LIME", "GROC", "VERMELL", "BLANC".</div>
+                <p class="text-slate-300 mb-6"><span class="code-tag">GOMA</span>: esborra per on passa la tortuga, amb el gruix actual. <span class="code-tag">BAIXALLAPIS</span> torna a dibuixar. La quadrícula es conserva.</p>
                 <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">Més eines de dibuix</h3>
                 <table class="w-full mb-6 help-table"><tr><th>Comanda</th><th>Exemple</th><th>Descripció</th></tr>
 <tr><td><span class="font-bold text-white">CENTRE</span></td><td><span class="code-tag">CENTRE</span></td><td>Torna a (0, 0) sense dibuixar el desplaçament, esborrar el dibuix ni canviar l’orientació.</td></tr>
@@ -269,11 +270,15 @@ REPETEIX 36 [
 <tr><td><span class="font-bold text-white">AMAGATORTUGA</span></td><td><span class="code-tag">AMAGATORTUGA</span></td><td>Amaga la fletxa. La tortuga continua movent-se i dibuixant segons l’estat del llapis.</td></tr>
 <tr><td><span class="font-bold text-white">MOSTRATORTUGA</span></td><td><span class="code-tag">MOSTRATORTUGA</span></td><td>Torna a mostrar la fletxa de la tortuga.</td></tr>
                 </table>
+                <p class="text-slate-300 mb-4"><span class="code-tag">ESCRIU "Hola, classe!"</span>: escriu a la posició de la tortuga, amb el color actual, sense moure-la. Admet espais dins de les cometes.</p>
                 <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">🧠 Lògica</h3>
                 <table class="w-full help-table">
                     <tr><th>Comanda</th><th>Sintaxi</th><th>Descripció</th></tr>
                     <tr><td><span class="font-bold text-white">NETEJA</span> / CS</td><td><span class="code-tag">NETEJA</span></td><td>Esborra la pantalla i reinicia la tortuga.</td></tr>
                     <tr><td><span class="font-bold text-white">REPETEIX</span></td><td><span class="code-tag">REPETEIX 4 [ AV 10 GD 90 ]</span></td><td>Fa un bucle amb les comandes de dins els claudàtors.</td></tr>
+                    <tr><td>ESPERA</td><td><span class="code-tag">ESPERA 1</span></td><td>Fa una pausa d’un segon. Admet decimals, com ESPERA 0.5. ATURAR interromp la pausa.</td></tr>
+                    <tr><td>REPETEIXSEMPRE</td><td><span class="code-tag">REPETEIXSEMPRE [ AV 50 GD 90 ESPERA 1 ]</span></td><td>Repeteix el bloc fins que prems ATURAR. Les instruccions posteriors no s’executen mentre el bucle continua.</td></tr>
+                    <tr><td>SI</td><td><span class="code-tag">SI DRETA [ POSACOLOR "VERMELL" ]</span></td><td>Comprova la posició quan arriba al SI. DRETA: X positiu; ESQUERRA: X negatiu; AMUNT: Y positiu; AVALL: Y negatiu. A (0, 0), totes són falses. Si no es compleix, salta el bloc.</td></tr>
                 </table>
             </div>
             <div class="p-4 border-t border-slate-700 bg-slate-800 rounded-b-lg text-right">
@@ -396,7 +401,7 @@ REPETEIX 36 [
         }
 
         // --- SYNTAX HIGHLIGHTER ---
-        const KEYWORDS = ['GRUIX', 'CENTRE', 'ORIENTA', 'AMAGATORTUGA', 'MOSTRATORTUGA', 'VESXY', 'AV', 'FD', 'FORWARD', 'RE', 'BK', 'BACK', 'GD', 'RT', 'RIGHT', 'GE', 'LT', 'LEFT', 'NETEJA', 'CS', 'PUJALLAPIS', 'PU', 'BAIXALLAPIS', 'PD', 'POSACOLOR', 'SETPC', 'SETCOLOR', 'REPETEIX', 'REPEAT'];
+        const KEYWORDS = ['ESPERA', 'ESCRIU', 'GOMA', 'REPETEIXSEMPRE', 'SI', 'DRETA', 'ESQUERRA', 'AMUNT', 'AVALL', 'GRUIX', 'CENTRE', 'ORIENTA', 'AMAGATORTUGA', 'MOSTRATORTUGA', 'VESXY', 'AV', 'FD', 'FORWARD', 'RE', 'BK', 'BACK', 'GD', 'RT', 'RIGHT', 'GE', 'LT', 'LEFT', 'NETEJA', 'CS', 'PUJALLAPIS', 'PU', 'BAIXALLAPIS', 'PD', 'POSACOLOR', 'SETPC', 'SETCOLOR', 'REPETEIX', 'REPEAT'];
         
         function updateHighlighting() {
             let text = codeArea.value;
@@ -474,8 +479,11 @@ REPETEIX 36 [
         const TURTLE_SPEED = 4;
         const ROTATE_SPEED = 5;
 
-        let state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true, thickness: 2 };
-        let drawnLines = []; 
+        let state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true, thickness: 2, erasing: false };
+        let drawnLines = [];
+        const inkCanvas = document.createElement('canvas');
+        const inkCtx = inkCanvas.getContext('2d');
+        let executionStack = [];
         let commandQueue = [];
         let currentAction = null;
         let isRunning = false;
@@ -489,9 +497,11 @@ REPETEIX 36 [
         }
         
         function resetSystem() {
-            state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true, thickness: 2 };
+            state = { x: 0, y: 0, angle: 0, penDown: true, color: '#22d3ee', visible: true, thickness: 2, erasing: false };
             drawnLines = [];
             commandQueue = [];
+            executionStack = [];
+
             currentAction = null;
             highlightLine(null); 
             updateStatus("READY");
@@ -540,20 +550,28 @@ REPETEIX 36 [
             ctx.fillText('(0, 0)', cx + 8, cy + 16);
             ctx.restore();
 
-            // 3. Draw User Lines
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            drawnLines.forEach(line => {
-                ctx.lineWidth = line.thickness || 2;
-                ctx.beginPath();
-                ctx.moveTo(t2cX(line.x1), t2cY(line.y1));
-                ctx.lineTo(t2cX(line.x2), t2cY(line.y2));
-                ctx.strokeStyle = line.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = line.color;
-                ctx.stroke();
-            });
-            ctx.shadowBlur = 0;
+            // Replay ink on a separate layer so the eraser preserves the grid.
+            inkCanvas.width = width;
+            inkCanvas.height = height;
+            inkCtx.lineCap = 'round';
+            for (const mark of drawnLines) {
+                inkCtx.globalCompositeOperation = mark.erasing ? 'destination-out' : 'source-over';
+                inkCtx.shadowBlur = mark.erasing ? 0 : 10;
+                inkCtx.shadowColor = mark.color;
+                if (mark.type === 'TEXT') {
+                    inkCtx.font = '18px monospace';
+                    inkCtx.fillStyle = mark.color;
+                    inkCtx.fillText(mark.text, t2cX(mark.x), t2cY(mark.y));
+                } else {
+                    inkCtx.lineWidth = mark.thickness || 2;
+                    inkCtx.strokeStyle = mark.color;
+                    inkCtx.beginPath();
+                    inkCtx.moveTo(t2cX(mark.x1), t2cY(mark.y1));
+                    inkCtx.lineTo(t2cX(mark.x2), t2cY(mark.y2));
+                    inkCtx.stroke();
+                }
+            }
+            ctx.drawImage(inkCanvas, 0, 0);
 
             // 4. Draw Turtle
             if (state.visible) {
@@ -590,21 +608,47 @@ REPETEIX 36 [
         function processQueue() {
             if (currentAction) {
                 if (currentAction.line !== undefined) highlightLine(currentAction.line);
-                const finished = updateAction(currentAction);
-                if (finished) currentAction = null;
+                if (updateAction(currentAction)) currentAction = null;
                 return;
             }
-            if (commandQueue.length > 0) {
-                currentAction = commandQueue.shift();
-                if (currentAction.line !== undefined) highlightLine(currentAction.line);
-            } else {
-                isRunning = false; 
-                highlightLine(null);
-                if (animationId) log("Execució completada.", 'success');
+            if (!executionStack.length && commandQueue.length) {
+                executionStack.push({ commands: commandQueue, index: 0, remaining: 1 });
+                commandQueue = [];
             }
+            if (executionStack.length) {
+                const frame = executionStack[executionStack.length - 1];
+                if (frame.index >= frame.commands.length) {
+                    if (frame.remaining > 1) { frame.remaining--; frame.index = 0; }
+                    else executionStack.pop();
+                    return;
+                }
+                const action = { ...frame.commands[frame.index++] };
+                highlightLine(action.line);
+                if (action.type === 'REPEAT' || action.type === 'FOREVER') {
+                    const count = action.type === 'FOREVER' ? Infinity : action.count;
+                    if (count > 0) executionStack.push({ commands: action.body, index: 0, remaining: count });
+                } else if (action.type === 'IF') {
+                    const epsilon = 1e-8;
+                    const matches = { DRETA: state.x > epsilon, ESQUERRA: state.x < -epsilon, AMUNT: state.y > epsilon, AVALL: state.y < -epsilon };
+                    if (matches[action.condition]) executionStack.push({ commands: action.body, index: 0, remaining: 1 });
+                } else currentAction = action;
+                return;
+            }
+            isRunning = false;
+            highlightLine(null);
+            log('Execució completada.', 'success');
         }
 
         function updateAction(action) {
+            if (action.type === 'WAIT') {
+                if (action.until === undefined) action.until = performance.now() + action.seconds * 1000;
+                return performance.now() >= action.until;
+            }
+            if (action.type === 'TEXT') {
+                drawnLines.push({ type: 'TEXT', text: action.text, x: state.x, y: state.y, color: state.color, erasing: state.erasing });
+                return true;
+            }
+            if (action.type === 'ERASE') { state.erasing = true; state.penDown = true; return true; }
             if (action.type === 'THICKNESS') { state.thickness = action.value; return true; }
             if (action.type === 'VISIBILITY') { state.visible = action.visible; return true; }
             if (action.type === 'CENTRE') { state.x = 0; state.y = 0; return true; }
@@ -630,7 +674,7 @@ REPETEIX 36 [
                 const oldX = state.x, oldY = state.y;
                 state.x = action.startX + (action.x - action.startX) * fraction;
                 state.y = action.startY + (action.y - action.startY) * fraction;
-                if (state.penDown) drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color, thickness: state.thickness });
+                if (state.penDown) drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color, thickness: state.thickness, erasing: state.erasing });
                 return action.traveled >= action.distance;
             }
             if (action.type === 'MOVE') {
@@ -648,7 +692,7 @@ REPETEIX 36 [
                 state.x += Math.cos(mathAngle) * moveStep;
                 state.y += Math.sin(mathAngle) * moveStep;
                 if (state.penDown) {
-                    drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color, thickness: state.thickness });
+                    drawnLines.push({ x1: oldX, y1: oldY, x2: state.x, y2: state.y, color: state.color, thickness: state.thickness, erasing: state.erasing });
                 }
                 action.traveled += step;
                 return (action.traveled >= absTotal);
@@ -673,11 +717,12 @@ REPETEIX 36 [
             }
             else if (action.type === 'PEN') {
                 state.penDown = action.down;
+                if (action.down) state.erasing = false;
                 return true;
             }
             else if (action.type === 'CLEAR') {
                 drawnLines = [];
-                state.x = 0; state.y = 0; state.angle = 0;
+                state.x = 0; state.y = 0; state.angle = 0; state.erasing = false;
                 log("Netejant canvas...", 'info');
                 return true;
             }
@@ -686,6 +731,7 @@ REPETEIX 36 [
 
         // --- PARSER ---
         const COMMANDS = {
+            'ESPERA': 'WAIT', 'ESCRIU': 'TEXT', 'GOMA': 'ERASE', 'REPETEIXSEMPRE': 'FOREVER', 'SI': 'IF',
             'GRUIX': 'THICKNESS', 'CENTRE': 'CENTRE', 'ORIENTA': 'ORIENT',
             'AMAGATORTUGA': 'HIDE', 'MOSTRATORTUGA': 'SHOW',
             'VESXY': 'GOTO',
@@ -705,16 +751,32 @@ REPETEIX 36 [
         };
 
         function parse(code) {
-            const rawLines = code.split('\n');
-            let allTokens = [];
-            rawLines.forEach((lineText, lineIdx) => {
-                let clean = lineText.replace(/;.*$/gm, '').replace(/\[/g, ' [ ').replace(/\]/g, ' ] ').trim();
-                if (clean.length > 0) {
-                    let parts = clean.split(/\s+/).filter(t => t.length > 0);
-                    parts.forEach(part => allTokens.push({ val: part, line: lineIdx }));
+            const allTokens = [];
+            code.split('\n').forEach((line, lineIdx) => {
+                const pattern = /"[^"\n]*"|;.*$|\/\/.*$|\[|\]|[^\s[\]";]+|"/g;
+                for (const match of line.matchAll(pattern)) {
+                    const val = match[0];
+                    if (val.startsWith(';') || val.startsWith('//')) break;
+                    if (val === '"') throw new Error('Falten les cometes de tancament');
+                    allTokens.push({ val, line: lineIdx });
                 }
             });
             return parseTokens(allTokens);
+        }
+
+        function parseBlock(tokens) {
+            const open = tokens.shift();
+            if (!open || open.val !== '[') throw new Error("Falta '['");
+            let depth = 1;
+            const block = [];
+            while (tokens.length) {
+                const token = tokens.shift();
+                if (token.val === '[') depth++;
+                if (token.val === ']') depth--;
+                if (!depth) return parseTokens(block);
+                block.push(token);
+            }
+            throw new Error("Falta ']'");
         }
 
         function parseTokens(tokenList) {
@@ -731,6 +793,26 @@ REPETEIX 36 [
 
                 try {
                     switch(op) {
+                        case 'WAIT': {
+                            const value = tokenList.shift();
+                            if (!value || !Number.isFinite(Number(value.val)) || Number(value.val) < 0) throw new Error('ESPERA necessita segons iguals o més grans que zero');
+                            cmds.push({ type: 'WAIT', seconds: Number(value.val), line: currentLine });
+                            break;
+                        }
+                        case 'TEXT': {
+                            const text = tokenList.shift();
+                            if (!text || !/^".*"$/.test(text.val)) throw new Error('ESCRIU necessita un text entre cometes');
+                            cmds.push({ type: 'TEXT', text: text.val.slice(1, -1), line: currentLine });
+                            break;
+                        }
+                        case 'ERASE': cmds.push({ type: 'ERASE', line: currentLine }); break;
+                        case 'IF': {
+                            const condition = tokenList.shift();
+                            if (!condition || !['DRETA', 'ESQUERRA', 'AMUNT', 'AVALL'].includes(condition.val.toUpperCase())) throw new Error('SI necessita DRETA, ESQUERRA, AMUNT o AVALL');
+                            cmds.push({ type: 'IF', condition: condition.val.toUpperCase(), body: parseBlock(tokenList), line: currentLine });
+                            break;
+                        }
+                        case 'FOREVER': cmds.push({ type: 'FOREVER', body: parseBlock(tokenList), line: currentLine }); break;
                         case 'THICKNESS':
                         case 'ORIENT': {
                             const value = tokenList.shift();
@@ -782,30 +864,13 @@ REPETEIX 36 [
                             let hex = COLORS[colName] || colName;
                             cmds.push({ type: 'SET_COLOR', color: hex, line: currentLine });
                             break;
-                        case 'REPEAT':
-                            let countObj = tokenList.shift();
-                            if (!countObj || isNaN(parseInt(countObj.val))) throw new Error("Falta repeticions");
-                            let count = parseInt(countObj.val);
-                            
-                            let bracketObj = tokenList.shift();
-                            if (!bracketObj || bracketObj.val !== '[') throw new Error("Falta '['");
-                            
-                            let depth = 1;
-                            let blockTokens = [];
-                            while(tokenList.length > 0) {
-                                let bt = tokenList.shift();
-                                if (bt.val === '[') depth++;
-                                if (bt.val === ']') depth--;
-                                if (depth === 0) break;
-                                blockTokens.push(bt);
-                            }
-                            if(depth !== 0) throw new Error("Falta ']'");
-                            
-                            let blockCmds = parseTokens([...blockTokens]);
-                            for(let i=0; i<count; i++) {
-                                blockCmds.forEach(c => cmds.push({...c}));
-                            }
+                        case 'REPEAT': {
+                            const value = tokenList.shift();
+                            const count = value ? Number(value.val) : NaN;
+                            if (!Number.isSafeInteger(count) || count < 0) throw new Error('REPETEIX necessita un nombre enter igual o més gran que zero');
+                            cmds.push({ type: 'REPEAT', count, body: parseBlock(tokenList), line: currentLine });
                             break;
+                        }
                     }
                 } catch(err) { throw err; }
             }
@@ -834,6 +899,7 @@ REPETEIX 36 [
         stopBtn.addEventListener('click', () => {
             isRunning = false;
             commandQueue = [];
+            executionStack = [];
             currentAction = null;
             highlightLine(null);
             updateStatus("HALTED");
