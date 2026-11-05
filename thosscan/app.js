@@ -84,8 +84,7 @@ drop.addEventListener('drop', event => {
     catch { status.textContent = 'Selecciona el fitxer amb el botó de càrrega.'; }
   }
 });
-drive.addEventListener('click', () => window.open('https://drive.google.com/drive/u/0/my-drive', '_blank', 'noopener,noreferrer'));
-download.addEventListener('click', () => {
+function downloadOutput() {
   if (!output) return;
   const url = URL.createObjectURL(output.blob);
   const anchor = document.createElement('a');
@@ -93,6 +92,13 @@ download.addEventListener('click', () => {
   anchor.download = output.name;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+download.addEventListener('click', downloadOutput);
+drive.addEventListener('click', () => {
+  if (!output) return;
+  downloadOutput();
+  window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener,noreferrer');
+  status.textContent = 'A Google Drive, tria «Nou → Puja un fitxer» i selecciona el document descarregat.';
 });
 try {
   // Cal empaquetar scribe.js-ocr al mateix origen, inclosos workers i models.
