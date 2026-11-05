@@ -137,6 +137,7 @@ export function documentPreview(file) {
     }
   };
   nav.hidden = true;
+  details.open = true;
   return {details,close};
 }
 export async function loadPreview(file) {

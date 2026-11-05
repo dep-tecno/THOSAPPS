@@ -1,5 +1,5 @@
 import {parsePages, copyDocuments, pdfName} from './core.mjs';
-import {loadPreview, resetPreview, updateIntervals, refreshPreviewControls, documentPreview} from './preview.mjs?v=20261105-1';
+import {loadPreview, resetPreview, updateIntervals, refreshPreviewControls, documentPreview} from './preview.mjs?v=20261105-2';
 import {initFormsEditor} from './forms.mjs?v=20261105-1';
 const $ = id => document.getElementById(id);
 let files = [], splitFile = null, busy = false, urls = [];
