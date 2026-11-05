@@ -1,5 +1,6 @@
 import {parsePages, copyDocuments, pdfName} from './core.mjs';
-import {loadPreview, resetPreview, updateIntervals, refreshPreviewControls} from './preview.mjs';
+import {loadPreview, resetPreview, updateIntervals, refreshPreviewControls, documentPreview} from './preview.mjs?v=20261105-1';
+import {initFormsEditor} from './forms.mjs?v=20261105-1';
 const $ = id => document.getElementById(id);
 let files = [], splitFile = null, busy = false, urls = [];
 function status(message, error = false) { $('status').textContent = message; $('status').classList.toggle('error', error); }
@@ -13,16 +14,18 @@ function refresh() {
     for (const [text, title, action, disabled] of [
       ['↑', 'Mou amunt', () => [files[i-1], files[i]] = [files[i], files[i-1]], i === 0],
       ['↓', 'Mou avall', () => [files[i+1], files[i]] = [files[i], files[i+1]], i === files.length-1],
-      ['×', 'Elimina', () => files.splice(i, 1), false]]) {
+      ['×', 'Elimina', () => {item.preview?.close(); files.splice(i, 1);}, false]]) {
       const button = document.createElement('button'); button.textContent = text; button.setAttribute('aria-label', `${title}: ${item.file.name}`); button.disabled = busy || disabled;
       button.onclick = () => {action(); clearResults(); refresh();}; li.append(button);
     }
+    item.preview ??= documentPreview(item.file);
+    li.append(item.preview.details);
     $('files').append(li);
   });
   $('summary').textContent = files.length ? `${files.length} documents · ${files.reduce((n, item) => n + item.doc.getPageCount(), 0)} pàgines` : 'Cap document afegit';
   $('merge').disabled = busy || files.length < 2; $('split').disabled = busy || !splitFile;
 }
-function lock(value) { busy = value; document.querySelectorAll('input,select,button').forEach(el => el.disabled = value); refresh(); $('interval-controls').disabled = value || $('split-mode').value === 'each'; refreshPreviewControls(value); }
+function lock(value) { busy = value; document.querySelectorAll('input,select,button:not(.merge-preview button)').forEach(el => el.disabled = value); refresh(); $('interval-controls').disabled = value || $('split-mode').value === 'each'; refreshPreviewControls(value); document.dispatchEvent(new CustomEvent('thospdf-busy',{detail:value})); }
 function selectionChanged() {
   clearResults();
   if (!splitFile) return;
@@ -70,8 +73,9 @@ function result(bytes, name) {
   const url = URL.createObjectURL(new Blob([bytes], {type:'application/pdf'})); urls.push(url);
   const link = document.createElement('a'); link.href = url; link.download = pdfName(name); link.textContent = `↓ Descarrega ${link.download}`; $('downloads').append(link); $('results').hidden = false;
 }
-for (const mode of ['merge', 'split']) $(mode+'-tab').onclick = () => {
-  for (const other of ['merge','split']) { $(other+'-tab').setAttribute('aria-pressed', String(mode === other)); $(other+'-panel').hidden = mode !== other; }
+for (const mode of ['merge', 'split', 'forms']) $(mode+'-tab').onclick = () => {
+  for (const other of ['merge','split','forms']) { $(other+'-tab').setAttribute('aria-pressed', String(mode === other)); $(other+'-panel').hidden = mode !== other; }
+  document.body.classList.toggle('forms-active', mode === 'forms');
   clearResults(); status('');
 };
 $('merge-input').onchange = event => { const selected = [...event.target.files]; event.target.value = ''; run(async () => {
@@ -84,7 +88,7 @@ $('split-input').onchange = event => { const file = event.target.files[0]; event
   selectionChanged(); void loadPreview(file);
 }); };
 $('sort').onclick = () => { files.sort((a,b) => a.file.name.localeCompare(b.file.name, 'ca', {numeric:true})); clearResults(); refresh(); };
-$('clear').onclick = () => { files = []; clearResults(); refresh(); status('Llista buida.'); };
+$('clear').onclick = () => { files.forEach(item=>item.preview?.close()); files = []; clearResults(); refresh(); status('Llista buida.'); };
 $('split-mode').onchange = () => { $('interval-controls').disabled = $('split-mode').value === 'each'; selectionChanged(); };
 $('merge').onclick = () => run(async () => {
   status('Unint els documents…'); result(await copyDocuments(PDFLib.PDFDocument, files), $('merge-name').value); status('PDF unificat. Ja el pots descarregar.');
@@ -112,3 +116,4 @@ $('split').onclick = () => run(async () => {
 });
 window.addEventListener('pagehide', () => urls.forEach(url => URL.revokeObjectURL(url)));
 refresh();
+initFormsEditor();

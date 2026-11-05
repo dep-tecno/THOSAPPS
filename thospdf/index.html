@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Uneix i separa PDF per intervals amb previsualització. Processament local en el teu dispositiu amb THOSPDF.">
   <title>THOSPDF · Uneix i separa PDF</title>
   <meta name="theme-color" content="#0f1722">
   <link rel="icon" type="image/svg+xml" href="thospdf.svg">
-  <link rel="stylesheet" href="styles.css?v=20261029-1">
-  <script defer src="vendor/pdf-lib.min.js?v=20261029-1"></script>
-  <script type="module" src="app.mjs?v=20261029-1"></script>
+  <link rel="stylesheet" href="styles.css?v=20261105-1">
+  <script defer src="vendor/pdf-lib.min.js"></script>
+  <script type="module" src="app.mjs?v=20261105-1"></script>
 </head>
 <body>
 <header class="app-header"><a class="app-brand" href="https://tecno-apps.cat/" target="_top" title="Torna a tecno-apps" aria-label="THOSPDF · Torna a la pàgina principal de Tecno-apps"><img src="thospdf.svg" width="44" height="44" alt=""><span class="brand-copy"><span class="brand-name">THOS<span>PDF</span></span><small>Uneix i separa documents</small></span></a></header>
 <main>
   <div class="intro"><p class="privacy">✓ Els teus PDF es processen en el teu dispositiu, sense pujar-los a cap servidor.</p></div>
-  <div class="tabs" role="group" aria-label="Operació"><button id="merge-tab" aria-pressed="true">Unir PDF</button><button id="split-tab" aria-pressed="false">Separar PDF</button></div>
+  <div class="tabs" role="group" aria-label="Operació"><button id="merge-tab" aria-pressed="true">Unir PDF</button><button id="split-tab" aria-pressed="false">Separar PDF</button><button id="forms-tab" aria-pressed="false">Formularis PDF</button></div>
   <section id="merge-panel" class="panel" aria-labelledby="merge-title">
     <h2 id="merge-title">Un sol PDF, en l’ordre que tu vulguis</h2><p>Afegeix els documents, revisa’n l’ordre i crea el PDF final.</p>
     <label class="picker">＋ Afegeix fitxers PDF<input id="merge-input" type="file" accept=".pdf,application/pdf" multiple></label>
@@ -33,6 +32,50 @@
     <label class="field">Com vols el resultat?<select id="split-mode"><option value="selected">Tots els intervals en un sol PDF</option><option value="interval">Un PDF per cada interval</option><option value="each">Un PDF per cada pàgina del document</option></select></label>
     <label class="field">Nom del resultat<input id="split-name" value="pagines-extretes.pdf" maxlength="160"></label>
     <button id="split" class="primary" disabled>Separa el PDF</button>
+  </section>
+  <section id="forms-panel" class="panel" aria-labelledby="forms-title" hidden>
+    <h2 id="forms-title">Converteix el teu PDF en un formulari emplenable</h2>
+    <p>Carrega un PDF, tria un tipus de camp i clica sobre la pàgina per col·locar-lo. Després el podràs moure i ajustar.</p>
+    <label class="picker">＋ Selecciona el PDF de base<input id="forms-input" type="file" accept=".pdf,application/pdf"></label>
+    <p id="forms-info">Cap document seleccionat</p>
+    <p id="forms-status" role="status" aria-live="polite"></p>
+    <fieldset id="forms-workspace" hidden>
+      <legend class="sr-only">Editor del formulari</legend>
+      <div class="form-tools" role="group" aria-label="Tipus de camp">
+        <button type="button" data-form-tool="select" aria-pressed="true">↖ Selecciona / mou</button>
+        <button type="button" data-form-tool="text" aria-pressed="false">＋ Text</button>
+        <button type="button" data-form-tool="checkbox" aria-pressed="false">☐ Casella</button>
+        <button type="button" data-form-tool="radio" aria-pressed="false">◯ Opció única</button>
+        <button type="button" data-form-tool="dropdown" aria-pressed="false">▾ Desplegable</button>
+      </div>
+      <p id="forms-tip" class="hint">Tria un tipus de camp i clica al lloc on el vols afegir.</p>
+      <div class="form-editor">
+        <div class="form-document">
+          <div class="form-page-nav"><button id="form-prev" type="button">← Anterior</button><label>Pàgina <select id="form-page" aria-label="Pàgina del formulari"></select></label><button id="form-next" type="button">Següent →</button></div>
+          <div id="form-stage" class="form-stage" aria-label="Pàgina del PDF: clica per afegir el camp triat"><canvas id="form-canvas" role="img" aria-label="Pàgina del PDF de base"></canvas><div id="form-overlays"></div></div>
+          <p class="hint">Arrossega un camp per moure’l i el cantó inferior dret per canviar-ne la mida. Amb el camp enfocat, també pots usar les fletxes del teclat.</p>
+        </div>
+        <aside class="form-sidebar" aria-label="Camps i propietats">
+          <h3 id="form-count">Camps afegits (0)</h3>
+          <div id="form-fields" class="form-fields"></div>
+          <p id="form-empty" class="hint">Encara no has afegit cap camp.</p>
+          <fieldset id="form-properties" hidden><legend>Propietats del camp</legend>
+            <label class="field">Nom del camp<input id="form-field-name" maxlength="100" autocomplete="off"></label>
+            <label id="form-initial-wrap" class="field">Text inicial (opcional)<textarea id="form-initial" rows="2" maxlength="2000"></textarea></label>
+            <label id="form-multiline-wrap" class="form-check"><input id="form-multiline" type="checkbox"> Permet diverses línies</label>
+            <label id="form-options-wrap" class="field" hidden>Opcions (una per línia)<textarea id="form-options" rows="4" placeholder="Matí&#10;Tarda" maxlength="3000"></textarea></label>
+            <div id="form-radio-wrap" hidden><label class="field">Grup d’opcions<input id="form-radio-group" maxlength="100"></label><label class="field">Valor de l’opció<input id="form-radio-value" maxlength="100"></label><p class="hint">Les opcions amb el mateix grup permeten una sola resposta. Posa-les sobre els cercles del teu document.</p></div>
+            <div class="form-dimensions"><label class="field">Posició X (%)<input id="form-x" type="number" min="0" max="99" step="0.5"></label><label class="field">Posició Y (%)<input id="form-y" type="number" min="0" max="99" step="0.5"></label><label class="field">Ample (%)<input id="form-width" type="number" min="1" max="100" step="0.5"></label><label class="field">Alçada (%)<input id="form-height" type="number" min="1" max="100" step="0.5"></label></div>
+            <label class="form-check"><input id="form-required" type="checkbox"> Camp obligatori</label>
+            <div class="form-actions"><button id="form-duplicate" type="button" class="secondary">Duplica</button><button id="form-delete" type="button" class="secondary">Elimina el camp</button></div>
+          </fieldset>
+        </aside>
+      </div>
+      <label class="field">Nom del formulari<input id="forms-name" value="formulari-emplenable.pdf" maxlength="160"></label>
+      <button id="form-export" type="button" class="primary" disabled>Crea el PDF emplenable</button>
+      <div id="forms-download" class="results" hidden></div>
+      <p class="hint">Els camps nous continuaran sent editables en un lector de PDF compatible. Els noms dels camps identifiquen les respostes; no afegeixen etiquetes impreses al document.</p>
+    </fieldset>
   </section>
   <p id="status" role="status" aria-live="polite"></p>
   <section id="results" class="panel results" aria-label="Fitxers generats" hidden><h2>Ja ho tens!</h2><p>Descarrega els fitxers generats. Els originals es conserven.</p><div id="downloads"></div></section>
