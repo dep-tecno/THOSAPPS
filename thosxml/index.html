@@ -175,6 +175,7 @@
     let userAnswers = {};
     let convertedXmlText = '';
     let convertedXmlFilename = '';
+    let activeXmlReader = null;
 
     function setMode(mode) {
       currentMode = mode;
@@ -209,6 +210,31 @@
     }
 
     function returnHome() {
+      if (activeXmlReader) {
+        const reader = activeXmlReader;
+        activeXmlReader = null;
+        if (reader.readyState === FileReader.LOADING) reader.abort();
+      }
+      rawQuestions = [];
+      xmlValidation = { errors: [], questionCount: 0 };
+      userAnswers = {};
+      convertedXmlText = '';
+      convertedXmlFilename = '';
+
+      document.getElementById('xml-input').value = '';
+      document.getElementById('html-input').value = '';
+      document.getElementById('html-results').replaceChildren();
+      document.getElementById('html-converter').querySelector('label[for="html-input"]').classList.remove('border-blue-500', 'bg-blue-50');
+      document.getElementById('converted-download-bar').classList.add('hidden');
+      document.getElementById('upload-zone').classList.remove('hidden');
+      document.getElementById('app-controls').classList.add('hidden');
+      document.getElementById('xml-validation').replaceChildren();
+      document.getElementById('xml-validation').classList.add('hidden');
+      document.getElementById('questions-container').replaceChildren();
+      document.getElementById('search-bar').value = '';
+      document.getElementById('filter-type').value = 'all';
+      setMode('simulador');
+
       document.getElementById('home-view').classList.remove('hidden');
       document.getElementById('xml-tools').classList.add('hidden');
       document.getElementById('html-converter').classList.add('hidden');
@@ -228,8 +254,17 @@
       document.getElementById('converted-download-bar').classList.add('hidden');
 
       const reader = new FileReader();
+      activeXmlReader = reader;
       reader.onload = function(e) {
+        if (activeXmlReader !== reader) return;
+        activeXmlReader = null;
         parseXMLContent(e.target.result);
+      };
+      reader.onerror = function() {
+        if (activeXmlReader === reader) activeXmlReader = null;
+      };
+      reader.onabort = function() {
+        if (activeXmlReader === reader) activeXmlReader = null;
       };
       reader.readAsText(file);
     }
@@ -1111,5 +1146,6 @@
   </script>
 </body>
 </html>
+
 
 
