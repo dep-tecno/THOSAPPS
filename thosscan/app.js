@@ -199,7 +199,17 @@ convert.addEventListener('click', async () => {
     download.hidden = false;
     download.disabled = false;
     drive.hidden = false;
-    showProgress(run.sheetCount ? `Conversió completada · ${run.sheetCount} ${run.sheetCount === 1 ? 'pestanya' : 'pestanyes'}. Descarrega el fitxer.` : 'Conversió completada. Descarrega el fitxer.', 1, 1);
+    const summary = [];
+    if (Number.isInteger(run.total) && run.total > 0) {
+      const pages = run.total === 1 ? 'pàgina' : 'pàgines';
+      summary.push(`${run.total} ${pages} del document`);
+    }
+    if (run.sheetCount) {
+      const sheets = run.sheetCount === 1 ? 'pestanya' : 'pestanyes';
+      summary.push(`${run.sheetCount} ${sheets} d’Excel`);
+    }
+    const result = summary.length ? ` · ${summary.join(' · ')}` : '';
+    showProgress(`Conversió completada${result}. Descarrega el fitxer.`, 1, 1);
   }
 });
 
