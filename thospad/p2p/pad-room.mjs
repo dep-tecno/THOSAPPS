@@ -72,7 +72,12 @@ export function padRoom(roomId, password, initial, { changed, connection, busy }
       if (pad.type && typeof pad.title === 'string') changed(pad);
     } catch { report(); }
   }
-  room.onPeerJoin(({ peerId }) => { peers.add(peerId); connection(peers.size); sync(peerId); }, { replay: true });
+  room.onPeerJoin(({ peerId }) => {
+    peers.add(peerId);
+    connection(peers.size);
+    sync(peerId);
+    if (meta.has('type')) send(updates, Y.encodeStateAsUpdate(doc), peerId);
+  }, { replay: true });
   room.onPeerLeave(({ peerId }) => { peers.delete(peerId); connection(peers.size); });
   room.onError(report);
   doc.on('update', (bytes, origin) => { if (origin !== remote && peers.size) send(updates, bytes); });

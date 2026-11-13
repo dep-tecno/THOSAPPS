@@ -848,11 +848,12 @@ async function joinSharedPad(invite, board) {
   sharingBusy = true;
   sharePad.disabled = true;
   try {
-    const { padRoom, renderShareQr } = await import('./p2p/pad-room.bundle.js?v=2');
+    const { padRoom, renderShareQr } = await import('./p2p/pad-room.bundle.js?v=3');
     const padId = board?.id ?? makePadId();
     const url = new URL('./', new URL(location.pathname.endsWith('/') || location.pathname.endsWith('.html')
       ? location.href : location.pathname + '/', location.origin));
-    url.hash = 'pad=' + invite.sala + '.' + invite.clau;
+    url.searchParams.set('participa', '1');
+    url.hash = new URLSearchParams(invite).toString();
     byId('share-link').value = url.href;
     const qr = byId('share-qr');
     qr.hidden = true;
@@ -870,7 +871,13 @@ async function joinSharedPad(invite, board) {
         }
       },
       changed: snapshot => {
-        const pad = readPadFile(JSON.stringify({ format: 'THOSPAD', version: 1, pad: snapshot }));
+        let pad;
+        try {
+          pad = readPadFile(JSON.stringify({ format: 'THOSPAD', version: 1, pad: snapshot }));
+        } catch {
+          byId('share-connection-note').textContent = 'La connexió funciona, però les dades rebudes no s’han pogut obrir.';
+          return;
+        }
         pad.id = padId;
         const next = boards.some(item => item.id === padId)
           ? boards.map(item => item.id === padId ? pad : item) : [...boards, pad];
@@ -886,9 +893,7 @@ async function joinSharedPad(invite, board) {
       }
     });
     shared = { room, padId };
-    const qrUrl = new URL(url);
-    qrUrl.searchParams.set('qr', '1');
-    void renderShareQr(qr, qrUrl.href).then(() => { qr.hidden = false; }).catch(() => {});
+    void renderShareQr(qr, url.href).then(() => { qr.hidden = false; }).catch(() => {});
     if (!shareDialog.open) shareDialog.showModal();
   } catch {
     byId('share-summary').textContent = 'Mateixa Wi-Fi';
@@ -1081,6 +1086,7 @@ async function init() {
       const clean = new URL(location.href);
       clean.hash = '';
       clean.searchParams.delete('qr');
+      clean.searchParams.delete('participa');
       history.replaceState(null, '', clean.href);
       shareDialog.close();
       render();
@@ -1345,7 +1351,7 @@ async function init() {
   function openInvitation() {
     const invite = readShareInvitation(location.hash);
     if (invite) void joinSharedPad(invite);
-    else if (new URLSearchParams(location.search).has('qr') || /^#(?:pad|sala|clau)=/.test(location.hash)) {
+    else if (['qr', 'participa'].some(key => new URLSearchParams(location.search).has(key)) || /^#(?:pad|sala|clau)=/.test(location.hash)) {
       status.textContent = 'El lector QR no ha obert la invitació sencera. Obre-la amb el navegador del mòbil o fes servir «Copia l’enllaç» al dispositiu que comparteix el PAD.';
     }
   }
