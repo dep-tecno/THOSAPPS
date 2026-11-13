@@ -848,15 +848,13 @@ async function joinSharedPad(invite, board) {
   sharingBusy = true;
   sharePad.disabled = true;
   try {
-    const { padRoom, renderShareQr } = await import('./p2p/pad-room.bundle.js?v=3');
+    const { padRoom } = await import('./p2p/pad-room.bundle.js?v=4');
     const padId = board?.id ?? makePadId();
     const url = new URL('./', new URL(location.pathname.endsWith('/') || location.pathname.endsWith('.html')
       ? location.href : location.pathname + '/', location.origin));
     url.searchParams.set('participa', '1');
     url.hash = new URLSearchParams(invite).toString();
     byId('share-link').value = url.href;
-    const qr = byId('share-qr');
-    qr.hidden = true;
     showShareConnections(0);
     if (!board) byId('share-state').textContent = 'Invitació rebuda. Esperant el PAD compartit…';
     let received = Boolean(board);
@@ -893,7 +891,6 @@ async function joinSharedPad(invite, board) {
       }
     });
     shared = { room, padId };
-    void renderShareQr(qr, url.href).then(() => { qr.hidden = false; }).catch(() => {});
     if (!shareDialog.open) shareDialog.showModal();
   } catch {
     byId('share-summary').textContent = 'Mateixa Wi-Fi';
@@ -1352,7 +1349,7 @@ async function init() {
     const invite = readShareInvitation(location.hash);
     if (invite) void joinSharedPad(invite);
     else if (['qr', 'participa'].some(key => new URLSearchParams(location.search).has(key)) || /^#(?:pad|sala|clau)=/.test(location.hash)) {
-      status.textContent = 'El lector QR no ha obert la invitació sencera. Obre-la amb el navegador del mòbil o fes servir «Copia l’enllaç» al dispositiu que comparteix el PAD.';
+      status.textContent = 'La invitació és incompleta. Torna a copiar l’enllaç des del dispositiu que comparteix el PAD.';
     }
   }
   window.addEventListener('hashchange', openInvitation);

@@ -1,1 +1,1 @@
-{"private":true,"type":"module","scripts":{"build":"esbuild app.mjs --bundle --minify --legal-comments=external --outfile=bundle.js"},"dependencies":{"qrcode":"1.5.4","trystero":"0.27.0","y-indexeddb":"9.0.12","yjs":"13.6.33"},"devDependencies":{"esbuild":"0.25.12"}}
+{"private":true,"type":"module","scripts":{"build":"esbuild app.mjs --bundle --minify --legal-comments=external --outfile=bundle.js"},"dependencies":{"trystero":"0.27.0","y-indexeddb":"9.0.12","yjs":"13.6.33"},"devDependencies":{"esbuild":"0.25.12"}}
