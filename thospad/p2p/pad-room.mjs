@@ -1,6 +1,11 @@
 import * as Y from 'yjs';
 import { joinRoom } from 'trystero';
+import QRCode from 'qrcode';
 import { updateText } from './model.mjs';
+
+export function renderShareQr(canvas, link) {
+  return QRCode.toCanvas(canvas, link, { margin: 4, scale: 8, errorCorrectionLevel: 'M' });
+}
 
 export function padRoom(roomId, password, initial, { changed, connection, busy }) {
   const doc = new Y.Doc();

@@ -830,11 +830,14 @@ async function joinSharedPad(invite, board) {
   sharingBusy = true;
   sharePad.disabled = true;
   try {
-    const { padRoom } = await import('./p2p/pad-room.bundle.js?v=1');
+    const { padRoom, renderShareQr } = await import('./p2p/pad-room.bundle.js?v=2');
     const padId = board?.id ?? makePadId();
     const url = new URL(location.href);
     url.hash = new URLSearchParams(invite).toString();
     byId('share-link').value = url.href;
+    const qr = byId('share-qr');
+    qr.hidden = true;
+    void renderShareQr(qr, url.href).then(() => { qr.hidden = false; }).catch(() => {});
     byId('share-state').textContent = 'Esperant altres participants…';
     let received = Boolean(board);
     const room = padRoom(invite.sala, invite.clau, board, {

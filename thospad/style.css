@@ -64,6 +64,7 @@ a { color: var(--accent); }
 #share-pad small { display: block; font-size: .7rem; margin-top: .2rem; color: #b4dcc6; }
 .share-panel, .share-panel label { display: grid; gap: .65rem; }
 .share-panel input { width: 100%; min-width: 0; }
+#share-qr { display: block; justify-self: center; width: min(100%, 15rem); height: auto; border-radius: 6px; }
 button:disabled { opacity: .5; cursor: default; }
 body { --editor-width: min(22rem, 42vw); min-height: 100dvh; display: flex; flex-direction: column; }
 body.creating-pad { padding-right: var(--editor-width); }

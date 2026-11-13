@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>THOSPAD · PADS d’aula</title>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=share1">
+  <link rel="stylesheet" href="style.css?v=share2">
   <script defer src="store.js"></script>
   <script defer src="pad-files.js"></script>
   <script defer src="map-data.js"></script>
-  <script defer src="app.js?v=share1"></script>
+  <script defer src="app.js?v=share2"></script>
 </head>
 <body>
   <header class="top">
@@ -63,6 +63,7 @@
       <h2 id="share-title">Compartir PAD</h2>
       <p>Connecteu-vos a la mateixa Wi-Fi. Qui tingui l’enllaç pot editar el PAD.</p>
       <p id="share-state" role="status"></p>
+      <canvas id="share-qr" role="img" aria-label="Codi QR de l’enllaç d’edició" hidden></canvas>
       <label>Enllaç d’edició <input id="share-link" readonly></label>
       <div class="actions">
         <button id="share-leave" type="button">Surt de la sala</button>
