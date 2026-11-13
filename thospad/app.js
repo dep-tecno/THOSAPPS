@@ -1155,8 +1155,17 @@ async function init() {
     radio.name = 'type';
     radio.value = mode;
     radio.defaultChecked = mode === 'wall';
-    const preview = element('span', label);
+    const preview = element('span', undefined, 'type-preview');
     preview.dataset.preview = mode;
+    const scene = element('span', undefined, 'preview-scene');
+    scene.setAttribute('aria-hidden', 'true');
+    for (let group = 0; group < (mode === 'table' ? 4 : 3); group++) {
+      const lane = element('span', undefined, 'preview-group');
+      const count = mode === 'wall' || mode === 'columns' || mode === 'kanban' ? 2 : 1;
+      for (let card = 0; card < count; card++) lane.append(element('i'));
+      scene.append(lane);
+    }
+    preview.append(scene, element('span', label, 'preview-name'));
     choice.append(radio, preview);
     byId('board-types').querySelector('.type-options').append(choice);
   }
