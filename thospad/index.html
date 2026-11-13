@@ -9,7 +9,7 @@
   <script defer src="store.js"></script>
   <script defer src="pad-files.js"></script>
   <script defer src="map-data.js"></script>
-  <script defer src="app.js?v=share2"></script>
+  <script defer src="app.js?v=share3"></script>
 </head>
 <body>
   <header class="top">
@@ -43,7 +43,7 @@
       </div>
       <button id="share-pad" disabled>
         <svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 8-5m-8 5 8 5"/><circle cx="5" cy="12" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="19" cy="19" r="3"/></svg>
-        <span>Compartir PAD<small>Mateixa Wi-Fi</small></span>
+        <span>Compartir PAD<small id="share-summary">Mateixa Wi-Fi</small></span>
       </button>
     </div>
   </header>
@@ -63,6 +63,7 @@
       <h2 id="share-title">Compartir PAD</h2>
       <p>Connecteu-vos a la mateixa Wi-Fi. Qui tingui l’enllaç pot editar el PAD.</p>
       <p id="share-state" role="status"></p>
+      <p id="share-connection-note" role="status"></p>
       <canvas id="share-qr" role="img" aria-label="Codi QR de l’enllaç d’edició" hidden></canvas>
       <label>Enllaç d’edició <input id="share-link" readonly></label>
       <div class="actions">

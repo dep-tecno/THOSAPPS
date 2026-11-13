@@ -5,6 +5,24 @@ const sharePad = byId('share-pad');
 const shareDialog = byId('share-dialog');
 let shared;
 let sharingBusy = false;
+
+function readShareInvitation(hash) {
+  const match = /^#pad=([a-f0-9]{32})\.([a-f0-9]{32})$/.exec(hash);
+  if (match) return { sala: match[1], clau: match[2] };
+  const params = new URLSearchParams(hash.slice(1));
+  const sala = params.get('sala');
+  const clau = params.get('clau');
+  if ([sala, clau].every(value => /^[a-f0-9]{32}$/.test(value ?? ''))) return { sala, clau };
+}
+
+function showShareConnections(count, error = false) {
+  const participants = count + 1;
+  byId('share-summary').textContent = participants + (count ? ' connectats' : ' connectat');
+  byId('share-state').textContent = count ? participants + ' navegadors connectats (inclòs el teu).'
+    : '1 navegador connectat (el teu). Esperant altres participants…';
+  byId('share-connection-note').textContent = error
+    ? 'Hi ha hagut un problema de connexió. Comproveu que sou a la mateixa Wi-Fi i que l’altre navegador continua obert.' : '';
+}
 const content = byId('content');
 const dialog = byId('editor');
 const form = byId('edit-form');
@@ -832,20 +850,17 @@ async function joinSharedPad(invite, board) {
   try {
     const { padRoom, renderShareQr } = await import('./p2p/pad-room.bundle.js?v=2');
     const padId = board?.id ?? makePadId();
-    const url = new URL(location.href);
-    url.hash = new URLSearchParams(invite).toString();
+    const url = new URL('./', new URL(location.pathname.endsWith('/') || location.pathname.endsWith('.html')
+      ? location.href : location.pathname + '/', location.origin));
+    url.hash = 'pad=' + invite.sala + '.' + invite.clau;
     byId('share-link').value = url.href;
     const qr = byId('share-qr');
     qr.hidden = true;
-    void renderShareQr(qr, url.href).then(() => { qr.hidden = false; }).catch(() => {});
-    byId('share-state').textContent = 'Esperant altres participants…';
+    showShareConnections(0);
     let received = Boolean(board);
     const room = padRoom(invite.sala, invite.clau, board, {
       busy: () => saving || dialog.open || deleteDialog.open || Boolean(content.querySelector('.column-editor, .dragging, .resizing')),
-      connection: (count, error) => {
-        byId('share-state').textContent = error ? 'Hi ha hagut un problema de connexió.'
-          : count ? 'Connectat · ' + (count + 1) + ' navegadors' : 'Esperant altres participants…';
-      },
+      connection: showShareConnections,
       changed: snapshot => {
         const pad = readPadFile(JSON.stringify({ format: 'THOSPAD', version: 1, pad: snapshot }));
         pad.id = padId;
@@ -856,14 +871,17 @@ async function joinSharedPad(invite, board) {
         } finally {
           boards = next;
           if (!received) activeId = padId;
+          if (!received && shareDialog.open) shareDialog.close();
           received = true;
           render();
         }
       }
     });
     shared = { room, padId };
+    void renderShareQr(qr, url.href).then(() => { qr.hidden = false; }).catch(() => {});
     if (!shareDialog.open) shareDialog.showModal();
   } catch {
+    byId('share-summary').textContent = 'Mateixa Wi-Fi';
     status.textContent = 'No s’ha pogut obrir la sala compartida.';
   } finally {
     sharingBusy = false;
@@ -1048,6 +1066,7 @@ async function init() {
       await room.close();
     } finally {
       shared = undefined;
+      byId('share-summary').textContent = 'Mateixa Wi-Fi';
       sharingBusy = false;
       history.replaceState(null, '', location.pathname + location.search);
       shareDialog.close();
@@ -1310,12 +1329,15 @@ async function init() {
     }
   });
   render();
-  const invitation = new URLSearchParams(location.hash.slice(1));
-  const sala = invitation.get('sala');
-  const clau = invitation.get('clau');
-  if ([sala, clau].every(value => /^[a-f0-9]{32}$/.test(value ?? ''))) {
-    void joinSharedPad({ sala, clau });
+  function openInvitation() {
+    const invite = readShareInvitation(location.hash);
+    if (invite) void joinSharedPad(invite);
+    else if (/^#(?:pad|sala|clau)=/.test(location.hash)) {
+      status.textContent = 'L’enllaç d’invitació és incomplet. Torna a escanejar el QR o obre l’enllaç copiat.';
+    }
   }
+  window.addEventListener('hashchange', openInvitation);
+  openInvitation();
 }
 
 void init();
