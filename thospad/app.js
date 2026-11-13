@@ -5,6 +5,13 @@ const sharePad = byId('share-pad');
 const shareDialog = byId('share-dialog');
 let shared;
 let sharingBusy = false;
+let sharePeerCount = 0;
+
+function renderShareSummary() {
+  byId('share-summary').textContent = shared?.padId === activeId && shared
+    ? (sharePeerCount + 1) + (sharePeerCount ? ' connectats' : ' connectat')
+    : 'Mateixa Wi-Fi';
+}
 
 function readShareInvitation(hash) {
   const match = /^#pad=([a-f0-9]{32})\.([a-f0-9]{32})$/.exec(hash);
@@ -17,7 +24,8 @@ function readShareInvitation(hash) {
 
 function showShareConnections(count, error = false) {
   const participants = count + 1;
-  byId('share-summary').textContent = participants + (count ? ' connectats' : ' connectat');
+  sharePeerCount = count;
+  renderShareSummary();
   byId('share-state').textContent = count ? participants + ' navegadors connectats (inclòs el teu).'
     : '1 navegador connectat (el teu). Esperant altres participants…';
   byId('share-connection-note').textContent = error
@@ -773,6 +781,7 @@ function activeBoard() {
 
 function render() {
   const board = activeBoard();
+  renderShareSummary();
   sharePad.disabled = sharingBusy || (!board && !shared);
   byId('kanban-split-control').hidden = presenting || board?.type !== 'kanban';
   byId('kanban-split').checked = Boolean(board?.kanbanSplit);
@@ -1060,6 +1069,14 @@ async function init() {
   }
   activeId = boards[0]?.id;
   sharePad.addEventListener('click', () => {
+    if (shared && shared.padId !== activeId) {
+      const pad = boards.find(item => item.id === shared.padId);
+      status.textContent = pad
+        ? '«' + pad.title + '» encara es comparteix. Selecciona aquest PAD per gestionar o tancar la sala.'
+        : 'La sala encara està esperant el PAD compartit.';
+      if (!pad) shareDialog.showModal();
+      return;
+    }
     if (shared) shareDialog.showModal();
     else if (activeBoard()) void joinSharedPad({ sala: makePadId(), clau: makePadId() }, activeBoard());
   });
