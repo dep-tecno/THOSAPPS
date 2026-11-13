@@ -125,12 +125,22 @@
         <label id="date-month-field" hidden>Mes <select name="dateMonth" disabled><option value="">Tria un mes</option></select></label>
         <label id="date-day-field" hidden>Dia, mes i any <input name="date" type="date" min="0001-01-01" max="9999-12-31" disabled></label>
       </fieldset>
-      <label data-field="place">Lloc <input name="place" maxlength="100"></label>
+      <label data-field="place"><span id="post-place-label">Lloc</span><input name="place" maxlength="100"></label>
       <div class="coordinates" data-field="coordinates">
         <label>Latitud <input name="lat" type="number" min="-90" max="90" step="any"></label>
         <label>Longitud <input name="lon" type="number" min="-180" max="180" step="any"></label>
       </div>
       <p id="editor-status" role="alert"></p>
+      </div>
+      <div id="post-delete" hidden>
+        <button id="delete-post" class="danger" type="button">Suprimeix</button>
+        <div id="confirm-post-delete" hidden>
+          <p>Vols suprimir «<span id="delete-post-title"></span>»?</p>
+          <div class="actions">
+            <button id="cancel-post-delete" type="button">Cancel·la la supressió</button>
+            <button id="confirm-delete-post" class="danger" type="button">Suprimeix definitivament</button>
+          </div>
+        </div>
       </div>
     </form>
   </dialog>

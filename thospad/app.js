@@ -15,6 +15,18 @@ let pendingDeleteId;
 const dateFormat = new Intl.DateTimeFormat('ca', { dateStyle: 'long', timeZone: 'UTC' });
 const monthFormat = new Intl.DateTimeFormat('ca', { year: 'numeric', month: 'long', timeZone: 'UTC' });
 const datePrecision = byId('date-precision');
+const tableFieldControls = {
+  title: byId('post-title-label').parentElement,
+  body: byId('body-label'),
+  group: byId('post-group-label').parentElement,
+  date: datePrecision.closest('fieldset'),
+  place: form.querySelector('[data-field="place"]')
+};
+const tableFieldAnchors = Object.fromEntries(Object.entries(tableFieldControls).map(([id, field]) => {
+  const anchor = document.createComment(id);
+  field.before(anchor);
+  return [id, anchor];
+}));
 const postFieldsByMode = {
   timeline: ['date'],
   map: ['place', 'coordinates']
@@ -110,9 +122,10 @@ function renderTable(board) {
   const body = table.createTBody();
   for (const post of board.posts) {
     const row = body.insertRow();
+    row.dataset.postId = post.id;
     for (const column of columns) {
       const cell = row.insertCell();
-      const value = column.id === 'date' ? post.date && displayDate(post.date)
+      const value = column.id === 'date' ? (column.label !== 'Data' ? post.tableDateText : undefined) ?? (post.date && displayDate(post.date))
         : column.id.startsWith('extra-') ? post.tableValues?.[column.id] : post[column.id];
       cell.textContent = value || '—';
       if (column.id === 'body') addPostAttachments(cell, post);
@@ -376,6 +389,7 @@ function render() {
   byId('photo-pad').disabled = !board;
   deleteButton.hidden = !board;
   byId('board-surface').hidden = !board;
+  byId('new-post').textContent = board?.type === 'table' ? '+ Nova fila' : '+ Publica';
   byId('no-pads').hidden = Boolean(board);
   byId('timeline-control').hidden = board?.mode !== 'timeline';
   if (!board) return;
@@ -415,6 +429,9 @@ function openEditor(board, post, pad) {
   creatingBoard = board;
   editingPad = pad;
   editingPost = post;
+  byId('post-delete').hidden = !post;
+  byId('delete-post').hidden = false;
+  byId('confirm-post-delete').hidden = true;
   imageRequest++;
   byId('editor-save').disabled = false;
   form.reset();
@@ -436,14 +453,36 @@ function openEditor(board, post, pad) {
   byId('backgrounds').hidden = !board;
   byId('board-types').hidden = !board || Boolean(pad);
   editorStatus.textContent = '';
-  byId('editor-title').textContent = pad ? 'Edita el PAD' : board ? 'Nou PAD' : post ? 'Edita la publicació' : 'Nova publicació';
-  const tableColumns = !board && activeBoard().type === 'table' ? activeBoard().tableColumns ?? defaultTableColumns : [];
+  const table = !board && activeBoard().type === 'table';
+  datePrecision.closest('fieldset').dataset.optional = String(table);
+  byId('editor-title').textContent = pad ? 'Edita el PAD' : board ? 'Nou PAD'
+    : table ? (post ? 'Edita la fila' : 'Nova fila') : (post ? 'Edita la publicació' : 'Nova publicació');
+  const tableColumns = table ? activeBoard().tableColumns ?? defaultTableColumns : [];
+  const textDateColumn = tableColumns.find(column => column.id === 'date' && column.label !== 'Data');
   byId('post-title-label').textContent = tableColumns.find(column => column.id === 'title')?.label ?? 'Títol';
   byId('body-label').firstElementChild.textContent = board ? 'Descripció'
     : tableColumns.find(column => column.id === 'body')?.label ?? 'Text';
   const tableFields = byId('table-fields');
+  for (const [id, field] of Object.entries(tableFieldControls)) tableFieldAnchors[id].after(field);
   tableFields.replaceChildren();
-  for (const column of tableColumns.filter(item => item.id.startsWith('extra-'))) {
+  for (const column of tableColumns) {
+    if (column === textDateColumn) {
+      const label = element('label', column.label);
+      const input = element('textarea');
+      input.name = 'tableDateText';
+      input.rows = 2;
+      input.maxLength = 500;
+      input.value = post?.tableDateText ?? (post?.date ? displayDate(post.date) : '');
+      label.append(input);
+      tableFields.append(label);
+      continue;
+    }
+    if (Object.hasOwn(tableFieldControls, column.id)) {
+      const field = tableFieldControls[column.id];
+      if (column.id === 'date' || column.id === 'place') field.firstElementChild.textContent = column.label;
+      tableFields.append(field);
+      continue;
+    }
     const label = element('label', column.label);
     const input = element('input');
     input.name = column.id;
@@ -454,7 +493,12 @@ function openEditor(board, post, pad) {
   }
   tableFields.hidden = !tableFields.childElementCount;
   const mode = board ? undefined : activeBoard().mode;
-  const visibleFields = board ? [] : ['group', 'link', 'image', ...(postFieldsByMode[mode] || [])];
+  if (!table) {
+    tableFieldControls.date.firstElementChild.textContent = 'Data';
+    byId('post-place-label').textContent = 'Lloc';
+  }
+  const visibleFields = board ? [] : ['group', 'link', 'image',
+    ...(table ? (textDateColumn ? ['place'] : ['date', 'place']) : postFieldsByMode[mode] || [])];
   byId('post-group-label').textContent = tableColumns.find(column => column.id === 'group')?.label
     ?? (mode === 'rows' || mode === 'columns' ? 'Etiqueta del grup' : 'Etiqueta');
   const groups = board ? [] : activeBoard().posts.map(item => item.group).filter(Boolean);
@@ -468,7 +512,7 @@ function openEditor(board, post, pad) {
     for (const input of field.querySelectorAll('input, select')) input.disabled = field.hidden;
   }
   updateDateFields();
-  byId('editor-save').textContent = pad || post ? 'Desa els canvis' : board ? 'Crea el PAD' : 'Publica';
+  byId('editor-save').textContent = pad || post ? 'Desa els canvis' : board ? 'Crea el PAD' : table ? 'Afegeix la fila' : 'Publica';
   if (board) {
     document.body.classList.add('creating-pad');
     document.querySelector('.top').inert = true;
@@ -483,6 +527,7 @@ function openEditor(board, post, pad) {
 
 function updateDateFields() {
   const precision = datePrecision.disabled ? '' : datePrecision.value;
+  const optional = tableFieldControls.date.dataset.optional === 'true';
   for (const [part, visible] of [
     ['year', precision === 'year' || precision === 'month'],
     ['month', precision === 'month'],
@@ -491,7 +536,7 @@ function updateDateFields() {
     const field = byId('date-' + part + '-field');
     field.hidden = !visible;
     field.firstElementChild.disabled = !visible;
-    field.firstElementChild.required = visible;
+    field.firstElementChild.required = visible && !optional;
   }
 }
 
@@ -626,6 +671,31 @@ async function init() {
   });
   byId('new-post').addEventListener('click', () => openEditor(false));
   byId('cancel').addEventListener('click', () => dialog.close());
+  byId('delete-post').addEventListener('click', () => {
+    if (saving || !editingPost) return;
+    byId('delete-post-title').textContent = editingPost.title;
+    byId('confirm-post-delete').hidden = false;
+    byId('delete-post').hidden = true;
+    byId('cancel-post-delete').focus();
+  });
+  byId('cancel-post-delete').addEventListener('click', () => {
+    byId('confirm-post-delete').hidden = true;
+    byId('delete-post').hidden = false;
+    byId('delete-post').focus();
+  });
+  byId('confirm-delete-post').addEventListener('click', async () => {
+    if (saving || !editingPost) return;
+    const pad = activeBoard();
+    const posts = pad.posts.filter(post => post.id !== editingPost.id);
+    const next = boards.map(item => item.id === pad.id ? { ...pad, posts } : item);
+    if (await persist(next, pad.id, editorStatus)) {
+      dialog.close();
+      status.textContent = 'Targeta suprimida.';
+      byId('new-post').focus();
+    } else {
+      editorStatus.scrollIntoView({ block: 'nearest' });
+    }
+  });
   form.addEventListener('input', previewNewPad);
   const imageInput = byId('post-image');
   imageInput.addEventListener('change', async () => {
@@ -680,18 +750,23 @@ async function init() {
       let post;
       try {
         const year = String(Number(fields.dateYear)).padStart(4, '0');
-        fields.date = {
+        const dateValue = {
           '': '',
-          year,
-          month: year + '-' + fields.dateMonth,
+          year: fields.dateYear ? year : '',
+          month: fields.dateYear && fields.dateMonth ? year + '-' + fields.dateMonth : '',
           day: fields.date
-        }[fields.datePrecision] ?? editingPost?.date ?? '';
+        }[fields.datePrecision];
+        if (fields.datePrecision === 'month' && Boolean(fields.dateYear) !== Boolean(fields.dateMonth)) {
+          throw new Error('Completa el mes i l’any o tria «Sense data».');
+        }
+        fields.date = fields.datePrecision === undefined ? editingPost?.date ?? '' : dateValue ?? '';
         for (const name of ['group', 'place', 'lat', 'lon']) {
           fields[name] ??= String(editingPost?.[name] ?? '');
         }
         const link = webLink(fields.link);
         if (fields.link && !link) throw new Error('Introdueix un enllaç web amb http:// o https://.');
         post = { ...editingPost, id: editingPost?.id ?? id, ...postFrom(fields), link, image: currentImage };
+        if (fields.tableDateText !== undefined) post.tableDateText = fields.tableDateText;
         const tableValues = Object.entries(fields).filter(([name]) => name.startsWith('extra-'));
         if (tableValues.length) post.tableValues = Object.fromEntries(tableValues);
       } catch (error) {
@@ -704,7 +779,15 @@ async function init() {
         return { ...board, posts };
       });
     }
-    if (await persist(next, selected, editorStatus)) dialog.close();
+    const newRow = !creatingBoard && !editingPost && activeBoard().type === 'table';
+    if (await persist(next, selected, editorStatus)) {
+      dialog.close();
+      if (newRow) {
+        const row = content.querySelector('tr[data-post-id="' + id + '"]');
+        row.classList.add('new-table-row');
+        row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    }
   });
   render();
 }

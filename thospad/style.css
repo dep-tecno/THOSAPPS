@@ -278,6 +278,11 @@ article small { display: block; margin-bottom: .4rem; }
 .column-editor { min-width: 11rem; padding: 0; grid-template-columns: 1fr 1fr; }
 .column-editor input { grid-column: 1 / -1; min-width: 0; }
 #table-fields { display: grid; gap: .65rem; }
+.new-table-row td { animation: highlight-row 3s ease-out; }
+@keyframes highlight-row { from { background: #b5f1d2; } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .new-table-row td { animation: none; background: #b5f1d2; }
+}
 table { border-collapse: collapse; width: 100%; background: var(--panel); }
 th, td { padding: .8rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; white-space: pre-wrap; }
 td:nth-child(2) { min-width: 10rem; }
@@ -310,6 +315,9 @@ body:not(.creating-pad) #editor :is(input, select, textarea, button) { padding: 
 body:not(.creating-pad) #editor label { gap: .25rem; }
 body:not(.creating-pad) #editor textarea { height: 4.1rem; }
 body:not(.creating-pad) #image-preview { max-height: 6rem; }
+#edit-form:has(#post-delete:not([hidden])) { grid-template-rows: auto minmax(0, 1fr) auto; }
+#post-delete { padding: .5rem .75rem; border-top: 1px solid var(--line); }
+#confirm-post-delete p { margin-bottom: .4rem; }
 textarea { resize: vertical; }
 .coordinates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
 form input:not([type="radio"]) { width: 100%; }
