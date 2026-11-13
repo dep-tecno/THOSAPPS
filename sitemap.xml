@@ -56,4 +56,8 @@
   <url><loc>https://tecno-apps.cat/thos-eplan.html</loc><priority>0.8</priority></url>
   <url><loc>https://tecno-apps.cat/thosmotion.html</loc><priority>0.8</priority></url>
   <url><loc>https://tecno-apps.cat/thospdf/</loc><priority>0.8</priority></url>
+  <url>
+    <loc>https://tecno-apps.cat/thospad/</loc>
+    <priority>0.8</priority>
+  </url>
 </urlset>
