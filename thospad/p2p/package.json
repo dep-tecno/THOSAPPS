@@ -1,0 +1,1 @@
+{"private":true,"type":"module","scripts":{"build":"esbuild app.mjs --bundle --minify --legal-comments=external --outfile=bundle.js"},"dependencies":{"trystero":"0.27.0","yjs":"13.6.33","y-indexeddb":"9.0.12"},"devDependencies":{"esbuild":"0.25.12"}}

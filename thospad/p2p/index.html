@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ca">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THOSPAD · Mur compartit</title>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="mur.css">
+<script defer src="bundle.js"></script>
+<header class="top"><a href="../">THOSPAD</a><strong>Mur compartit · Prova</strong>
+  <button id="share" disabled>Comparteix</button><button id="leave" hidden>Surt de la sala</button>
+  <button id="save" disabled>Desa</button><button id="open" disabled>Obre</button>
+  <input id="file" type="file" accept=".thospad,.json,application/json" hidden>
+</header>
+<main>
+  <section id="invite" hidden>
+    <label for="link">Enllaç d’edició</label><input id="link" readonly>
+    <button id="copy">Copia</button>
+    <p>Qui tingui l’enllaç pot editar. Mantingueu almenys un navegador connectat perquè els nous participants rebin el mur.</p>
+  </section>
+  <p id="connection" role="status">Carregant el mur…</p>
+  <p id="feedback" role="status"></p>
+  <section class="board-surface" data-theme="forest">
+    <button id="add" class="primary" disabled>+ Targeta</button>
+    <div id="cards"></div>
+  </section>
+</main>
+</html>
