@@ -884,7 +884,7 @@ function openEditor(board, post, pad) {
   const visibleFields = board ? [] : ['group', 'link', 'image',
     ...(table ? (textDateColumn ? ['place'] : ['date', 'place']) : postFieldsByMode[mode] || [])];
   byId('post-group-label').textContent = tableColumns.find(column => column.id === 'group')?.label
-    ?? (mode === 'rows' || mode === 'columns' ? 'Etiqueta del grup' : 'Etiqueta');
+    ?? (mode === 'kanban' ? 'Responsable' : mode === 'rows' || mode === 'columns' ? 'Etiqueta del grup' : 'Etiqueta');
   const groups = board ? [] : activeBoard().posts.map(item => item.group).filter(Boolean);
   byId('post-groups').replaceChildren(...[...new Set(groups)].map(group => {
     const option = element('option');
