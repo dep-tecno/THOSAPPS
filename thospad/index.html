@@ -65,6 +65,7 @@
         <h2 id="editor-title"></h2>
         <div class="actions"><button type="button" id="cancel">Cancel·la</button><button id="editor-save" class="primary">Desa</button></div>
       </div>
+      <div class="editor-fields">
       <label><span id="post-title-label">Títol</span><input name="title" required maxlength="100"></label>
       <label id="body-label"><span></span><textarea name="body" maxlength="1500" rows="4"></textarea></label>
       <fieldset id="board-types">
@@ -78,12 +79,17 @@
           <label><input type="radio" name="theme" value="mosaic"><span data-theme="mosaic">Mosaic</span></label>
           <label><input type="radio" name="theme" value="confetti"><span data-theme="confetti">Confeti</span></label>
           <label><input type="radio" name="theme" value="tiles"><span data-theme="tiles">Rajoles</span></label>
+          <label><input type="radio" name="theme" value="doodles"><span data-theme="doodles">Dibuixets</span></label>
+          <label><input type="radio" name="theme" value="graph"><span data-theme="graph">Paper quadriculat</span></label>
         </div>
         <p class="background-category">Textures i paisatges</p>
         <div class="background-options">
           <label><input type="radio" name="theme" value="wood"><span data-theme="wood">Fusta</span></label>
           <label><input type="radio" name="theme" value="paper"><span data-theme="paper">Paper</span></label>
           <label><input type="radio" name="theme" value="shore"><span data-theme="shore">Platja</span></label>
+          <label><input type="radio" name="theme" value="cork"><span data-theme="cork">Suro</span></label>
+          <label><input type="radio" name="theme" value="metal"><span data-theme="metal">Metall</span></label>
+          <label><input type="radio" name="theme" value="chalk"><span data-theme="chalk">Pissarra</span></label>
         </div>
         <p class="background-category">Degradats</p>
         <div class="background-options">
@@ -125,6 +131,7 @@
         <label>Longitud <input name="lon" type="number" min="-180" max="180" step="any"></label>
       </div>
       <p id="editor-status" role="alert"></p>
+      </div>
     </form>
   </dialog>
 </body>

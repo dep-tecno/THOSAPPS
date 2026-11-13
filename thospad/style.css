@@ -38,7 +38,7 @@ a { color: var(--accent); }
 .top .file-tools button:hover:not(:disabled) { background: #273249; }
 .top #new-board { color: #b9f7d6; background: #17382e; border-color: #295744; }
 button:disabled { opacity: .5; cursor: default; }
-body { --editor-width: min(27rem, 42vw); min-height: 100dvh; display: flex; flex-direction: column; }
+body { --editor-width: min(22rem, 42vw); min-height: 100dvh; display: flex; flex-direction: column; }
 body.creating-pad { padding-right: var(--editor-width); }
 .board-surface #new-post {
   position: fixed;
@@ -58,16 +58,27 @@ body.creating-pad { padding-right: var(--editor-width); }
   max-height: 100dvh;
   max-width: 100%;
   margin: 0;
-  padding: 0 .85rem .85rem;
+  padding: 0;
+  overflow: hidden;
   border-radius: 0;
   z-index: 4;
 }
 .editor-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; }
-.creating-pad .editor-heading { position: sticky; top: 0; padding: .75rem 0; background: var(--panel); z-index: 1; }
-.creating-pad .type-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.creating-pad #edit-form { height: 100%; grid-template-rows: auto minmax(0, 1fr); padding: 0; gap: 0; }
+.creating-pad .editor-heading { padding: .5rem .65rem; border-bottom: 1px solid var(--line); }
+.creating-pad .editor-heading h2 { font-size: 1rem; }
+.creating-pad .editor-fields { overflow-y: auto; overscroll-behavior: contain; padding: .6rem .65rem; gap: .45rem; }
+.creating-pad #editor :is(input, textarea, button) { padding: .35rem .5rem; }
+.creating-pad #editor label { gap: .25rem; }
+.creating-pad #editor textarea { height: 3.5rem; }
+.creating-pad .type-options { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem; }
+.creating-pad .type-option span { gap: .2rem; padding: .25rem; font-size: .78rem; overflow-wrap: anywhere; }
+.creating-pad .type-option span::before { height: 1.3rem; }
+.creating-pad .background-category { margin: .35rem 0 .2rem; }
+.creating-pad .background-options span { min-height: 2.15rem; font-size: .75rem; text-align: center; }
 @media (max-width: 680px) {
   body.creating-pad { padding-right: 0; }
-  .creating-pad #editor { inset: auto 0 0; width: 100%; height: 70dvh; border-radius: 16px 16px 0 0; }
+  .creating-pad #editor { inset: auto 0 0; width: 100%; height: 58dvh; border-radius: 16px 16px 0 0; }
 }
 .top strong { letter-spacing: .09em; }
 .top strong span { color: var(--accent); }
@@ -116,6 +127,33 @@ select { max-width: min(60vw, 22rem); text-overflow: ellipsis; }
   --art: radial-gradient(circle at 76% 21%, #fff1bd 0 3%, transparent 3.3%),
     radial-gradient(ellipse 110% 48% at 27% 107%, #e8be8c 0 80%, #fff8e4 81% 83%, #9fdad3 84% 90%, transparent 91%),
     linear-gradient(#f6c7be 0%, #fce8c4 34%, #acd6db 35%, #76c0c2 71%, #c6e7d8);
+}
+[data-theme="cork"] {
+  --paper: #e2b584; --wash: #bb8356; --ink: #412b20;
+  --art: radial-gradient(ellipse at 3px 5px, #80512e75 0 1px, transparent 2px) 0 0 / 11px 9px,
+    radial-gradient(ellipse at 9px 12px, #a66b48 0 1px, transparent 2.5px) 2px 1px / 17px 15px,
+    radial-gradient(ellipse at 5px 2px, #f3c994 0 1px, transparent 3px) 0 0 / 13px 7px,
+    linear-gradient(125deg, #eac194, #c38b60);
+}
+[data-theme="metal"] {
+  --paper: #dbe2e9; --wash: #b1becb; --ink: #263a49;
+  --art: repeating-linear-gradient(0deg, #52657b18 0 1px, transparent 1px 3px, #fff5 3px 4px) 0 0,
+    linear-gradient(110deg, #a5b3c4, #f2f5f7 36%, #aebccc 68%, #dde5ed);
+}
+[data-theme="doodles"] {
+  --paper: #fff1d8; --wash: #ffe5dc; --ink: #483243;
+  --art: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMjAiIGhlaWdodD0iMTYwIiB2aWV3Qm94PSIwIDAgMjIwIDE2MCI+CiAgPGcgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJtMzcgMTUgNSAxMCAxMiAyLTkgOCAyIDExLTEwLTUtMTAgNSAyLTExLTktOCAxMi0yeiIgZmlsbD0iI2ZmZGI3OSIgc3Ryb2tlPSIjZDg5YTQ3Ii8+CiAgICA8cGF0aCBkPSJNMTEyIDEyMmMtNS05LTE4LTQtMTMgNmwxMyAxMiAxMy0xMmM1LTEwLTgtMTUtMTMtNnoiIGZpbGw9IiNmZmM1Y2QiIHN0cm9rZT0iI2NlNzg4ZCIvPgogICAgPHBhdGggZD0iTTE1OCA0NGEyMiAyMiAwIDAgMSA0NCAwbS0zNiAwYTE0IDE0IDAgMCAxIDI4IDBtLTIwIDBhNiA2IDAgMCAxIDEyIDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2I1OGFkNCIvPgogICAgPHBhdGggZD0iTTMyIDExM2MtMTIgMC0xMi0xNS0xLTE1IDEtMTQgMjEtMTUgMjMtMSAxNC0zIDE4IDE2IDQgMTZ6IiBmaWxsPSIjYzNlNmZjIiBzdHJva2U9IiM3YWFhYzQiLz4KICAgIDxwYXRoIGQ9Im0xNjcgMTExIDE1LTE2IDE4IDEwLTE3IDE2eiIgZmlsbD0iI2JkZThjOCIgc3Ryb2tlPSIjNzZhZDkwIi8+CiAgICA8cGF0aCBkPSJtOTEgNDQgNCA1IDctNG00MyAzMiA0IDUgNy00bTQxIDU4IDQgNSA3LTRtLTE5MSAwIDQgNSA3LTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RmYWE3NiIvPgogICAgPGNpcmNsZSBjeD0iMTE4IiBjeT0iMjIiIHI9IjMiIGZpbGw9IiM5YWNlYmEiLz4KICAgIDxjaXJjbGUgY3g9Ijc1IiBjeT0iNzUiIHI9IjMiIGZpbGw9IiNlOWE0YWYiLz4KICA8L2c+Cjwvc3ZnPgo=") repeat 0 0 / 220px 160px #fff3df;
+}
+[data-theme="graph"] {
+  --paper: #f2f9ff; --wash: #daeaf9; --ink: #243d54;
+  --art: linear-gradient(#6c9fbe44 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(90deg, #6c9fbe44 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(120deg, #fbfeff, #deedf9);
+}
+[data-theme="chalk"] {
+  --paper: #a6c4af; --wash: #8db09f; --ink: #163e31;
+  --art: repeating-linear-gradient(155deg, transparent 0 19px, #e7f5e726 20px, transparent 25px 37px),
+    radial-gradient(ellipse at top left, #c9dbbf, #88b09c);
 }
 .board-surface {
   --panel: #fffdf9;
@@ -252,6 +290,26 @@ dialog { color: var(--text); background: var(--panel); border: 1px solid var(--l
 dialog::backdrop { background: #000a; }
 form, form label { display: grid; gap: .65rem; }
 form { padding: .5rem; }
+.editor-fields { display: grid; gap: .65rem; min-width: 0; }
+body:not(.creating-pad) #editor {
+  width: min(27rem, calc(100% - 1.25rem));
+  max-height: calc(100dvh - 1.25rem);
+  padding: 0;
+  overflow: hidden;
+}
+body:not(.creating-pad) #edit-form {
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: calc(100dvh - 1.4rem);
+  padding: 0;
+  gap: 0;
+}
+body:not(.creating-pad) .editor-heading { padding: .6rem .75rem; border-bottom: 1px solid var(--line); }
+body:not(.creating-pad) .editor-heading h2 { font-size: 1rem; }
+body:not(.creating-pad) .editor-fields { overflow-y: auto; overscroll-behavior: contain; padding: .65rem .75rem; gap: .5rem; }
+body:not(.creating-pad) #editor :is(input, select, textarea, button) { padding: .35rem .5rem; }
+body:not(.creating-pad) #editor label { gap: .25rem; }
+body:not(.creating-pad) #editor textarea { height: 4.1rem; }
+body:not(.creating-pad) #image-preview { max-height: 6rem; }
 textarea { resize: vertical; }
 .coordinates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
 form input:not([type="radio"]) { width: 100%; }
