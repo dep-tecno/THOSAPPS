@@ -47,6 +47,16 @@ async function preparePostImage(file) {
 
 function readPadFile(text) {
   const { format, version, pad } = JSON.parse(text);
+  const isExtraColumn = id => typeof id === 'string' && /^extra-[a-f0-9]{32}$/.test(id);
+  const validColumns = columns => columns === undefined || (Array.isArray(columns) &&
+    columns.length >= defaultTableColumns.length &&
+    columns.every((column, index) => column &&
+      (index < defaultTableColumns.length ? column.id === defaultTableColumns[index].id : isExtraColumn(column.id)) &&
+      typeof column.label === 'string' && column.label.trim() && column.label.length <= 60) &&
+    new Set(columns.map(column => column.id)).size === columns.length);
+  const validTableValues = values => values === undefined || (values && typeof values === 'object' &&
+    !Array.isArray(values) && Object.entries(values).every(([id, value]) =>
+      isExtraColumn(id) && typeof value === 'string' && value.length <= 500));
   const validPosition = position => position === undefined || (position &&
     ([position.x, position.y].every(value => Number.isFinite(value) && value >= 0 && value <= 100000) ||
       (Number.isInteger(position.column) && position.column >= 0 && position.column < 3 &&
@@ -56,12 +66,12 @@ function readPadFile(text) {
     validPostDate(post.date) &&
     ((post.lat === null && post.lon === null) ||
       (Number.isFinite(post.lat) && Math.abs(post.lat) <= 90 && Number.isFinite(post.lon) && Math.abs(post.lon) <= 180)) &&
-    validPosition(post.position) &&
+    validPosition(post.position) && validTableValues(post.tableValues) &&
     (post.image === undefined || validPostImage(post.image)) &&
     (post.link === undefined || post.link === '' || Boolean(webLink(post.link)));
   if (format !== 'THOSPAD' || version !== 1 || !pad ||
       typeof pad.title !== 'string' || !pad.title.trim() || typeof pad.description !== 'string' ||
-      !Object.hasOwn(modes, pad.type) || !Array.isArray(pad.posts) || !pad.posts.every(validPost) ||
+      !Object.hasOwn(modes, pad.type) || !validColumns(pad.tableColumns) || !Array.isArray(pad.posts) || !pad.posts.every(validPost) ||
       new Set(pad.posts.map(post => post.id)).size !== pad.posts.length) {
     throw new Error('Fitxer PAD incorrecte');
   }

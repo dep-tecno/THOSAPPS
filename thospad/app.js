@@ -16,8 +16,6 @@ const dateFormat = new Intl.DateTimeFormat('ca', { dateStyle: 'long', timeZone: 
 const monthFormat = new Intl.DateTimeFormat('ca', { year: 'numeric', month: 'long', timeZone: 'UTC' });
 const datePrecision = byId('date-precision');
 const postFieldsByMode = {
-  columns: ['group'],
-  rows: ['group'],
   timeline: ['date'],
   map: ['place', 'coordinates']
 };
@@ -41,6 +39,7 @@ function element(tag, value, className) {
 function card(post, detail) {
   const node = element('article');
   if (detail) node.append(element('small', detail));
+  if (post.group && post.group !== detail) node.append(element('small', post.group));
   node.append(element('h3', post.title));
   if (post.body) node.append(element('p', post.body));
   addPostAttachments(node, post);
@@ -83,27 +82,88 @@ function displayDate(date) {
   return dateFormat.format(new Date(date + 'T00:00:00Z'));
 }
 
-function renderTable(posts) {
+function renderTable(board) {
+  const editable = board.type === 'table';
+  const columns = editable ? board.tableColumns ?? defaultTableColumns : defaultTableColumns;
   const wrap = element('div', undefined, 'table-wrap');
   const table = element('table');
   table.setAttribute('aria-label', 'Taula de publicacions');
   const header = table.createTHead().insertRow();
-  for (const label of ['Títol', 'Publicació', 'Columna', 'Data', 'Lloc']) {
-    const cell = element('th', label);
+  for (const column of columns) {
+    const cell = element('th');
     cell.scope = 'col';
+    if (editable) {
+      const button = element('button', column.label + ' ✎', 'column-button');
+      button.setAttribute('aria-label', 'Edita la columna «' + column.label + '»');
+      button.addEventListener('click', () => editTableHeader(board, columns, cell, button, column));
+      cell.append(button);
+    } else cell.textContent = column.label;
+    header.append(cell);
+  }
+  if (editable) {
+    const cell = element('th');
+    const button = element('button', '+ Columna', 'column-button');
+    button.addEventListener('click', () => editTableHeader(board, columns, cell, button));
+    cell.append(button);
     header.append(cell);
   }
   const body = table.createTBody();
-  for (const post of posts) {
+  for (const post of board.posts) {
     const row = body.insertRow();
-    for (const value of [post.title, post.body, post.group, post.date && displayDate(post.date), post.place]) {
-      row.insertCell().textContent = value || '—';
+    for (const column of columns) {
+      const cell = row.insertCell();
+      const value = column.id === 'date' ? post.date && displayDate(post.date)
+        : column.id.startsWith('extra-') ? post.tableValues?.[column.id] : post[column.id];
+      cell.textContent = value || '—';
+      if (column.id === 'body') addPostAttachments(cell, post);
+      if (column.id === 'title') enablePostEditing(row, cell, post);
     }
-    addPostAttachments(row.cells[1], post);
-    enablePostEditing(row, row.cells[0], post);
+    if (editable) row.insertCell();
   }
   wrap.append(table);
   content.append(wrap);
+}
+
+function editTableHeader(board, columns, cell, trigger, column) {
+  if (saving) return;
+  content.querySelector('.column-editor button[type="button"]')?.click();
+  const editor = element('form', undefined, 'column-editor');
+  const input = element('input');
+  input.required = true;
+  input.maxLength = 60;
+  input.value = column?.label ?? '';
+  input.placeholder = 'Nom de la columna';
+  input.setAttribute('aria-label', 'Nom de la columna');
+  const save = element('button', 'Desa');
+  const cancel = element('button', 'Cancel·la');
+  cancel.type = 'button';
+  function close() {
+    cell.replaceChildren(trigger);
+    trigger.focus();
+  }
+  cancel.addEventListener('click', close);
+  editor.addEventListener('keydown', event => {
+    if (event.key === 'Escape') close();
+  });
+  editor.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (saving) return;
+    const label = input.value.trim();
+    if (!label) {
+      input.value = '';
+      input.reportValidity();
+      return;
+    }
+    const tableColumns = column ? columns.map(item => item.id === column.id ? { ...item, label } : item)
+      : [...columns, { id: 'extra-' + makePadId(), label }];
+    const next = boards.map(item => item.id === board.id ? { ...item, tableColumns } : item);
+    const index = column ? columns.indexOf(column) : columns.length;
+    if (await persist(next, board.id, status)) content.querySelectorAll('.column-button')[index].focus();
+  });
+  editor.append(input, save, cancel);
+  cell.replaceChildren(editor);
+  input.select();
+  input.focus();
 }
 
 function svg(tag, attributes) {
@@ -149,11 +209,11 @@ function renderMap(posts) {
 function renderPosts(board) {
   const { posts, mode } = board;
   content.replaceChildren();
+  if (mode === 'table') return renderTable(board);
   if (!posts.length) {
     content.append(element('p', 'Afegeix la primera publicació al PAD.', 'empty'));
     return;
   }
-  if (mode === 'table') return renderTable(posts);
   if (mode === 'map') return renderMap(posts);
   if (mode === 'free') return renderFree(board);
   if (mode === 'timeline') return renderTimeline(board);
@@ -377,9 +437,32 @@ function openEditor(board, post, pad) {
   byId('board-types').hidden = !board || Boolean(pad);
   editorStatus.textContent = '';
   byId('editor-title').textContent = pad ? 'Edita el PAD' : board ? 'Nou PAD' : post ? 'Edita la publicació' : 'Nova publicació';
-  byId('body-label').firstElementChild.textContent = board ? 'Descripció' : 'Text';
+  const tableColumns = !board && activeBoard().type === 'table' ? activeBoard().tableColumns ?? defaultTableColumns : [];
+  byId('post-title-label').textContent = tableColumns.find(column => column.id === 'title')?.label ?? 'Títol';
+  byId('body-label').firstElementChild.textContent = board ? 'Descripció'
+    : tableColumns.find(column => column.id === 'body')?.label ?? 'Text';
+  const tableFields = byId('table-fields');
+  tableFields.replaceChildren();
+  for (const column of tableColumns.filter(item => item.id.startsWith('extra-'))) {
+    const label = element('label', column.label);
+    const input = element('input');
+    input.name = column.id;
+    input.maxLength = 500;
+    input.value = post?.tableValues?.[column.id] ?? '';
+    label.append(input);
+    tableFields.append(label);
+  }
+  tableFields.hidden = !tableFields.childElementCount;
   const mode = board ? undefined : activeBoard().mode;
-  const visibleFields = board ? [] : ['link', 'image', ...(postFieldsByMode[mode] || [])];
+  const visibleFields = board ? [] : ['group', 'link', 'image', ...(postFieldsByMode[mode] || [])];
+  byId('post-group-label').textContent = tableColumns.find(column => column.id === 'group')?.label
+    ?? (mode === 'rows' || mode === 'columns' ? 'Etiqueta del grup' : 'Etiqueta');
+  const groups = board ? [] : activeBoard().posts.map(item => item.group).filter(Boolean);
+  byId('post-groups').replaceChildren(...[...new Set(groups)].map(group => {
+    const option = element('option');
+    option.value = group;
+    return option;
+  }));
   for (const field of form.querySelectorAll('[data-field]')) {
     field.hidden = !visibleFields.includes(field.dataset.field);
     for (const input of field.querySelectorAll('input, select')) input.disabled = field.hidden;
@@ -609,6 +692,8 @@ async function init() {
         const link = webLink(fields.link);
         if (fields.link && !link) throw new Error('Introdueix un enllaç web amb http:// o https://.');
         post = { ...editingPost, id: editingPost?.id ?? id, ...postFrom(fields), link, image: currentImage };
+        const tableValues = Object.entries(fields).filter(([name]) => name.startsWith('extra-'));
+        if (tableValues.length) post.tableValues = Object.fromEntries(tableValues);
       } catch (error) {
         editorStatus.textContent = error.message;
         return;

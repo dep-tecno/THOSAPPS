@@ -65,7 +65,7 @@
         <h2 id="editor-title"></h2>
         <div class="actions"><button type="button" id="cancel">Cancel·la</button><button id="editor-save" class="primary">Desa</button></div>
       </div>
-      <label>Títol <input name="title" required maxlength="100"></label>
+      <label><span id="post-title-label">Títol</span><input name="title" required maxlength="100"></label>
       <label id="body-label"><span></span><textarea name="body" maxlength="1500" rows="4"></textarea></label>
       <fieldset id="board-types">
         <legend>Tipologia inicial</legend>
@@ -94,7 +94,11 @@
           <label><input type="radio" name="theme" value="coral"><span data-theme="coral">Corall</span></label>
         </div>
       </fieldset>
-      <label data-field="group">Grup (fila o columna) <input name="group" maxlength="60" placeholder="General"></label>
+      <label data-field="group"><span id="post-group-label">Etiqueta</span>
+        <input name="group" maxlength="60" list="post-groups">
+      </label>
+      <datalist id="post-groups"></datalist>
+      <div id="table-fields" hidden></div>
       <label data-field="link">Enllaç web <input name="link" type="url" placeholder="https://…" maxlength="2048"></label>
       <div data-field="image" class="image-editor">
         <label>Imatge <input id="post-image" type="file" accept="image/jpeg,image/png,image/webp"></label>

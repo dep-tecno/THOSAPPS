@@ -15,6 +15,14 @@ const wallFormats = {
   free: 'Forma lliure'
 };
 
+const defaultTableColumns = [
+  { id: 'title', label: 'Títol' },
+  { id: 'body', label: 'Publicació' },
+  { id: 'group', label: 'Etiqueta' },
+  { id: 'date', label: 'Data' },
+  { id: 'place', label: 'Lloc' }
+];
+
 function normalizeBoard(board) {
   const type = board.type || (['timeline', 'map'].includes(board.mode) ? board.mode : 'wall');
   const mode = type === 'wall' && Object.hasOwn(wallFormats, board.mode) ? board.mode : type;
