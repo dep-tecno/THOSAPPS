@@ -181,6 +181,61 @@ select { max-width: min(60vw, 22rem); text-overflow: ellipsis; }
   --art: repeating-linear-gradient(155deg, transparent 0 19px, #e7f5e726 20px, transparent 25px 37px),
     radial-gradient(ellipse at top left, #c9dbbf, #88b09c);
 }
+[data-theme="mist"] { --paper: #dee3ef; --wash: #c1c9dd; --ink: #28344e; --art: linear-gradient(150deg, #f1f4fa, var(--wash)); }
+[data-theme="clay"] { --paper: #f5e4db; --wash: #d7ab98; --ink: #54372e; --art: linear-gradient(135deg, #f7eee8, var(--wash)); }
+[data-theme="sage"] { --paper: #dce7d8; --wash: #b6c9af; --ink: #2b4538; --art: var(--paper); }
+[data-theme="ice"] { --paper: #e4f2f7; --wash: #b8dbe8; --ink: #233e54; --art: radial-gradient(ellipse at top left, #f3fbff, var(--wash)); }
+[data-theme="pearl"] { --paper: #f3eee8; --wash: #e1d9ee; --ink: #45384e; --art: linear-gradient(135deg, #fff8ed, var(--wash)); }
+[data-theme="orbit"] {
+  --paper: #202943; --ink: #22334d;
+  --art: radial-gradient(circle at 76% 22%, #eee4ff 0 1px, transparent 2px),
+    radial-gradient(circle at 13% 30%, #fff 0 1px, transparent 2px),
+    radial-gradient(ellipse at 61% 115%, #1f385c 0 29%, #79bce3 30%, #b4dafa 31%, transparent 32%),
+    linear-gradient(152deg, #080e1e, #283459);
+}
+[data-theme="galaxy"] {
+  --paper: #312347; --ink: #40264d;
+  --art: radial-gradient(circle at 35% 26%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 72% 60%, #f9eaff 0 1px, transparent 2px),
+    radial-gradient(ellipse at 52% 46%, #f2cbdc, transparent 17%),
+    radial-gradient(ellipse at 47% 63%, #c77ba2, transparent 34%),
+    radial-gradient(ellipse at 64% 45%, #6166ae, transparent 52%),
+    linear-gradient(130deg, #13122c, #321e49);
+}
+[data-theme="aurora"] {
+  --paper: #183a45; --ink: #173d37;
+  --art: radial-gradient(ellipse 80% 30% at 52% 9%, #6ce6b4, transparent 72%),
+    radial-gradient(ellipse 65% 40% at 69% 35%, #448ba2, transparent 74%),
+    linear-gradient(155deg, #101832, #123b41 70%, #122433);
+}
+[data-theme="graphite"] { --paper: #303742; --ink: #2b3441; --art: linear-gradient(145deg, #161a20, #444e5c); }
+[data-theme="savanna"] {
+  --paper: #f1d4ab; --ink: #583a28;
+  --art: radial-gradient(circle at 74% 32%, #fff0af 0 7%, transparent 7.5%),
+    radial-gradient(ellipse 85% 50% at 13% 125%, #855540 0 98%, transparent 100%),
+    radial-gradient(ellipse 85% 50% at 90% 120%, #b17a4f 0 98%, transparent 100%),
+    linear-gradient(#e6a287, #f6c792 64%, #d39c6b);
+}
+[data-theme="woodland"] {
+  --paper: #bbd2c5; --ink: #1e4238;
+  --art: radial-gradient(ellipse 78% 52% at 5% 126%, #204b40 0 98%, transparent 100%),
+    radial-gradient(ellipse 83% 53% at 95% 123%, #416d5e 0 98%, transparent 100%),
+    radial-gradient(ellipse 68% 52% at 39% 115%, #79a291 0 98%, transparent 100%),
+    linear-gradient(#dfebdf, #90b3a7);
+}
+[data-theme="deep"] {
+  --paper: #17536b; --ink: #184356;
+  --art: radial-gradient(ellipse at 54% -10%, #a3e7d9, transparent 58%), linear-gradient(#246c87, #091c35);
+}
+[data-theme="volcano"] {
+  --paper: #422b3d; --ink: #533141;
+  --art: radial-gradient(ellipse 65% 52% at 60% 119%, #281d31 0 98%, transparent 100%),
+    radial-gradient(ellipse at 61% 69%, #f08b6b, transparent 46%), linear-gradient(#211d39, #613749);
+}
+.background-options :is([data-theme="orbit"], [data-theme="galaxy"], [data-theme="aurora"], [data-theme="graphite"], [data-theme="deep"], [data-theme="volcano"]) {
+  color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 8px #000;
+}
 .board-surface {
   --panel: #fffdf9;
   --line: #0003;
