@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>THOSPAD · PADS d’aula</title>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=share1">
   <script defer src="store.js"></script>
   <script defer src="pad-files.js"></script>
   <script defer src="map-data.js"></script>
-  <script defer src="app.js"></script>
+  <script defer src="app.js?v=share1"></script>
 </head>
 <body>
   <header class="top">
@@ -41,6 +41,10 @@
         <button id="photo-pad" aria-label="Exporta una foto" title="Exporta una foto" disabled><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 6l2-3h4l2 3h4a1 1 0 0 1 1 1v12H3V7a1 1 0 0 1 1-1Z"/><circle cx="12" cy="12" r="3"/></svg> Foto</button>
         <button id="delete-pad" class="danger" aria-label="Elimina el PAD" title="Elimina el PAD" hidden><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/></svg> Elimina</button>
       </div>
+      <button id="share-pad" disabled>
+        <svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 8-5m-8 5 8 5"/><circle cx="5" cy="12" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="19" cy="19" r="3"/></svg>
+        <span>Compartir PAD<small>Mateixa Wi-Fi</small></span>
+      </button>
     </div>
   </header>
   <main>
@@ -54,6 +58,19 @@
     <section id="content" aria-label="Publicacions"></section>
     </div>
   </main>
+  <dialog id="share-dialog" aria-labelledby="share-title">
+    <div class="share-panel">
+      <h2 id="share-title">Compartir PAD</h2>
+      <p>Connecteu-vos a la mateixa Wi-Fi. Qui tingui l’enllaç pot editar el PAD.</p>
+      <p id="share-state" role="status"></p>
+      <label>Enllaç d’edició <input id="share-link" readonly></label>
+      <div class="actions">
+        <button id="share-leave" type="button">Surt de la sala</button>
+        <button id="share-close" type="button">Tanca</button>
+        <button id="share-copy" type="button" class="primary">Copia l’enllaç</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-description">
     <form id="delete-form">
       <h2 id="delete-title">Elimina el PAD</h2>

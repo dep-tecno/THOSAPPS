@@ -1,6 +1,10 @@
 
 const byId = id => document.getElementById(id);
 const picker = byId('boards');
+const sharePad = byId('share-pad');
+const shareDialog = byId('share-dialog');
+let shared;
+let sharingBusy = false;
 const content = byId('content');
 const dialog = byId('editor');
 const form = byId('edit-form');
@@ -104,6 +108,7 @@ function addCardResize(node, post) {
   handle.addEventListener('pointerdown', event => {
     if (saving || !event.isPrimary || event.button !== 0) return;
     handle.setPointerCapture(event.pointerId);
+    node.classList.add('resizing');
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, start: measure(), previous: currentStyle() };
   });
   handle.addEventListener('pointermove', event => {
@@ -115,6 +120,7 @@ function addCardResize(node, post) {
     if (drag?.id !== event.pointerId) return;
     const { size, previous } = drag;
     drag = null;
+    node.classList.remove('resizing');
     if (size) void save(size, previous);
   });
   handle.addEventListener('lostpointercapture', () => {
@@ -122,6 +128,7 @@ function addCardResize(node, post) {
     node.style.setProperty('--card-width', drag.previous.width);
     node.style.minHeight = drag.previous.height;
     drag = null;
+    node.classList.remove('resizing');
   });
   handle.addEventListener('keydown', event => {
     const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
@@ -748,6 +755,7 @@ function activeBoard() {
 
 function render() {
   const board = activeBoard();
+  sharePad.disabled = sharingBusy || (!board && !shared);
   byId('kanban-split-control').hidden = presenting || board?.type !== 'kanban';
   byId('kanban-split').checked = Boolean(board?.kanbanSplit);
   picker.replaceChildren(...boards.map(item => {
@@ -759,7 +767,7 @@ function render() {
   picker.disabled = !board;
   byId('save-pad').disabled = !board;
   byId('photo-pad').disabled = !board;
-  deleteButton.hidden = !board || presenting;
+  deleteButton.hidden = !board || presenting || shared?.padId === board.id;
   byId('new-board').hidden = presenting;
   byId('open-pad').hidden = presenting;
   byId('new-post').hidden = presenting;
@@ -792,9 +800,14 @@ function render() {
 async function persist(next, selectedId, feedback, refresh = true) {
   if (presenting) return false;
   saving = true;
+  const previousShared = shared && boards.find(board => board.id === shared.padId);
   try {
     await store.save(next);
     boards = next;
+    if (previousShared) {
+      const nextShared = boards.find(board => board.id === previousShared.id);
+      if (nextShared && nextShared !== previousShared) shared.room.save(previousShared, nextShared);
+    }
     activeId = selectedId;
     status.textContent = '';
     if (refresh) render();
@@ -804,6 +817,54 @@ async function persist(next, selectedId, feedback, refresh = true) {
     return false;
   } finally {
     saving = false;
+    shared?.room.flush();
+  }
+}
+
+async function joinSharedPad(invite, board) {
+  if (shared || sharingBusy) return;
+  if (!isSecureContext || location.protocol === 'file:') {
+    status.textContent = 'Obre THOSPAD per HTTPS per compartir el PAD.';
+    return;
+  }
+  sharingBusy = true;
+  sharePad.disabled = true;
+  try {
+    const { padRoom } = await import('./p2p/pad-room.bundle.js?v=1');
+    const padId = board?.id ?? makePadId();
+    const url = new URL(location.href);
+    url.hash = new URLSearchParams(invite).toString();
+    byId('share-link').value = url.href;
+    byId('share-state').textContent = 'Esperant altres participants…';
+    let received = Boolean(board);
+    const room = padRoom(invite.sala, invite.clau, board, {
+      busy: () => saving || dialog.open || deleteDialog.open || Boolean(content.querySelector('.column-editor, .dragging, .resizing')),
+      connection: (count, error) => {
+        byId('share-state').textContent = error ? 'Hi ha hagut un problema de connexió.'
+          : count ? 'Connectat · ' + (count + 1) + ' navegadors' : 'Esperant altres participants…';
+      },
+      changed: snapshot => {
+        const pad = readPadFile(JSON.stringify({ format: 'THOSPAD', version: 1, pad: snapshot }));
+        pad.id = padId;
+        const next = boards.some(item => item.id === padId)
+          ? boards.map(item => item.id === padId ? pad : item) : [...boards, pad];
+        try {
+          void store.save(next).catch(() => { status.textContent = 'El PAD compartit no s’ha pogut desar en aquest navegador.'; });
+        } finally {
+          boards = next;
+          if (!received) activeId = padId;
+          received = true;
+          render();
+        }
+      }
+    });
+    shared = { room, padId };
+    if (!shareDialog.open) shareDialog.showModal();
+  } catch {
+    status.textContent = 'No s’ha pogut obrir la sala compartida.';
+  } finally {
+    sharingBusy = false;
+    render();
   }
 }
 
@@ -965,6 +1026,32 @@ async function init() {
     return;
   }
   activeId = boards[0]?.id;
+  sharePad.addEventListener('click', () => {
+    if (shared) shareDialog.showModal();
+    else if (activeBoard()) void joinSharedPad({ sala: makePadId(), clau: makePadId() }, activeBoard());
+  });
+  byId('share-close').addEventListener('click', () => shareDialog.close());
+  byId('share-copy').addEventListener('click', async () => {
+    const link = byId('share-link');
+    try { await navigator.clipboard.writeText(link.value); }
+    catch { link.select(); }
+  });
+  byId('share-leave').addEventListener('click', async () => {
+    if (!shared || sharingBusy) return;
+    sharingBusy = true;
+    const { room } = shared;
+    try {
+      room.flush();
+      await room.close();
+    } finally {
+      shared = undefined;
+      sharingBusy = false;
+      history.replaceState(null, '', location.pathname + location.search);
+      shareDialog.close();
+      render();
+    }
+  });
+  dialog.addEventListener('close', () => shared?.room.flush());
   const split = byId('kanban-split');
   split.addEventListener('change', async () => {
     const board = activeBoard();
@@ -1220,6 +1307,12 @@ async function init() {
     }
   });
   render();
+  const invitation = new URLSearchParams(location.hash.slice(1));
+  const sala = invitation.get('sala');
+  const clau = invitation.get('clau');
+  if ([sala, clau].every(value => /^[a-f0-9]{32}$/.test(value ?? ''))) {
+    void joinSharedPad({ sala, clau });
+  }
 }
 
 void init();

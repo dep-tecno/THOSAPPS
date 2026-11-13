@@ -60,6 +60,10 @@ a { color: var(--accent); }
 .top .file-tools button:not(.danger) { background: transparent; border-color: transparent; }
 .top .file-tools button:hover:not(:disabled) { background: #273249; }
 .top #new-board { color: #b9f7d6; background: #17382e; border-color: #295744; }
+#share-pad { display: inline-flex; align-items: center; gap: .6rem; margin-inline-start: auto; background: #17382e; color: #c3f8dc; border-color: #397757; text-align: left; line-height: 1.15; }
+#share-pad small { display: block; font-size: .7rem; margin-top: .2rem; color: #b4dcc6; }
+.share-panel, .share-panel label { display: grid; gap: .65rem; }
+.share-panel input { width: 100%; min-width: 0; }
 button:disabled { opacity: .5; cursor: default; }
 body { --editor-width: min(22rem, 42vw); min-height: 100dvh; display: flex; flex-direction: column; }
 body.creating-pad { padding-right: var(--editor-width); }
