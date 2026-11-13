@@ -117,6 +117,23 @@ async function padPhoto(surface) {
     node.style.display = 'none';
   });
   copy.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+  const tiles = [...copy.querySelectorAll('.map-tiles image')];
+  const embedded = await Promise.allSettled(tiles.map(async tile => {
+    const response = await fetch(tile.getAttribute('href'));
+    if (!response.ok) throw new Error('Cartografia no disponible');
+    const blob = await response.blob();
+    const url = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    tile.setAttribute('href', url);
+  }));
+  if (embedded.some(result => result.status === 'rejected')) {
+    copy.querySelector('.map-tiles').replaceChildren();
+    copy.querySelector('.map-names').style.visibility = 'visible';
+  }
   const markup = new XMLSerializer().serializeToString(copy);
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height +
     '"><foreignObject width="100%" height="100%">' + markup + '</foreignObject></svg>';

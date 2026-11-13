@@ -7,6 +7,11 @@ const form = byId('edit-form');
 const status = byId('status');
 const editorStatus = byId('editor-status');
 const views = byId('views');
+const padMode = byId('pad-mode');
+let presenting = false;
+const mapPicker = byId('map-picker');
+let mapPoint;
+let mapSelection;
 const timelineDirection = byId('timeline-direction');
 const deleteDialog = byId('delete-dialog');
 const deleteButton = byId('delete-pad');
@@ -77,6 +82,7 @@ function addPostAttachments(node, post) {
 }
 
 function enablePostEditing(container, actionCell, post) {
+  if (presenting) return;
   const button = element('button', 'Edita', 'edit-post');
   button.type = 'button';
   button.setAttribute('aria-label', 'Edita «' + post.title + '»');
@@ -95,8 +101,8 @@ function displayDate(date) {
 }
 
 function renderTable(board) {
-  const editable = board.type === 'table';
-  const columns = editable ? board.tableColumns ?? defaultTableColumns : defaultTableColumns;
+  const editable = !presenting && board.type === 'table';
+  const columns = board.type === 'table' ? board.tableColumns ?? defaultTableColumns : defaultTableColumns;
   const wrap = element('div', undefined, 'table-wrap');
   const table = element('table');
   table.setAttribute('aria-label', 'Taula de publicacions');
@@ -187,29 +193,168 @@ function svg(tag, attributes) {
 
 function renderMap(posts) {
   const figure = element('figure', undefined, 'map');
-  const map = svg('svg', { viewBox: '0 0 720 360', role: 'img', 'aria-label': 'Mapa esquemàtic amb coordenades geogràfiques' });
+  const map = svg('svg', { id: 'pad-map', viewBox: '0 0 720 360', role: 'group', 'aria-label': 'Mapa polític mundial' });
   const located = posts.filter(post => post.lat !== null && post.lon !== null);
-  for (let x = 60; x < 720; x += 60) {
-    map.append(svg('path', { d: 'M' + x + ' 0V360', stroke: x === 360 ? '#899db5' : '#45617c' }));
+  const countries = svg('g', { class: 'map-countries', 'aria-hidden': 'true' });
+  const names = svg('g', { class: 'map-names', 'aria-hidden': 'true' });
+  for (const country of mapCountries) {
+    countries.append(svg('path', { d: country.path }));
+    const name = svg('text', { x: country.x, y: country.y, 'data-rank': country.rank });
+    name.textContent = country.name;
+    names.append(name);
   }
-  for (let y = 60; y < 360; y += 60) {
-    map.append(svg('path', { d: 'M0 ' + y + 'H720', stroke: y === 180 ? '#899db5' : '#45617c' }));
+  map.append(countries, names);
+  const controls = element('div', undefined, 'map-controls');
+  const markers = [];
+  const tiles = svg('g', { class: 'map-tiles', 'aria-hidden': 'true', 'pointer-events': 'none' });
+  map.insertBefore(tiles, names);
+  const tileNodes = new Map();
+  const onlineTiles = ['http:', 'https:'].includes(location.protocol);
+  let tileFrame;
+  function updateTiles() {
+    if (!onlineTiles) return;
+    const z = Math.max(0, Math.min(17, Math.round(Math.log2(720 * map.clientWidth / (256 * width)))));
+    if (z < 5) {
+      tiles.replaceChildren();
+      tileNodes.clear();
+      names.style.visibility = '';
+      return;
+    }
+    const count = 2 ** z;
+    const size = 720 / count;
+    const halfHeight = width * map.clientHeight / Math.max(1, map.clientWidth) / 2;
+    const wanted = new Set();
+    for (let x = Math.max(0, Math.floor((cx - width / 2) / size)); x < count && x * size < cx + width / 2; x++) {
+      for (let y = Math.max(0, Math.floor((cy - halfHeight) / size)); y < count && y * size < cy + halfHeight; y++) {
+        const key = [z, x, y].join('/');
+        wanted.add(key);
+        if (tileNodes.has(key)) continue;
+        const tile = svg('image', { x: x * size, y: y * size, width: size, height: size,
+          href: 'https://tile.openstreetmap.org/' + key + '.png' });
+        tile.addEventListener('error', () => { names.style.visibility = ''; });
+        tileNodes.set(key, tile);
+        tiles.append(tile);
+      }
+    }
+    for (const [key, tile] of tileNodes) {
+      if (wanted.has(key)) continue;
+      tile.remove();
+      tileNodes.delete(key);
+    }
+    names.style.visibility = wanted.size ? 'hidden' : '';
+  }
+  let width = 720;
+  let cx = 360;
+  let cy = 180;
+  function setView(x, y, size) {
+    const heightRatio = map.clientHeight / Math.max(1, map.clientWidth) || .5;
+    width = Math.max(onlineTiles ? .035 : 22.5, Math.min(720, size));
+    const height = width * heightRatio;
+    cx = Math.max(width / 2, Math.min(720 - width / 2, x));
+    cy = height >= 720 ? 360 : Math.max(height / 2, Math.min(720 - height / 2, y));
+    map.setAttribute('viewBox', [cx - width / 2, cy - height / 2, width, height].join(' '));
+    clearTimeout(tileFrame);
+    tileFrame = setTimeout(() => { if (map.isConnected) updateTiles(); }, 100);
+    names.style.fontSize = (width / 135) + 'px';
+    for (const name of names.children) name.style.display = Number(name.dataset.rank) > (width > 360 ? 3 : 9) ? 'none' : '';
+    for (const [marker, px, py] of markers) {
+      marker.setAttribute('transform', 'translate(' + px + ' ' + py + ') scale(' + width / 720 + ')');
+    }
+    draft.setAttribute('r', 8 * width / 720);
+  }
+  for (const [label, action] of [
+    ['−', () => setView(cx, cy, width * 2)],
+    ['+', () => setView(cx, cy, width / 2)],
+    ['Centra', centerMap]
+  ]) {
+    const button = element('button', label);
+    button.setAttribute('aria-label', label === '−' ? 'Allunya el mapa' : label === '+' ? 'Apropa el mapa' : 'Centra el mapa');
+    button.addEventListener('click', action);
+    controls.append(button);
+  }
+  function centerMap() {
+    if (!located.length) return setView(360, 360, 720);
+    const xs = located.map(post => 360 + post.lon * 2);
+    const ys = located.map(post => mapLatitudeY(post.lat));
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    setView((minX + maxX) / 2, (minY + maxY) / 2, Math.max(90, (maxX - minX) * 1.2, (maxY - minY) * 2.4));
   }
   const list = element('ol', undefined, 'map-list');
   located.forEach((post, index) => {
     const x = 360 + post.lon * 2;
-    const y = 180 - post.lat * 2;
-    const pin = svg('circle', { cx: x, cy: y, r: 8, fill: '#00e676', stroke: '#0f1117' });
-    const label = svg('text', { x: Math.max(12, Math.min(708, x)), y: Math.max(16, y - 10), fill: '#fff', 'text-anchor': 'middle', 'font-size': 14 });
+    const y = mapLatitudeY(post.lat);
+    const pin = svg('circle', { r: 8, fill: '#233544', stroke: '#fff' });
+    const label = svg('text', { y: 3, fill: '#fff', 'text-anchor': 'middle', 'font-size': 9 });
     label.textContent = index + 1;
-    map.append(pin, label);
+    const marker = svg('g', { tabindex: 0, role: 'button', 'aria-label': post.title });
+    marker.append(pin, label);
+    markers.push([marker, x, y]);
+    map.append(marker);
     const item = element('li');
     item.append(card(post, [post.place, post.lat + '°, ' + post.lon + '°'].filter(Boolean).join(' · ')));
+    item.tabIndex = -1;
+    const showPost = () => {
+      if (!mapPicker.hidden) return;
+      pointList.open = true;
+      item.focus();
+      item.scrollIntoView({ block: 'nearest' });
+    };
+    marker.addEventListener('click', showPost);
+    marker.addEventListener('keydown', event => {
+      if (!['Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      showPost();
+    });
     list.append(item);
   });
-  figure.append(map, element('figcaption', 'Mapa esquemàtic de latitud i longitud · Línies cada 30°'));
+  const draft = svg('circle', { r: 8, fill: '#ff6295', stroke: '#fff', 'stroke-width': 2, hidden: '' });
+  map.append(draft);
+  map.addEventListener('wheel', event => {
+    event.preventDefault();
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(map.getScreenCTM().inverse());
+    const next = Math.max(onlineTiles ? .035 : 22.5, Math.min(720, width * (event.deltaY < 0 ? .8 : 1.25)));
+    const ratio = next / width;
+    setView(point.x + (cx - point.x) * ratio, point.y + (cy - point.y) * ratio, next);
+  }, { passive: false });
+  let pan;
+  map.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    if (mapPicker.hidden) {
+      if (!event.target.closest('[role="button"]')) {
+        pan = { id: event.pointerId, x: event.clientX, y: event.clientY, cx, cy };
+        map.setPointerCapture(event.pointerId);
+      }
+      return;
+    }
+    map.setPointerCapture(event.pointerId);
+    pickMapPoint(event, map);
+  });
+  map.addEventListener('pointermove', event => {
+    if (!mapPicker.hidden && map.hasPointerCapture(event.pointerId)) pickMapPoint(event, map);
+    if (pan?.id === event.pointerId) {
+      const scale = map.getScreenCTM().a;
+      setView(pan.cx - (event.clientX - pan.x) / scale, pan.cy - (event.clientY - pan.y) / scale, width);
+    }
+  });
+  map.addEventListener('lostpointercapture', () => { pan = undefined; });
+  const credit = element('figcaption', 'Natural Earth');
+  if (onlineTiles) {
+    const link = element('a', '© OpenStreetMap contributors');
+    link.href = 'https://www.openstreetmap.org/copyright';
+    credit.append(' · ', link);
+  }
+  figure.append(controls, map, credit);
   content.append(figure);
-  if (located.length) content.append(list);
+  centerMap();
+  const observer = new ResizeObserver(() => {
+    if (!map.isConnected) observer.disconnect();
+    else setView(cx, cy, width);
+  });
+  observer.observe(map);
+  const pointList = element('details', undefined, 'map-points');
+  pointList.append(element('summary', 'Punts del PAD (' + located.length + ')'), list);
+  if (located.length) content.append(pointList);
   const unlocated = posts.filter(post => !located.includes(post));
   if (unlocated.length) {
     const section = element('div', undefined, 'lane');
@@ -223,11 +368,11 @@ function renderPosts(board) {
   const { posts, mode } = board;
   content.replaceChildren();
   if (mode === 'table') return renderTable(board);
+  if (mode === 'map') return renderMap(posts);
   if (!posts.length) {
-    content.append(element('p', 'Afegeix la primera publicació al PAD.', 'empty'));
+    if (!presenting) content.append(element('p', 'Afegeix la primera publicació al PAD.', 'empty'));
     return;
   }
-  if (mode === 'map') return renderMap(posts);
   if (mode === 'free') return renderFree(board);
   if (mode === 'timeline') return renderTimeline(board);
   const layout = element('div', undefined, mode);
@@ -247,6 +392,62 @@ function renderPosts(board) {
     for (const post of posts) layout.append(card(post, post.group));
   }
   content.append(layout);
+}
+
+function pickMapPoint(event, map) {
+  const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(map.getScreenCTM().inverse());
+  byId('pick-lat').value = (Math.atan(Math.sinh(Math.PI * (1 - 2 * point.y / 720))) * 180 / Math.PI).toFixed(5);
+  byId('pick-lon').value = Math.max(-180, Math.min(180, (point.x - 360) / 2)).toFixed(5);
+  updateMapPoint();
+}
+
+function updateMapPoint() {
+  const lat = byId('pick-lat');
+  const lon = byId('pick-lon');
+  mapPoint = lat.value && lon.value && lat.validity.valid && lon.validity.valid
+    ? { lat: Number(lat.value), lon: Number(lon.value) } : null;
+  byId('map-continue').disabled = !mapPoint;
+  byId('map-prompt').hidden = !mapPoint;
+  byId('pick-name-label').hidden = !mapPoint;
+  const draft = byId('pad-map')?.lastElementChild;
+  if (draft && mapPoint) {
+    draft.setAttribute('cx', 360 + mapPoint.lon * 2);
+    draft.setAttribute('cy', mapLatitudeY(mapPoint.lat));
+  }
+  draft?.toggleAttribute('hidden', !mapPoint);
+}
+
+function showMapPicker(show, point = mapSelection) {
+  mapPicker.hidden = !show;
+  form.querySelector('.editor-fields').hidden = show;
+  byId('editor-save').hidden = show;
+  byId('post-delete').hidden = show || !editingPost;
+  byId('editor-title').textContent = show ? 'Tria una ubicació' : editingPost ? 'Edita la targeta' : 'Nova targeta';
+  if (show) {
+    byId('pick-lat').value = point?.lat ?? '';
+    byId('pick-lon').value = point?.lon ?? '';
+    byId('pick-name').value = point?.place ?? '';
+    updateMapPoint();
+    byId('pick-lat').focus();
+  } else {
+    form.elements.namedItem('title').focus();
+  }
+}
+
+function confirmMapLocation(point) {
+  if (mapPicker.hidden) return;
+  const place = point ? byId('pick-name').value.trim() || point.lat + '°, ' + point.lon + '°' : '';
+  mapSelection = point ? { ...point, place } : null;
+  for (const [name, value] of Object.entries({ place, lat: point?.lat ?? '', lon: point?.lon ?? '' })) {
+    form.elements.namedItem(name).value = value;
+  }
+  const title = form.elements.namedItem('title');
+  if (!title.value.trim()) title.value = place;
+  if (!point) {
+    byId('pick-lat').value = '';
+    updateMapPoint();
+  }
+  showMapPicker(false);
 }
 
 function renderTimeline(board) {
@@ -288,6 +489,7 @@ function renderFree(board) {
   const cards = board.posts.map(post => {
     const node = card(post, post.group);
     const handle = element('button', '✥ Mou', 'move-handle');
+    handle.hidden = presenting;
     handle.type = 'button';
     handle.setAttribute('aria-label', 'Mou «' + post.title + '»');
     node.prepend(handle);
@@ -334,6 +536,7 @@ function renderFree(board) {
     }
 
     place(original);
+    if (presenting) return;
     handle.addEventListener('pointerdown', event => {
       if (saving || drag || event.button !== 0 || !event.isPrimary) return;
       event.preventDefault();
@@ -387,17 +590,25 @@ function render() {
   picker.disabled = !board;
   byId('save-pad').disabled = !board;
   byId('photo-pad').disabled = !board;
-  deleteButton.hidden = !board;
+  deleteButton.hidden = !board || presenting;
+  byId('new-board').hidden = presenting;
+  byId('open-pad').hidden = presenting;
+  byId('new-post').hidden = presenting;
+  byId('edit-pad').hidden = presenting;
+  byId('presentation-title').hidden = !presenting;
   byId('board-surface').hidden = !board;
   byId('new-post').textContent = board?.type === 'table' ? '+ Nova fila' : '+ Publica';
   byId('no-pads').hidden = Boolean(board);
-  byId('timeline-control').hidden = board?.mode !== 'timeline';
+  byId('no-pads').textContent = presenting ? 'Encara no tens cap PAD.'
+    : 'Encara no tens cap PAD. Prem «Nou PAD» per crear-ne un.';
+  byId('timeline-control').hidden = presenting || board?.mode !== 'timeline';
+  views.parentElement.hidden = presenting || board?.type !== 'wall';
   if (!board) return;
   timelineDirection.value = board.timelineDirection === 'horizontal' ? 'horizontal' : 'vertical';
   byId('board-surface').dataset.theme = board.theme || 'forest';
   byId('title').textContent = board.title;
+  byId('presentation-title').textContent = board.title;
   byId('description').textContent = board.description;
-  views.parentElement.hidden = board.type !== 'wall';
   views.replaceChildren(...Object.entries(wallFormats).map(([mode, label]) => {
     const option = element('option', label);
     option.value = mode;
@@ -408,6 +619,7 @@ function render() {
 }
 
 async function persist(next, selectedId, feedback) {
+  if (presenting) return false;
   saving = true;
   try {
     await store.save(next);
@@ -425,7 +637,7 @@ async function persist(next, selectedId, feedback) {
 }
 
 function openEditor(board, post, pad) {
-  if (!boards || saving || dialog.open) return;
+  if (!boards || saving || dialog.open || presenting) return;
   creatingBoard = board;
   editingPad = pad;
   editingPost = post;
@@ -493,6 +705,7 @@ function openEditor(board, post, pad) {
   }
   tableFields.hidden = !tableFields.childElementCount;
   const mode = board ? undefined : activeBoard().mode;
+  byId('change-location').hidden = mode !== 'map';
   if (!table) {
     tableFieldControls.date.firstElementChild.textContent = 'Data';
     byId('post-place-label').textContent = 'Lloc';
@@ -519,6 +732,14 @@ function openEditor(board, post, pad) {
     document.querySelector('main').inert = true;
     dialog.show();
     previewNewPad();
+  } else if (mode === 'map') {
+    mapSelection = post?.lat != null && post?.lon != null ? { lat: post.lat, lon: post.lon, place: post.place } : null;
+    document.body.classList.add('editing-map');
+    document.querySelector('.top').inert = true;
+    byId('new-post').hidden = true;
+    dialog.show();
+    showMapPicker(!post);
+    return;
   } else {
     dialog.showModal();
   }
@@ -569,6 +790,15 @@ async function init() {
     return;
   }
   activeId = boards[0]?.id;
+  padMode.checked = true;
+  padMode.addEventListener('change', () => {
+    if (saving) {
+      padMode.checked = !presenting;
+      return;
+    }
+    presenting = !padMode.checked;
+    render();
+  });
   const monthNames = new Intl.DateTimeFormat('ca', { month: 'long', timeZone: 'UTC' });
   const months = form.elements.namedItem('dateMonth');
   for (let month = 1; month <= 12; month++) {
@@ -670,6 +900,10 @@ async function init() {
     }
   });
   byId('new-post').addEventListener('click', () => openEditor(false));
+  for (const id of ['pick-lat', 'pick-lon']) byId(id).addEventListener('input', updateMapPoint);
+  byId('map-continue').addEventListener('click', () => confirmMapLocation(mapPoint));
+  byId('map-skip').addEventListener('click', () => confirmMapLocation(null));
+  byId('change-location').addEventListener('click', () => showMapPicker(true));
   byId('cancel').addEventListener('click', () => dialog.close());
   byId('delete-post').addEventListener('click', () => {
     if (saving || !editingPost) return;
@@ -717,9 +951,19 @@ async function init() {
   });
   byId('remove-image').addEventListener('click', () => setEditorImage());
   dialog.addEventListener('keydown', event => {
-    if (creatingBoard && event.key === 'Escape') dialog.close();
+    if ((creatingBoard || document.body.classList.contains('editing-map')) && event.key === 'Escape') dialog.close();
   });
   dialog.addEventListener('close', () => {
+    if (document.body.classList.contains('editing-map')) {
+      document.body.classList.remove('editing-map');
+      document.querySelector('.top').inert = false;
+      mapPicker.hidden = true;
+      form.querySelector('.editor-fields').hidden = false;
+      byId('editor-save').hidden = false;
+      byId('pad-map')?.lastElementChild?.setAttribute('hidden', '');
+      byId('new-post').hidden = presenting;
+      byId('new-post').focus();
+    }
     if (!creatingBoard) return;
     document.body.classList.remove('creating-pad');
     document.querySelector('.top').inert = false;
@@ -729,7 +973,7 @@ async function init() {
   });
   form.addEventListener('submit', async event => {
     event.preventDefault();
-    if (saving || byId('editor-save').disabled) return;
+    if (saving || byId('editor-save').disabled || !mapPicker.hidden) return;
     const fields = Object.fromEntries([...new FormData(form)].map(([name, value]) => [name, value.trim()]));
     if (!fields.title) {
       editorStatus.textContent = 'Escriu un títol.';

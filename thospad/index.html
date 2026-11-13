@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css">
   <script defer src="store.js"></script>
   <script defer src="pad-files.js"></script>
+  <script defer src="map-data.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -29,6 +30,10 @@
         <button id="new-board"><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg> Nou PAD</button>
       </div>
       <div class="tool-group file-tools">
+        <label class="edit-switch">Mode d’edició
+          <input id="pad-mode" type="checkbox" role="switch" checked>
+          <span class="edit-switch-track" aria-hidden="true"></span>
+        </label>
         <button id="save-pad" disabled><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></svg> Desa</button>
         <button id="open-pad" disabled><svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 19V6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v1M3 19l3-9h16l-3 9H3Z"/></svg> Obre</button>
         <input id="pad-file" type="file" accept=".json,application/json" hidden>
@@ -42,7 +47,7 @@
     <p id="no-pads" class="empty" hidden>Encara no tens cap PAD. Prem «+ Nou PAD» per crear-ne un.</p>
     <div id="board-surface" class="board-surface" data-theme="forest">
     <section class="intro" aria-labelledby="title">
-      <div><h1><button id="edit-pad" type="button" title="Edita el PAD"><span id="title"></span><span class="edit-pad-icon" aria-hidden="true">✎</span></button></h1><p id="description"></p></div>
+      <div><h1><span id="presentation-title" hidden></span><button id="edit-pad" type="button" title="Edita el PAD"><span id="title"></span><span class="edit-pad-icon" aria-hidden="true">✎</span></button></h1><p id="description"></p></div>
       <button class="primary" id="new-post">+ Publica</button>
     </section>
     <section id="content" aria-label="Publicacions"></section>
@@ -65,6 +70,17 @@
         <h2 id="editor-title"></h2>
         <div class="actions"><button type="button" id="cancel">Cancel·la</button><button id="editor-save" class="primary">Desa</button></div>
       </div>
+      <section id="map-picker" hidden>
+        <p>Clica al mapa o arrossega la xinxeta fins al lloc.</p>
+        <label>Latitud <input id="pick-lat" type="number" min="-90" max="90" step="any"></label>
+        <label>Longitud <input id="pick-lon" type="number" min="-180" max="180" step="any"></label>
+        <p id="map-prompt" hidden>Què estàs marcant?</p>
+        <label id="pick-name-label" hidden>Nom del lloc <input id="pick-name" maxlength="100"></label>
+        <div class="actions">
+          <button id="map-skip" type="button">Omet per ara</button>
+          <button id="map-continue" class="primary" type="button" disabled>Fes servir aquest punt</button>
+        </div>
+      </section>
       <div class="editor-fields">
       <label><span id="post-title-label">Títol</span><input name="title" required maxlength="100"></label>
       <label id="body-label"><span></span><textarea name="body" maxlength="1500" rows="4"></textarea></label>
@@ -130,6 +146,7 @@
         <label>Latitud <input name="lat" type="number" min="-90" max="90" step="any"></label>
         <label>Longitud <input name="lon" type="number" min="-180" max="180" step="any"></label>
       </div>
+      <button id="change-location" type="button" hidden>Canvia la ubicació</button>
       <p id="editor-status" role="alert"></p>
       </div>
       <div id="post-delete" hidden>
