@@ -281,6 +281,14 @@ function renderMap(posts) {
     setView((minX + maxX) / 2, (minY + maxY) / 2, Math.max(90, (maxX - minX) * 1.2, (maxY - minY) * 2.4));
   }
   const list = element('ol', undefined, 'map-list');
+  const pointList = element('details', undefined, 'map-points');
+  const summary = element('summary', '☷');
+  summary.title = 'Punts del PAD';
+  summary.setAttribute('aria-label', 'Punts del PAD (' + located.length + ')');
+  pointList.append(summary, list);
+  if (located.length) controls.prepend(pointList);
+  const selectedPost = element('div', undefined, 'map-selected-post');
+  selectedPost.hidden = true;
   located.forEach((post, index) => {
     const x = 360 + post.lon * 2;
     const y = mapLatitudeY(post.lat);
@@ -292,14 +300,27 @@ function renderMap(posts) {
     markers.push([marker, x, y]);
     map.append(marker);
     const item = element('li');
-    item.append(card(post, [post.place, post.lat + '°, ' + post.lon + '°'].filter(Boolean).join(' · ')));
-    item.tabIndex = -1;
+    const jump = element('button', post.place || post.title);
+    jump.type = 'button';
+    item.append(jump);
     const showPost = () => {
       if (!mapPicker.hidden) return;
-      pointList.open = true;
-      item.focus();
-      item.scrollIntoView({ block: 'nearest' });
+      const close = element('button', 'Tanca');
+      close.type = 'button';
+      close.addEventListener('click', () => {
+        selectedPost.hidden = true;
+        marker.focus();
+      });
+      selectedPost.replaceChildren(close, card(post, post.place));
+      selectedPost.hidden = false;
     };
+    jump.addEventListener('click', () => {
+      if (!mapPicker.hidden) return;
+      setView(x, y, Math.min(width, 45));
+      pointList.open = false;
+      summary.focus({ preventScroll: true });
+      showPost();
+    });
     marker.addEventListener('click', showPost);
     marker.addEventListener('keydown', event => {
       if (!['Enter', ' '].includes(event.key)) return;
@@ -352,13 +373,11 @@ function renderMap(posts) {
     else setView(cx, cy, width);
   });
   observer.observe(map);
-  const pointList = element('details', undefined, 'map-points');
-  pointList.append(element('summary', 'Punts del PAD (' + located.length + ')'), list);
-  if (located.length) content.append(pointList);
+  content.append(selectedPost);
   const unlocated = posts.filter(post => !located.includes(post));
   if (unlocated.length) {
-    const section = element('div', undefined, 'lane');
-    section.append(element('h2', 'Publicacions sense coordenades'));
+    const section = element('details', undefined, 'map-unlocated');
+    section.append(element('summary', 'Sense ubicació (' + unlocated.length + ')'));
     for (const post of unlocated) section.append(card(post, post.place));
     content.append(section);
   }
@@ -597,6 +616,7 @@ function render() {
   byId('edit-pad').hidden = presenting;
   byId('presentation-title').hidden = !presenting;
   byId('board-surface').hidden = !board;
+  byId('board-surface').classList.toggle('map-surface', board?.mode === 'map');
   byId('new-post').textContent = board?.type === 'table' ? '+ Nova fila' : '+ Publica';
   byId('no-pads').hidden = Boolean(board);
   byId('no-pads').textContent = presenting ? 'Encara no tens cap PAD.'
@@ -774,6 +794,7 @@ function previewNewPad() {
   if (!dialog.open || !creatingBoard) return;
   const fields = form.elements;
   byId('board-surface').hidden = false;
+  byId('board-surface').classList.remove('map-surface');
   byId('no-pads').hidden = true;
   byId('title').textContent = fields.namedItem('title').value.trim() || editingPad?.title || 'Nou PAD';
   byId('description').textContent = fields.namedItem('body').value.trim();

@@ -309,17 +309,20 @@ article small { display: block; margin-bottom: .4rem; }
 table { border-collapse: collapse; width: 100%; background: var(--panel); }
 th, td { padding: .8rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; white-space: pre-wrap; }
 td:nth-child(2) { min-width: 10rem; }
-.map { margin: 0 calc(-1 * clamp(.75rem, 1.6vw, 1.35rem)) 1rem; padding: 0; border: 0; border-radius: 0; }
-.map { position: relative; }
-.map svg { display: block; width: 100%; height: max(300px, calc(100dvh - 11rem)); background: #c9d1d6; touch-action: none; cursor: grab; }
+.map-surface { position: relative; isolation: isolate; min-height: 18rem; padding-bottom: 0; }
+.map-surface .intro { position: relative; z-index: 1; width: fit-content; max-width: 100%; }
+.map-surface #content { position: absolute; inset: 0; margin: 0; }
+.map { position: absolute; inset: 0; margin: 0; padding: 0; border: 0; border-radius: 0; }
+.map svg { display: block; width: 100%; height: 100%; background: #c9d1d6; touch-action: none; cursor: grab; }
 .map svg:active { cursor: grabbing; }
 .map-countries path { fill: #fbfaf7; fill-rule: evenodd; stroke: #a7adb3; stroke-width: .65; vector-effect: non-scaling-stroke; }
 .map-names { fill: #37404a; font-weight: 600; text-anchor: middle; pointer-events: none; }
-.map-controls { position: absolute; top: 1.5rem; left: 1.5rem; display: flex; gap: .25rem; }
+.map-controls { position: absolute; bottom: 2rem; left: .75rem; display: flex; gap: .25rem; }
 .map-controls button { padding: .3rem .55rem; }
-.map-points { border-radius: 12px; background: var(--panel); padding: .65rem .85rem; }
-.map-points summary { font-weight: 700; cursor: pointer; }
-.map figcaption { position: absolute; right: .4rem; bottom: .3rem; padding: .2rem .35rem; background: var(--panel); color: var(--ink); font-size: .72rem; }
+.map-points { position: relative; z-index: 1; }
+.map-points summary { display: grid; place-items: center; height: 100%; min-width: 2rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-weight: 700; cursor: pointer; list-style: none; }
+.map-points summary::-webkit-details-marker { display: none; }
+.map figcaption { position: absolute; left: .4rem; bottom: .3rem; padding: .2rem .35rem; background: var(--panel); color: var(--ink); font-size: .72rem; }
 .map [role="button"] { cursor: pointer; }
 .editing-map { padding-right: var(--editor-width); }
 body.editing-map #editor { position: fixed; inset: 0 0 0 auto; width: var(--editor-width); height: 100dvh; max-height: 100dvh; margin: 0; z-index: 4; border-radius: 0; }
@@ -331,8 +334,24 @@ body.editing-map #edit-form { height: 100%; max-height: none; }
   body.editing-map { padding-right: 0; padding-bottom: 50dvh; }
   body.editing-map #editor { inset: auto 0 0; width: 100%; height: 50dvh; }
 }
-.map-list { padding-left: 1.6rem; }
-.map-list li { padding-left: .3rem; margin-bottom: .6rem; }
+.map-list { position: absolute; bottom: 100%; left: 0; margin: 0 0 .35rem; padding: .3rem; width: min(15rem, 75vw); max-height: 30dvh; overflow: auto; list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 5px 16px #17233426; }
+.map-list button { width: 100%; border: 0; text-align: left; overflow-wrap: anywhere; }
+.map-list button:hover { color: var(--ink); background: var(--paper); }
+.map-selected-post, .map-unlocated {
+  position: absolute;
+  right: .75rem;
+  bottom: 4.75rem;
+  width: min(20rem, calc(100% - 1.5rem));
+  max-height: 32%;
+  overflow: auto;
+  padding: .4rem;
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 5px 16px #17233426;
+}
+.map-selected-post { z-index: 1; bottom: 7.25rem; }
+.map-selected-post > button { margin-bottom: .3rem; }
+.map-unlocated summary { cursor: pointer; padding: .2rem .4rem; }
 dialog { color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(32rem, calc(100% - 2rem)); }
 dialog::backdrop { background: #000a; }
 form, form label { display: grid; gap: .65rem; }
