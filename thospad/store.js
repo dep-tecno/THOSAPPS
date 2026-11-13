@@ -3,8 +3,12 @@ const modes = {
   columns: 'Columnes',
   table: 'Taula',
   timeline: 'Cronologia',
-  map: 'Mapa geogràfic'
+  map: 'Mapa geogràfic',
+  kanban: 'Kanban'
 };
+
+const kanbanStages = { todo: 'Per fer', doing: 'En curs', done: 'Fet' };
+const splitKanbanStages = { todo: 'Per fer', doing: 'Treballant', waiting: 'En espera', done: 'Fet' };
 
 const wallFormats = {
   wall: modes.wall,

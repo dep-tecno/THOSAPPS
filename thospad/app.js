@@ -453,10 +453,86 @@ function renderMap(posts) {
   }
 }
 
+function renderKanban(board) {
+  const layout = element('div', undefined, 'kanban');
+  const stages = board.kanbanSplit ? splitKanbanStages : kanbanStages;
+  if (board.kanbanSplit) {
+    layout.classList.add('kanban-split');
+    const total = board.posts.filter(post => post.stage === 'doing' || post.stage === 'waiting').length;
+    layout.append(element('h2', 'En curs · ' + total, 'kanban-progress'));
+  }
+  async function move(id, stage, restoreFocus = false) {
+    const pad = activeBoard();
+    if (saving || presenting || pad?.id !== board.id || !Object.hasOwn(stages, stage)) return;
+    const posts = pad.posts.map(post => post.id === id ? { ...post, stage } : post);
+    const next = boards.map(item => item.id === pad.id ? { ...pad, posts } : item);
+    if (await persist(next, pad.id, status)) {
+      status.textContent = 'Tasca moguda a «' + stages[stage] + '».';
+      if (restoreFocus) [...content.querySelectorAll('.kanban-move')].find(select => select.dataset.postId === id)?.focus();
+    }
+  }
+  let draggedId;
+  for (const [stage, label] of Object.entries(stages)) {
+    const lane = element('section', undefined, 'lane kanban-lane');
+    lane.dataset.stage = stage;
+    const posts = board.posts.filter(post =>
+      (!board.kanbanSplit && post.stage === 'waiting' ? 'doing' : post.stage ?? 'todo') === stage);
+    lane.append(element('h2', label + ' · ' + posts.length));
+    for (const post of posts) {
+      const node = card(post);
+      if (!presenting) {
+        const control = element('label', 'Mou a…', 'kanban-move-label');
+        const select = element('select', undefined, 'kanban-move');
+        select.dataset.postId = post.id;
+        select.setAttribute('aria-label', 'Mou «' + post.title + '»');
+        for (const [value, name] of Object.entries(stages)) {
+          const option = element('option', name);
+          option.value = value;
+          select.append(option);
+        }
+        select.value = stage;
+        select.addEventListener('change', () => {
+          const target = select.value;
+          select.value = stage;
+          if (target !== stage) void move(post.id, target, true);
+        });
+        control.append(select);
+        const handle = element('span', '⠿', 'kanban-drag');
+        handle.title = 'Arrossega per moure la tasca';
+        handle.setAttribute('aria-hidden', 'true');
+        handle.draggable = true;
+        handle.addEventListener('dragstart', event => {
+          draggedId = post.id;
+          event.dataTransfer.setData('text/plain', post.id);
+          event.dataTransfer.effectAllowed = 'move';
+        });
+        handle.addEventListener('dragend', () => { draggedId = undefined; });
+        node.prepend(handle);
+        node.append(control);
+      }
+      lane.append(node);
+    }
+    lane.addEventListener('dragover', event => {
+      if (!draggedId || presenting) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+    });
+    lane.addEventListener('drop', event => {
+      if (!draggedId || presenting) return;
+      event.preventDefault();
+      if (!posts.some(post => post.id === draggedId)) void move(draggedId, stage);
+      draggedId = undefined;
+    });
+    layout.append(lane);
+  }
+  content.append(layout);
+}
+
 function renderPosts(board) {
   const { posts, mode } = board;
   content.replaceChildren();
   if (mode === 'table') return renderTable(board);
+  if (mode === 'kanban') return renderKanban(board);
   if (mode === 'map') return renderMap(posts);
   if (!posts.length) {
     if (!presenting) content.append(element('p', 'Afegeix la primera publicació al PAD.', 'empty'));
@@ -672,6 +748,8 @@ function activeBoard() {
 
 function render() {
   const board = activeBoard();
+  byId('kanban-split-control').hidden = presenting || board?.type !== 'kanban';
+  byId('kanban-split').checked = Boolean(board?.kanbanSplit);
   picker.replaceChildren(...boards.map(item => {
     const option = element('option', item.title);
     option.value = item.id;
@@ -689,7 +767,8 @@ function render() {
   byId('presentation-title').hidden = !presenting;
   byId('board-surface').hidden = !board;
   byId('board-surface').classList.toggle('map-surface', board?.mode === 'map');
-  byId('new-post').textContent = board?.type === 'table' ? '+ Nova fila' : '+ Publica';
+  byId('board-surface').classList.toggle('kanban-surface', board?.type === 'kanban');
+  byId('new-post').textContent = board?.type === 'table' ? '+ Nova fila' : board?.type === 'kanban' ? '+ Tasca' : '+ Publica';
   byId('no-pads').hidden = Boolean(board);
   byId('no-pads').textContent = presenting ? 'Encara no tens cap PAD.'
     : 'Encara no tens cap PAD. Prem «Nou PAD» per crear-ne un.';
@@ -866,7 +945,8 @@ function previewNewPad() {
   if (!dialog.open || !creatingBoard) return;
   const fields = form.elements;
   const type = editingPad?.type ?? fields.namedItem('type').value;
-  byId('backgrounds').hidden = type === 'map';
+  byId('backgrounds').hidden = type === 'map' || type === 'kanban';
+  byId('board-surface').classList.toggle('kanban-surface', type === 'kanban');
   byId('board-surface').hidden = false;
   byId('board-surface').classList.remove('map-surface');
   byId('no-pads').hidden = true;
@@ -885,6 +965,16 @@ async function init() {
     return;
   }
   activeId = boards[0]?.id;
+  const split = byId('kanban-split');
+  split.addEventListener('change', async () => {
+    const board = activeBoard();
+    if (board?.type !== 'kanban' || presenting || saving) {
+      split.checked = Boolean(board?.kanbanSplit);
+      return;
+    }
+    const next = boards.map(item => item.id === board.id ? { ...item, kanbanSplit: split.checked } : item);
+    if (!await persist(next, board.id, status)) split.checked = Boolean(board.kanbanSplit);
+  });
   padMode.checked = true;
   padMode.addEventListener('change', () => {
     if (saving) {
@@ -1105,6 +1195,7 @@ async function init() {
         const link = webLink(fields.link);
         if (fields.link && !link) throw new Error('Introdueix un enllaç web amb http:// o https://.');
         post = { ...editingPost, id: editingPost?.id ?? id, ...postFrom(fields), link, image: currentImage };
+        if (activeBoard().type === 'kanban') post.stage ??= 'todo';
         if (fields.tableDateText !== undefined) post.tableDateText = fields.tableDateText;
         const tableValues = Object.entries(fields).filter(([name]) => name.startsWith('extra-'));
         if (tableValues.length) post.tableValues = Object.fromEntries(tableValues);

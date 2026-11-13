@@ -67,6 +67,7 @@ function readPadFile(text) {
     ((post.lat === null && post.lon === null) ||
       (Number.isFinite(post.lat) && Math.abs(post.lat) <= 90 && Number.isFinite(post.lon) && Math.abs(post.lon) <= 180)) &&
     validPosition(post.position) && validTableValues(post.tableValues) &&
+    (post.stage === undefined || Object.hasOwn(splitKanbanStages, post.stage)) &&
     (post.size === undefined || (post.size && Number.isInteger(post.size.width) &&
       post.size.width >= 144 && post.size.width <= 960 && Number.isInteger(post.size.height) &&
       post.size.height >= 88 && post.size.height <= 960)) &&
@@ -75,6 +76,7 @@ function readPadFile(text) {
     (post.link === undefined || post.link === '' || Boolean(webLink(post.link)));
   if (format !== 'THOSPAD' || version !== 1 || !pad ||
       typeof pad.title !== 'string' || !pad.title.trim() || typeof pad.description !== 'string' ||
+      (pad.kanbanSplit !== undefined && typeof pad.kanbanSplit !== 'boolean') ||
       !Object.hasOwn(modes, pad.type) || !validColumns(pad.tableColumns) || !Array.isArray(pad.posts) || !pad.posts.every(validPost) ||
       new Set(pad.posts.map(post => post.id)).size !== pad.posts.length) {
     throw new Error('Fitxer PAD incorrecte');
@@ -116,7 +118,7 @@ async function padPhoto(surface) {
   const height = surface.offsetHeight;
   copy.style.margin = '0';
   copy.style.minHeight = '0';
-  copy.querySelectorAll('button:not(#edit-pad), .edit-pad-icon').forEach(node => {
+  copy.querySelectorAll('button:not(#edit-pad), .edit-pad-icon, .kanban-move-label, .kanban-drag').forEach(node => {
     node.style.display = 'none';
   });
   copy.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
