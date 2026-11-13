@@ -8,3 +8,7 @@
 #cards label { display: grid; gap: .25rem; margin-bottom: .65rem; }
 #cards input, #cards textarea { width: 100%; }
 #cards textarea { min-height: 6rem; }
+#turn-settings { padding: .35rem .75rem; }
+#turn-settings summary { cursor: pointer; }
+#turn-form { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+#turn-form input { width: min(100%, 15rem); }

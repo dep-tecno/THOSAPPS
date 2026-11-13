@@ -19,6 +19,16 @@
   </section>
   <p id="connection" role="status">Carregant el mur…</p>
   <p id="feedback" role="status"></p>
+  <details id="turn-settings">
+    <summary>Relé TURN · prova de connexió</summary>
+    <form id="turn-form">
+      <label>Adreça TURN <input id="turn-url" placeholder="turns:relé:443?transport=tcp" required></label>
+      <label>Usuari temporal <input id="turn-user" autocomplete="off" required></label>
+      <label>Clau temporal <input id="turn-password" type="password" autocomplete="off" required></label>
+      <button type="submit">Aplica i reconnecta</button>
+      <button id="turn-clear" type="button">Treu el relé</button>
+    </form>
+  </details>
   <section class="board-surface" data-theme="forest">
     <button id="add" class="primary" disabled>+ Targeta</button>
     <div id="cards"></div>

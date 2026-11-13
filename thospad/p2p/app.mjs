@@ -11,6 +11,8 @@ const storagePrefix = 'thospad-mur-p2p:';
 const id = () => crypto.randomUUID();
 let doc, cards, persistence, session, project;
 let ready = false;
+let turnConfig;
+let reconnecting = false;
 
 function render() {
   for (const [key, entry] of fields) {
@@ -89,8 +91,8 @@ function refresh() {
 }
 
 function startRoom(roomId, password) {
-  const room = joinRoom({ appId: 'tecno-apps.cat/thospad/mur-p2p-v1', password }, roomId);
-  const state = { room, peers: new Set() };
+  const room = joinRoom({ appId: 'tecno-apps.cat/thospad/mur-p2p-v1', password, turnConfig }, roomId);
+  const state = { room, roomId, password, peers: new Set() };
   session = state;
   const vectors = room.makeAction('state-vector');
   const updates = room.makeAction('update');
@@ -108,7 +110,10 @@ function startRoom(roomId, password) {
   });
   room.onPeerJoin(({ peerId }) => {
     state.peers.add(peerId);
-    refresh();
+    if (session === state) {
+      $('feedback').textContent = '';
+      refresh();
+    }
     void requestSync(peerId);
   }, { replay: true });
   room.onPeerLeave(({ peerId }) => { state.peers.delete(peerId); refresh(); });
@@ -126,18 +131,61 @@ function startRoom(roomId, password) {
   refresh();
 }
 
-$('share').onclick = () => {
-  try { startRoom(id(), id()); }
-  catch { $('feedback').textContent = 'No s’ha pogut iniciar la sessió.'; }
-};
-$('leave').onclick = async () => {
+async function stopRoom() {
   const state = session;
   session = undefined;
   clearInterval(state.retry);
   doc.off('update', state.onUpdate);
+  await state.room.leave();
+}
+
+async function changeTurn(config) {
+  if (!ready || reconnecting) return;
+  reconnecting = true;
+  turnConfig = config;
+  try {
+    if (session) {
+      const { roomId, password } = session;
+      $('connection').textContent = 'Reconnectant…';
+      await stopRoom();
+      startRoom(roomId, password);
+    }
+    $('feedback').textContent = config ? 'TURN configurat per a aquesta pestanya.' : 'Relé TURN desactivat.';
+  } catch {
+    $('feedback').textContent = 'No s’ha pogut reconnectar a la sala. Els canvis es desen en aquest navegador.';
+  } finally {
+    reconnecting = false;
+    refresh();
+  }
+}
+
+$('turn-form').onsubmit = event => {
+  event.preventDefault();
+  const urls = $('turn-url').value.trim();
+  const username = $('turn-user').value.trim();
+  const credential = $('turn-password').value;
+  if (!/^turns?:[^\s/?#@]+(?:\?transport=(?:udp|tcp))?$/.test(urls) || !username || !credential) {
+    $('feedback').textContent = 'Introdueix una adreça turn: o turns: i les credencials temporals.';
+    return;
+  }
+  $('turn-password').value = '';
+  void changeTurn([{ urls, username, credential }]);
+};
+$('turn-clear').onclick = () => {
+  $('turn-form').reset();
+  void changeTurn(undefined);
+};
+
+$('share').onclick = () => {
+  if (reconnecting || session) return;
+  try { startRoom(id(), id()); }
+  catch { $('feedback').textContent = 'No s’ha pogut iniciar la sessió.'; }
+};
+$('leave').onclick = async () => {
+  if (!session || reconnecting) return;
   history.replaceState(null, '', location.pathname + location.search);
   localStorage.setItem(storagePrefix + 'last', project);
-  await state.room.leave();
+  await stopRoom();
   $('feedback').textContent = 'Has sortit de la sala. El mur queda desat en aquest navegador.';
   refresh();
 };
