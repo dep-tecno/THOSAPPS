@@ -67,6 +67,9 @@ function readPadFile(text) {
     ((post.lat === null && post.lon === null) ||
       (Number.isFinite(post.lat) && Math.abs(post.lat) <= 90 && Number.isFinite(post.lon) && Math.abs(post.lon) <= 180)) &&
     validPosition(post.position) && validTableValues(post.tableValues) &&
+    (post.size === undefined || (post.size && Number.isInteger(post.size.width) &&
+      post.size.width >= 144 && post.size.width <= 960 && Number.isInteger(post.size.height) &&
+      post.size.height >= 88 && post.size.height <= 960)) &&
     (post.tableDateText === undefined || (typeof post.tableDateText === 'string' && post.tableDateText.length <= 500)) &&
     (post.image === undefined || validPostImage(post.image)) &&
     (post.link === undefined || post.link === '' || Boolean(webLink(post.link)));

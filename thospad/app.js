@@ -54,14 +54,84 @@ function element(tag, value, className) {
 }
 
 function card(post, detail) {
-  const node = element('article');
+  const node = element('article', undefined, 'pad-card');
+  if (post.size) {
+    node.style.setProperty('--card-width', post.size.width + 'px');
+    node.style.minHeight = post.size.height + 'px';
+  }
   if (detail) node.append(element('small', detail));
   if (post.group && post.group !== detail) node.append(element('small', post.group));
   node.append(element('h3', post.title));
   if (post.body) node.append(element('p', post.body));
   addPostAttachments(node, post);
   enablePostEditing(node, node, post);
+  if (!presenting) addCardResize(node, post);
   return node;
+}
+
+function addCardResize(node, post) {
+  const handle = element('button', '◢', 'resize-card');
+  handle.type = 'button';
+  handle.title = 'Canvia la mida de la targeta';
+  handle.setAttribute('aria-label', 'Canvia la mida de «' + post.title + '» amb les fletxes');
+  node.append(handle);
+  let drag;
+  const measure = () => ({ width: node.offsetWidth, height: node.offsetHeight });
+  const limit = (value, min, max) => Math.round(Math.max(min, Math.min(max, value)));
+  function apply(width, height) {
+    const size = { width: limit(width, 144, 960), height: limit(height, 88, 960) };
+    node.style.setProperty('--card-width', size.width + 'px');
+    node.style.minHeight = size.height + 'px';
+    return size;
+  }
+  async function save(size, previous) {
+    const pad = activeBoard();
+    const posts = pad.posts.map(item => item.id === post.id ? { ...item, size } : item);
+    const next = boards.map(item => item.id === pad.id ? { ...pad, posts } : item);
+    if (!await persist(next, pad.id, status, false)) {
+      node.style.setProperty('--card-width', previous.width);
+      node.style.minHeight = previous.height;
+    } else {
+      const layout = node.closest('.free');
+      if (layout) {
+        layout.style.minHeight = Math.max(layout.clientHeight, node.offsetTop + node.offsetHeight + 16) + 'px';
+      }
+    }
+  }
+  const currentStyle = () => ({
+    width: node.style.getPropertyValue('--card-width'), height: node.style.minHeight
+  });
+  handle.addEventListener('pointerdown', event => {
+    if (saving || !event.isPrimary || event.button !== 0) return;
+    handle.setPointerCapture(event.pointerId);
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, start: measure(), previous: currentStyle() };
+  });
+  handle.addEventListener('pointermove', event => {
+    if (drag?.id !== event.pointerId) return;
+    if (event.clientX === drag.x && event.clientY === drag.y && !drag.size) return;
+    drag.size = apply(drag.start.width + event.clientX - drag.x, drag.start.height + event.clientY - drag.y);
+  });
+  handle.addEventListener('pointerup', event => {
+    if (drag?.id !== event.pointerId) return;
+    const { size, previous } = drag;
+    drag = null;
+    if (size) void save(size, previous);
+  });
+  handle.addEventListener('lostpointercapture', () => {
+    if (!drag) return;
+    node.style.setProperty('--card-width', drag.previous.width);
+    node.style.minHeight = drag.previous.height;
+    drag = null;
+  });
+  handle.addEventListener('keydown', event => {
+    const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    if (saving || drag) return;
+    const previous = currentStyle();
+    const { width, height } = measure();
+    void save(apply(width + delta[0] * 16, height + delta[1] * 16), previous);
+  });
 }
 
 function addPostAttachments(node, post) {
@@ -534,6 +604,7 @@ function renderFree(board) {
     let drag;
     function place({ x, y }) {
       node.style.left = x + 'px';
+      node.style.setProperty('--card-left', x + 'px');
       node.style.top = y + 'px';
     }
     function bounded(x, y) {
@@ -543,8 +614,9 @@ function renderFree(board) {
       };
     }
     async function save(position, restoreFocus = false) {
-      const posts = board.posts.map(item => item.id === post.id ? { ...item, position } : item);
-      const next = boards.map(item => item.id === board.id ? { ...board, posts } : item);
+      const pad = activeBoard();
+      const posts = pad.posts.map(item => item.id === post.id ? { ...item, position } : item);
+      const next = boards.map(item => item.id === pad.id ? { ...pad, posts } : item);
       const scrollLeft = wrap.scrollLeft;
       if (!await persist(next, board.id, status)) {
         place(original);
@@ -638,7 +710,7 @@ function render() {
   renderPosts(board);
 }
 
-async function persist(next, selectedId, feedback) {
+async function persist(next, selectedId, feedback, refresh = true) {
   if (presenting) return false;
   saving = true;
   try {
@@ -646,7 +718,7 @@ async function persist(next, selectedId, feedback) {
     boards = next;
     activeId = selectedId;
     status.textContent = '';
-    render();
+    if (refresh) render();
     return true;
   } catch {
     feedback.textContent = 'No s’han pogut desar els canvis. Revisa l’espai i els permisos d’emmagatzematge del navegador.';
@@ -793,6 +865,8 @@ function setEditorImage(image) {
 function previewNewPad() {
   if (!dialog.open || !creatingBoard) return;
   const fields = form.elements;
+  const type = editingPad?.type ?? fields.namedItem('type').value;
+  byId('backgrounds').hidden = type === 'map';
   byId('board-surface').hidden = false;
   byId('board-surface').classList.remove('map-surface');
   byId('no-pads').hidden = true;
