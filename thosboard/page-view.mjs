@@ -88,6 +88,20 @@ export function createPageView(el, changed, ink) {
   el('zoom-out').onclick = () => { zoom = Math.max(1, zoom / 1.25); update(); };
   el('rotate').onclick = () => { rotation = (rotation + 90) % 360; update(); };
   el('fit').onclick = reset;
+  stage.addEventListener('wheel', event => {
+    if (!page || remoteView || !event.deltaY) return;
+    event.preventDefault();
+    const step = event.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const nextZoom = Math.max(1, Math.min(4, zoom * step));
+    const ratio = nextZoom / zoom;
+    const rect = stage.getBoundingClientRect();
+    const pointerX = event.clientX - (rect.left + rect.width / 2);
+    const pointerY = event.clientY - (rect.top + rect.height / 2);
+    x = pointerX - (pointerX - x) * ratio;
+    y = pointerY - (pointerY - y) * ratio;
+    zoom = nextZoom;
+    update();
+  }, { passive: false });
   pan.onclick = () => {
     ink.select(undefined);
     togglePan(!stage.classList.contains('pan'));
