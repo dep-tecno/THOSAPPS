@@ -32,6 +32,25 @@ function showShareConnections(count, error = false) {
     ? 'Hi ha hagut un problema de connexió. Comproveu que sou a la mateixa Wi-Fi i que l’altre navegador continua obert.' : '';
 }
 const content = byId('content');
+const padZoom = new Map();
+
+function renderCanvasZoom(board) {
+  const value = padZoom.get(board?.id) ?? 100;
+  const available = Boolean(board && board.mode !== 'map');
+  byId('canvas-zoom').hidden = !available;
+  content.style.zoom = available ? String(value / 100) : '';
+  byId('zoom-reset').textContent = value + '%';
+  byId('zoom-out').disabled = value <= 40;
+  byId('zoom-in').disabled = value >= 160;
+}
+
+function changeCanvasZoom(delta) {
+  const board = activeBoard();
+  if (!board || board.mode === 'map' || content.querySelector('.dragging, .resizing')) return;
+  const current = padZoom.get(board.id) ?? 100;
+  padZoom.set(board.id, delta ? Math.max(40, Math.min(160, current + delta)) : 100);
+  renderCanvasZoom(board);
+}
 const dialog = byId('editor');
 const form = byId('edit-form');
 const status = byId('status');
@@ -140,7 +159,8 @@ function addCardResize(node, post) {
   handle.addEventListener('pointermove', event => {
     if (drag?.id !== event.pointerId) return;
     if (event.clientX === drag.x && event.clientY === drag.y && !drag.size) return;
-    drag.size = apply(drag.start.width + event.clientX - drag.x, drag.start.height + event.clientY - drag.y);
+    const scale = Number(content.style.zoom) || 1;
+    drag.size = apply(drag.start.width + (event.clientX - drag.x) / scale, drag.start.height + (event.clientY - drag.y) / scale);
   });
   handle.addEventListener('pointerup', event => {
     if (drag?.id !== event.pointerId) return;
@@ -749,7 +769,8 @@ function renderFree(board) {
     handle.addEventListener('pointermove', event => {
       if (drag?.id !== event.pointerId) return;
       const rect = layout.getBoundingClientRect();
-      drag.position = bounded(event.clientX - rect.left - drag.offsetX, event.clientY - rect.top - drag.offsetY);
+      const scale = Number(content.style.zoom) || 1;
+      drag.position = bounded((event.clientX - rect.left - drag.offsetX) / scale, (event.clientY - rect.top - drag.offsetY) / scale);
       place(drag.position);
     });
     handle.addEventListener('pointerup', event => {
@@ -781,6 +802,7 @@ function activeBoard() {
 
 function render() {
   const board = activeBoard();
+  renderCanvasZoom(board);
   renderShareSummary();
   sharePad.disabled = sharingBusy || (!board && !shared);
   byId('kanban-split-control').hidden = presenting || board?.type !== 'kanban';
@@ -1068,6 +1090,9 @@ async function init() {
     return;
   }
   activeId = boards[0]?.id;
+  byId('zoom-out').addEventListener('click', () => changeCanvasZoom(-10));
+  byId('zoom-reset').addEventListener('click', () => changeCanvasZoom(0));
+  byId('zoom-in').addEventListener('click', () => changeCanvasZoom(10));
   sharePad.addEventListener('click', () => {
     if (shared && shared.padId !== activeId) {
       const pad = boards.find(item => item.id === shared.padId);

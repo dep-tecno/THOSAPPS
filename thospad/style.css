@@ -67,15 +67,25 @@ a { color: var(--accent); }
 button:disabled { opacity: .5; cursor: default; }
 body { --editor-width: min(22rem, 42vw); min-height: 100dvh; display: flex; flex-direction: column; }
 body.creating-pad { padding-right: var(--editor-width); }
-.board-surface #new-post {
+.canvas-actions {
   position: fixed;
   right: clamp(1rem, 3vw, 2rem);
   bottom: 1.25rem;
   z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .5rem;
+  max-width: calc(100% - 2rem);
+}
+.canvas-actions button {
   border-radius: 999px;
   padding: .8rem 1.15rem;
   box-shadow: 0 4px 16px #0003;
 }
+.canvas-zoom { display: flex; align-items: center; border-radius: 999px; background: var(--ink); box-shadow: 0 4px 16px #0003; }
+.canvas-zoom button { padding-inline: .65rem; box-shadow: none; font-variant-numeric: tabular-nums; }
+.creating-pad .canvas-actions, .editing-map .canvas-actions { display: none; }
 .creating-pad :is(#content, #new-post, #status) { display: none; }
 .creating-pad #editor {
   position: fixed;

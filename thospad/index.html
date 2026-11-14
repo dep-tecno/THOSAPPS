@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>THOSPAD · PADS d’aula</title>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=fons3">
+  <link rel="stylesheet" href="style.css?v=zoom1">
   <script defer src="store.js"></script>
   <script defer src="pad-files.js"></script>
   <script defer src="map-data.js"></script>
-  <script defer src="app.js?v=share7"></script>
+  <script defer src="app.js?v=zoom1"></script>
 </head>
 <body>
   <header class="top">
@@ -53,7 +53,14 @@
     <div id="board-surface" class="board-surface" data-theme="forest">
     <section class="intro" aria-labelledby="title">
       <div><h1><span id="presentation-title" hidden></span><button id="edit-pad" type="button" title="Edita el PAD"><span id="title"></span><span class="edit-pad-icon" aria-hidden="true">✎</span></button></h1><p id="description"></p></div>
-      <button class="primary" id="new-post">+ Publica</button>
+      <div class="canvas-actions">
+        <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Zoom del llenç">
+          <button class="primary" id="zoom-out" type="button" aria-label="Redueix el contingut">−</button>
+          <button class="primary" id="zoom-reset" type="button" title="Restableix el zoom al 100%">100%</button>
+          <button class="primary" id="zoom-in" type="button" aria-label="Amplia el contingut">+</button>
+        </div>
+        <button class="primary" id="new-post">+ Publica</button>
+      </div>
     </section>
     <section id="content" aria-label="Publicacions"></section>
     </div>
