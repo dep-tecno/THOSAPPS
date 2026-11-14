@@ -1,10 +1,15 @@
 import { openSession, randomCode } from './session.mjs';
+import { createPageView } from './page-view.mjs';
 
 const el = id => document.getElementById(id);
 const status = message => { el('status').textContent = message; };
 const warning = message => { el('error').textContent = message; };
 const canvas = el('canvas');
 const image = el('page-image');
+const view = createPageView(el, state => {
+  currentView = state;
+  if (latestPage) session?.updateView(state);
+});
 
 let session;
 let mode;
@@ -16,30 +21,54 @@ let renderTask;
 let renderQueue = Promise.resolve();
 let generation = 0;
 let connectionTimer;
+let currentCode;
+let latestPage;
+let currentView;
 
 function clearPage() {
+  view.clear();
   image.removeAttribute('src');
   if (imageUrl) URL.revokeObjectURL(imageUrl);
   imageUrl = undefined;
   image.hidden = true;
   el('student-page').textContent = '';
+  el('student-page').hidden = true;
   el('stage').hidden = true;
 }
 
-function showPage(blob, { page, total }) {
+function showPage(blob, { page, total, view: state }) {
   clearTimeout(connectionTimer);
   warning('');
   clearPage();
   imageUrl = URL.createObjectURL(blob);
   image.src = imageUrl;
   image.alt = `Pàgina ${page} del PDF compartit`;
-  el('student-page').textContent = `Pàgina ${page} de ${total}`;
+  el('student-page').textContent = `${page} / ${total}`;
+  el('student-page').hidden = false;
   image.hidden = false;
   el('stage').hidden = false;
+  view.show(image, state);
 }
 
 function showCount(count) {
-  el('count').textContent = `${count} ${count === 1 ? 'alumne connectat' : 'alumnes connectats'}`;
+  el('count').textContent = count;
+}
+
+function connect(code, teacher) {
+  el('host-collision').hidden = el('student-collision').hidden = true;
+  return openSession(code, teacher, {
+    status, warning, clearPage, page: showPage, count: showCount,
+    view: state => view.follow(state),
+    collision: found => {
+      el(teacher ? 'host-collision' : 'student-collision').hidden = !found;
+      if (found && !teacher) clearTimeout(connectionTimer);
+    },
+  });
+}
+
+function showCode(code) {
+  currentCode = code;
+  el('session-code').textContent = code.slice(0, 3) + ' ' + code.slice(3);
 }
 
 async function enter(code, teacher) {
@@ -53,23 +82,18 @@ async function enter(code, teacher) {
     }
     status('');
     warning('');
-    el('host-collision').hidden = el('student-collision').hidden = true;
-    session = await openSession(code, teacher, {
-      status, warning, clearPage, page: showPage, count: showCount,
-      collision: found => { el(teacher ? 'host-collision' : 'student-collision').hidden = !found; },
-    });
+    if (!teacher) status('Cercant la sessió del professor…');
+    session = await connect(code, teacher);
+    document.body.classList.add('presenting');
     el('lobby').hidden = true;
     el('board').hidden = el('leave').hidden = false;
     el('teacher').hidden = !teacher;
-    el('verify').hidden = teacher;
-    el('session-code').textContent = code;
-    if (teacher) el('teacher-id').textContent = session.fingerprint;
+    showCode(code);
     if (teacher) {
-      el('pdf').focus();
+      el('choose-pdf').focus();
     } else {
-      el('fingerprint').focus();
       connectionTimer = setTimeout(() => {
-        warning('Si encara esperes, comprova el codi, l’identificador i que la xarxa permeti la connexió directa.');
+        warning('Si encara esperes, comprova el codi i que la xarxa permeti la connexió directa.');
       }, 20000);
     }
   } catch (error) {
@@ -83,7 +107,7 @@ function updateNavigation() {
   el('previous').disabled = !documentProxy || pageNumber <= 1;
   el('next').disabled = !documentProxy || pageNumber >= documentProxy.numPages;
   el('teacher-page').textContent = documentProxy
-    ? `Pàgina ${pageNumber} de ${documentProxy.numPages}`
+    ? `${pageNumber} / ${documentProxy.numPages}`
     : 'Cap PDF obert';
 }
 
@@ -95,7 +119,6 @@ function changePage(number, pdfModule) {
   const current = ++generation;
   const source = pdf;
   const proxy = documentProxy;
-  const currentSession = session;
   status('Preparant la pàgina…');
   warning('');
   renderQueue = renderQueue.then(async () => {
@@ -107,9 +130,13 @@ function changePage(number, pdfModule) {
       await source.withReadErrors(renderTask.promise);
       if (current !== generation) return;
       canvas.hidden = el('stage').hidden = false;
+      latestPage = undefined;
+      currentView = { zoom: 1, rotation: 0, x: 0, y: 0 };
+      view.show(canvas);
       const blob = await pdfModule.compressPage(canvas);
       if (current !== generation) return;
-      currentSession.publish(blob, number, proxy.numPages);
+      latestPage = [blob, number, proxy.numPages];
+      session?.publish(...latestPage, currentView);
       status('');
     } finally {
       renderTask = undefined;
@@ -123,10 +150,12 @@ function changePage(number, pdfModule) {
 }
 
 let pdfModule;
+el('choose-pdf').onclick = () => el('pdf').click();
 el('pdf').onchange = async () => {
   const file = el('pdf').files[0];
   if (!file || !session) return;
   el('pdf').value = '';
+  latestPage = undefined;
   session.clear();
   const current = ++generation;
   renderTask?.cancel();
@@ -160,19 +189,30 @@ el('next').onclick = () => changePage(pageNumber + 1, pdfModule);
 el('host').onclick = () => void enter(randomCode(), true);
 el('join').onsubmit = event => {
   event.preventDefault();
-  const code = el('code').value;
-  if (/^[0-9]{4}$/.test(code)) void enter(code, false);
+  const code = el('code').value.replace(' ', '');
+  if (/^[0-9]{6}$/.test(code)) void enter(code, false);
 };
 
-el('verify').onsubmit = event => {
-  event.preventDefault();
-  const field = el('fingerprint');
-  const fingerprint = field.value.trim();
-  if (/^[0-9A-Za-z]{14}$/.test(fingerprint)) {
+el('new-code').onclick = async () => {
+  if (!session || mode !== 'teacher') return;
+  const previous = session;
+  const oldCode = currentCode;
+  const button = el('new-code');
+  button.disabled = el('leave').disabled = true;
+  let code;
+  do { code = randomCode(); } while (code === oldCode);
+  try {
+    const next = await connect(code, true);
+    session = next;
+    showCount(0);
     warning('');
-    session?.verify(fingerprint);
-  } else {
-    warning('Escriu els 14 caràcters de l’identificador tal com surten a la pissarra.');
+    showCode(code);
+    if (latestPage) next.publish(...latestPage, currentView);
+    await previous.close();
+  } catch {
+    warning('No s’ha pogut canviar el codi de sessió.');
+  } finally {
+    button.disabled = el('leave').disabled = false;
   }
 };
 
@@ -189,12 +229,14 @@ el('leave').onclick = async () => {
   clearPage();
   canvas.hidden = true;
   canvas.width = canvas.height = 0;
-  el('board').hidden = el('leave').hidden = true;
+  el('board').hidden = el('leave').hidden = el('teacher').hidden = true;
   el('lobby').hidden = false;
   el('host').disabled = el('join-button').disabled = false;
-  el('pdf').value = el('fingerprint').value = '';
+  el('pdf').value = '';
   showCount(0);
   updateNavigation();
   el(mode === 'teacher' ? 'host' : 'code').focus();
+  latestPage = undefined;
+  document.body.classList.remove('presenting');
   mode = undefined;
 };

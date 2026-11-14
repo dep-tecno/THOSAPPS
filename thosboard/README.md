@@ -1,14 +1,16 @@
 # THOSBOARD
 
-El professor crea una sessió, mostra el codi de quatre xifres i el seu identificador a la pissarra i obre un PDF. L’alumne entra amb el codi, confirma l’identificador que veu a la pissarra i es connecta automàticament. La pàgina actual s’envia també als alumnes que arriben tard.
+El professor crea una sessió, mostra el codi de sis xifres a la pissarra i obre un PDF. L’alumne entra automàticament amb aquest codi. La pàgina actual s’envia també als alumnes que arriben tard.
 
 ## Descoberta i identificació
 
-Trystero 0.27.0 usa relés públics de Nostr per descobrir els participants. L’alumnat entra en mode passiu i els professors anuncien la sessió. El codi és el nom del grup de descoberta i té 10.000 valors possibles. Qualsevol persona que el conegui o l’endevini pot intentar connectar-se o interferir en la descoberta.
+Trystero 0.27.0 usa relés públics de Nostr per descobrir els participants. L’alumnat entra en mode passiu i els professors anuncien la sessió. El codi és el nom del grup de descoberta i té 1.000.000 de valors possibles. Qualsevol persona que el conegui o l’endevini pot intentar connectar-se o interferir en la descoberta.
 
-Si es detecten dos professors amb el mateix codi, es mostra un avís. Cada professor pot generar un altre codi sortint i creant una sessió nova. L’alumne selecciona el professor amb els primers 14 caràcters de la identitat efímera que verifica Trystero. En connectar-se, es conserva la identitat completa mentre dura la sessió de l’alumne. La confirmació visual és necessària perquè el navegador pugui associar la clau amb el professor de l’aula. L’identificador permet seleccionar la sessió correcta. Amb la connexió automàtica, els participants que la puguin localitzar i identificar poden rebre les pàgines. La detecció de col·lisions depèn de les connexions que efectivament s’estableixin i no reserva globalment el codi.
+Quan troba el primer professor, l’alumne espera dos segons per detectar possibles coincidències abans de seguir-lo. Si l’aplicació detecta una coincidència, atura la visualització i el professor pot generar un altre codi sense reobrir el PDF. La detecció depèn de les connexions que s’estableixin i pot arribar tard. En reconnectar, l’alumne conserva la identitat de Trystero que havia seleccionat. El codi per si sol no acredita la identitat del professor.
 
 ## PDF i capacitat
+
+El professor controla el zoom, el desplaçament i el gir de la pàgina per a tota l’aula. L’alumnat segueix el mateix detall amb un ajust a la seva pantalla. Els gestos envien només els ajustos de vista sobre la imatge que ja s’ha compartit.
 
 Es reutilitza el PDF.js de THOSPDF. La lectura es fa localment per blocs, sense límit fix de mida del fitxer. El cost depèn de la memòria disponible i de la complexitat del document. El PDF original queda al dispositiu del professor. Només s’envia la pàgina renderitzada i comprimida, amb un màxim d’1 MiB per imatge. Els receptors poden desar o capturar la pàgina que veuen.
 

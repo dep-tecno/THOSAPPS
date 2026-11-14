@@ -14,7 +14,27 @@
       <span class="brand-icon" aria-hidden="true"></span>
       THOS<span>BOARD</span>
     </a>
-    <button id="leave" hidden>Sortir de la sessió</button>
+    <div id="teacher" class="row" role="group" aria-label="Controls del professorat" hidden>
+      <div class="session-details">CODI <strong id="session-code"></strong></div>
+      <button id="new-code" type="button">Canvia el codi</button>
+      <span id="connections" aria-live="polite">Connexions <strong id="count">0</strong></span>
+      <button id="choose-pdf" class="primary" type="button">Tria un PDF</button>
+      <input id="pdf" type="file" accept=".pdf,application/pdf" hidden>
+      <div class="row pagination">
+        <button id="previous" class="primary" aria-label="Pàgina anterior" disabled>←</button>
+        <output id="teacher-page" aria-live="polite">Cap PDF obert</output>
+        <button id="next" class="primary" aria-label="Pàgina següent" disabled>→</button>
+      </div>
+    </div>
+    <p id="student-page" hidden></p>
+    <div id="view-tools" class="row" role="group" aria-label="Vista del PDF" hidden>
+      <button id="zoom-out" aria-label="Redueix el zoom">−</button>
+      <button id="zoom-in" aria-label="Augmenta el zoom">+</button>
+      <button id="pan" aria-label="Mà per desplaçar" aria-pressed="false">✋</button>
+      <button id="rotate" aria-label="Gira la pàgina 90 graus a la dreta">↻</button>
+      <button id="fit" aria-label="Torna a la pàgina completa" title="Pàgina completa">100%</button>
+    </div>
+    <button id="leave" hidden>Sortir</button>
   </header>
   <main>
     <section id="lobby" aria-labelledby="title">
@@ -29,8 +49,8 @@
           <h2>Alumnat</h2>
           <label for="code">Codi de la sessió</label>
           <div class="row">
-            <input id="code" name="code" placeholder="0000" inputmode="numeric" autocomplete="off"
-              pattern="[0-9]{4}" maxlength="4" required>
+            <input id="code" name="code" placeholder="000 000" inputmode="numeric" autocomplete="off"
+              pattern="[0-9]{3} ?[0-9]{3}" maxlength="7" required>
             <button id="join-button" class="primary">Entra</button>
           </div>
         </form>
@@ -38,37 +58,13 @@
     </section>
 
     <div id="board" hidden>
-      <section id="teacher" class="panel controls" aria-label="Controls del professorat" hidden>
-        <div class="row session-details">
-          <div>Codi de sessió <strong id="session-code"></strong></div>
-          <div>Identificador a mostrar a l’aula <strong id="teacher-id"></strong></div>
-          <span id="count" aria-live="polite">0 alumnes connectats</span>
-        </div>
-        <p id="host-collision" class="notice" hidden>Hi ha un altre professor amb aquest codi. Per canviar-lo, surt i crea una sessió nova.</p>
-        <div class="row">
-          <label for="pdf">Tria un PDF</label>
-          <input id="pdf" type="file" accept=".pdf,application/pdf">
-          <button id="previous" aria-label="Pàgina anterior" disabled>←</button>
-          <output id="teacher-page" aria-live="polite">Cap PDF obert</output>
-          <button id="next" aria-label="Pàgina següent" disabled>→</button>
-        </div>
-      </section>
-
-      <form id="verify" class="panel controls" hidden>
-        <label for="fingerprint">Identificador del professor que veus a la pissarra</label>
-        <div class="row">
-          <input id="fingerprint" maxlength="14" autocomplete="off" autocapitalize="off" spellcheck="false" required>
-          <button class="primary">Connecta’t</button>
-        </div>
-        <p>Respecta majúscules i minúscules.</p>
-      </form>
-      <p id="student-collision" class="notice" hidden>S’han trobat diversos professors amb aquest codi. Fes servir l’identificador de la teva pissarra.</p>
+      <p id="host-collision" class="notice" hidden>Hi ha un altre professor amb aquest codi. Prem «Canvia el codi» i mostra el nou codi a l’aula.</p>
+      <p id="student-collision" class="notice" hidden>S’ha detectat una coincidència de codi. Surt de la sessió i entra amb el codi nou que et doni el professor.</p>
       <p id="status" role="status"></p>
       <p id="error" role="alert"></p>
       <section id="stage" aria-label="Pàgina compartida" hidden>
         <canvas id="canvas" hidden></canvas>
-        <img id="page-image" alt="" hidden>
-        <p id="student-page"></p>
+        <img id="page-image" alt="" draggable="false" hidden>
       </section>
     </div>
     <p id="lobby-error" role="alert"></p>

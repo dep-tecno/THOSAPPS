@@ -1,19 +1,27 @@
-const APP_ID = 'tecno-apps.cat/thosboard/v2';
+const APP_ID = 'tecno-apps.cat/thosboard/v4';
 export const MAX_FRAME_BYTES = 1024 * 1024;
 
 export function randomCode() {
-  const value = new Uint16Array(1);
+  const value = new Uint32Array(1);
   do {
     crypto.getRandomValues(value);
-  } while (value[0] >= 60000);
-  return String(value[0] % 10000).padStart(4, '0');
+  } while (value[0] >= 4294000000);
+  return String(value[0] % 1000000).padStart(6, '0');
+}
+
+function validView(state) {
+  return Number.isFinite(state?.zoom) && state.zoom >= 1 && state.zoom <= 4
+    && [0, 90, 180, 270].includes(state.rotation)
+    && Number.isFinite(state.x) && Math.abs(state.x) <= .5
+    && Number.isFinite(state.y) && Math.abs(state.y) <= .5;
 }
 
 function validFrame(meta) {
   return Number.isSafeInteger(meta?.revision) && meta.revision > 0
     && Number.isSafeInteger(meta.page) && meta.page > 0
     && Number.isSafeInteger(meta.total) && meta.total >= meta.page
-    && ['image/webp', 'image/jpeg', 'image/png'].includes(meta.type);
+    && ['image/webp', 'image/jpeg', 'image/png'].includes(meta.type)
+    && validView(meta.view) && Number.isSafeInteger(meta.viewVersion) && meta.viewVersion >= 0;
 }
 
 export async function openSession(code, teacher, events) {
@@ -27,9 +35,9 @@ export async function openSession(code, teacher, events) {
   }, code);
   const hello = room.makeAction('teacher');
   const follow = room.makeAction('follow');
-  const fingerprint = identity.userId.slice(0, 14);
   const frames = room.makeAction('page');
   const reset = room.makeAction('reset-page');
+  const views = room.makeAction('view');
   const hosts = new Map();
   const students = new Map();
 
@@ -37,9 +45,13 @@ export async function openSession(code, teacher, events) {
   let frame;
   let revision = 0;
   let shown = 0;
-  let expected = '';
+  let viewVersion = 0;
+  let pendingView;
+  let viewTimer;
+  let discoveryTimer;
+  let collision = false;
   let selected = null;
-  let verifiedUserId = null;
+  let selectedUserId = null;
 
   function send(action, data, target) {
     return action.send(data, { target }).catch(() => {
@@ -69,25 +81,16 @@ export async function openSession(code, teacher, events) {
   }
 
   function findTeacher() {
-    const candidates = [...hosts].filter(([, userId]) => verifiedUserId
-      ? userId === verifiedUserId
-      : userId.startsWith(expected));
-    if (candidates.length > 1 && expected) {
-      selected = null;
-      shown = 0;
-      events.clearPage();
-      events.status('Identificador ambigu. Demana al professor que creï una sessió nova.');
-      return;
-    }
-    if (selected || !expected) return;
-    if (!candidates.length) {
-      events.status('Esperant el professor amb aquest identificador…');
-      return;
-    }
-    selected = candidates[0][0];
-    verifiedUserId = candidates[0][1];
-    events.status('Connectat. Esperant la pàgina del professor…');
-    void send(follow, expected, selected);
+    clearTimeout(discoveryTimer);
+    if (collision || selected || hosts.size !== 1) return;
+    discoveryTimer = setTimeout(() => {
+      const [[peerId, userId]] = hosts;
+      if (selectedUserId && selectedUserId !== userId) return;
+      selected = peerId;
+      selectedUserId = userId;
+      events.status('Connectat. Esperant la pàgina del professor…');
+      void send(follow, code, peerId);
+    }, selectedUserId ? 0 : 2000);
   }
 
   room.onPeerJoin(({ peerId }) => {
@@ -97,13 +100,23 @@ export async function openSession(code, teacher, events) {
   hello.onMessage((message, { peerId, userId }) => {
     if (closed || message !== 'teacher' || !/^[0-9A-Za-z]{22}$/.test(userId)) return;
     hosts.set(peerId, userId);
-    events.collision(teacher || new Set(hosts.values()).size > 1);
-    if (!teacher) findTeacher();
+    if (teacher) {
+      events.collision(true);
+    } else if (hosts.size > 1 || (selectedUserId && userId !== selectedUserId)) {
+      collision = true;
+      selected = null;
+      clearTimeout(discoveryTimer);
+      events.clearPage();
+      events.status('');
+      events.collision(true);
+    } else {
+      findTeacher();
+    }
   });
 
-  follow.onReceive(({ byteLength }) => teacher && byteLength === fingerprint.length);
+  follow.onReceive(({ byteLength }) => teacher && byteLength === code.length);
   follow.onMessage((value, { peerId }) => {
-    if (closed || !teacher || value !== fingerprint || hosts.has(peerId)) return;
+    if (closed || !teacher || value !== code || hosts.has(peerId)) return;
     if (!students.has(peerId)) {
       students.set(peerId, { busy: false, sent: 0 });
       updateTeacher();
@@ -114,6 +127,7 @@ export async function openSession(code, teacher, events) {
     if (closed || teacher || selected !== peerId
       || !Number.isSafeInteger(nextRevision) || nextRevision <= shown) return;
     shown = nextRevision;
+    if (pendingView?.revision <= shown) pendingView = undefined;
     events.clearPage();
     events.status('Esperant la pàgina del professor…');
   });
@@ -126,23 +140,42 @@ export async function openSession(code, teacher, events) {
   frames.onMessage((data, { peerId, metadata }) => {
     if (!(data instanceof Uint8Array) || !accepts(peerId, metadata, data.byteLength)) return;
     shown = metadata.revision;
+    if (pendingView?.revision === shown && pendingView.viewVersion > metadata.viewVersion) {
+      metadata = { ...metadata, view: pendingView.view, viewVersion: pendingView.viewVersion };
+    }
+    if (pendingView?.revision <= shown) pendingView = undefined;
+    viewVersion = metadata.viewVersion;
     events.page(new Blob([data], { type: metadata.type }), metadata);
     events.status('');
+  });
+  views.onMessage((message, { peerId }) => {
+    if (closed || teacher || selected !== peerId || !validView(message?.view)
+      || !Number.isSafeInteger(message.revision) || message.revision < shown
+      || !Number.isSafeInteger(message.viewVersion) || message.viewVersion < 1) return;
+    if (message.revision === shown) {
+      if (message.viewVersion <= viewVersion) return;
+      viewVersion = message.viewVersion;
+      events.view(message.view);
+    } else if (!pendingView || message.revision > pendingView.revision
+      || (message.revision === pendingView.revision && message.viewVersion > pendingView.viewVersion)) {
+      pendingView = message;
+    }
   });
 
   room.onPeerLeave(({ peerId }) => {
     if (closed) return;
     hosts.delete(peerId);
-    events.collision(teacher ? hosts.size > 0 : new Set(hosts.values()).size > 1);
+    if (teacher) events.collision(hosts.size > 0);
     if (teacher) {
       if (students.delete(peerId)) updateTeacher();
     } else if (peerId === selected) {
       selected = null;
       shown = 0;
+      pendingView = undefined;
       events.clearPage();
       events.status('Connexió amb el professor interrompuda. Esperant que es recuperi…');
       findTeacher();
-    } else if (!selected && expected) {
+    } else if (!selected) {
       findTeacher();
     }
   });
@@ -158,27 +191,33 @@ export async function openSession(code, teacher, events) {
   }
 
   return {
-    fingerprint,
-    verify(value) {
-      if (teacher || selected) return;
-      expected = value;
-      if (verifiedUserId && value !== verifiedUserId.slice(0, 14)) verifiedUserId = null;
-      findTeacher();
-    },
     clear() {
       frame = null;
       ++revision;
       for (const peerId of students.keys()) void send(reset, revision, peerId);
     },
-    publish(image, page, total) {
-      const meta = { revision: ++revision, page, total, type: image.type };
+    publish(image, page, total, view) {
+      const meta = { revision: ++revision, page, total, type: image.type, view, viewVersion: 0 };
       frame = { image, meta };
       for (const [peerId, student] of students) {
         void deliver(peerId, student);
       }
     },
+    updateView(view) {
+      if (!teacher || closed || !frame) return;
+      frame.meta = { ...frame.meta, view, viewVersion: frame.meta.viewVersion + 1 };
+      if (viewTimer) return;
+      viewTimer = setTimeout(() => {
+        viewTimer = undefined;
+        if (!frame) return;
+        const { revision, view, viewVersion } = frame.meta;
+        for (const peerId of students.keys()) void send(views, { revision, view, viewVersion }, peerId);
+      }, 50);
+    },
     async close() {
       closed = true;
+      clearTimeout(discoveryTimer);
+      clearTimeout(viewTimer);
       frame = null;
       await room.leave();
     },
