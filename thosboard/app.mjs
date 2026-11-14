@@ -142,8 +142,9 @@ function changePage(number, pdfModule) {
       renderTask = undefined;
       page.cleanup();
     }
-  }).catch(() => {
+  }).catch(error => {
     if (current !== generation) return;
+    console.error('THOSBOARD · PDF', error);
     status('');
     warning('No s’ha pogut preparar aquesta pàgina del PDF.');
   });

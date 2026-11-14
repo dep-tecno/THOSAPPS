@@ -1,7 +1,7 @@
-import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport } from '../thospdf/vendor/pdfjs/pdf.min.mjs';
+import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport } from './vendor/pdfjs/pdf.min.mjs';
 import { MAX_FRAME_BYTES } from './session.mjs';
 
-GlobalWorkerOptions.workerSrc = new URL('../thospdf/vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
+GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
 
 class LocalFileTransport extends PDFDataRangeTransport {
   constructor(file) {
@@ -43,7 +43,9 @@ export function drawPage(page, canvas) {
   const viewport = page.getViewport({ scale });
   canvas.width = Math.max(1, Math.round(viewport.width));
   canvas.height = Math.max(1, Math.round(viewport.height));
-  return page.render({ canvas, viewport, background: '#ffffff' });
+  const canvasContext = canvas.getContext('2d', { alpha: false });
+  if (!canvasContext) throw new Error('El navegador no ha pogut obrir el llenç del PDF.');
+  return page.render({ canvasContext, viewport, background: '#ffffff' });
 }
 
 function encode(canvas, type, quality) {
