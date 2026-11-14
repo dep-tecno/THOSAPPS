@@ -1,6 +1,8 @@
 import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport } from './vendor/pdfjs/pdf.min.mjs';
 import { MAX_FRAME_BYTES } from './session.mjs';
 
+const TARGET_FRAME_BYTES = 320 * 1024;
+
 GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
 
 class LocalFileTransport extends PDFDataRangeTransport {
@@ -53,17 +55,28 @@ function encode(canvas, type, quality) {
 }
 
 export async function compressPage(canvas) {
+  const preferred = await encode(canvas, 'image/webp', 0.83);
+  if (preferred?.size && preferred.size <= TARGET_FRAME_BYTES) return preferred;
+
+  // Preserve resolution for zoom while trying a smaller encoding.
+  const type = preferred?.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+  const compact = await encode(canvas, type, 0.72);
+  if (compact?.size && compact.size <= TARGET_FRAME_BYTES) return compact;
+
+  const fallback = [preferred, compact]
+    .filter(image => image?.size && image.size <= MAX_FRAME_BYTES)
+    .sort((first, second) => first.size - second.size)[0];
+
   let source = canvas;
-  while (true) {
-    for (const type of ['image/webp', 'image/jpeg']) {
-      const image = await encode(source, type, 0.83);
-      if (image?.size && image.size <= MAX_FRAME_BYTES) return image;
-    }
-    if (Math.max(source.width, source.height) <= 256) throw new Error('No s’ha pogut comprimir la pàgina.');
+  while (Math.max(source.width, source.height) > (fallback ? 1600 : 256)) {
     const smaller = document.createElement('canvas');
     smaller.width = Math.max(1, Math.floor(source.width * 0.75));
     smaller.height = Math.max(1, Math.floor(source.height * 0.75));
     smaller.getContext('2d').drawImage(source, 0, 0, smaller.width, smaller.height);
     source = smaller;
+    const image = await encode(source, type, 0.78);
+    if (image?.size && image.size <= MAX_FRAME_BYTES && (!fallback || image.size < fallback.size)) return image;
   }
+  if (fallback) return fallback;
+  throw new Error('No s’ha pogut comprimir la pàgina.');
 }
