@@ -35,11 +35,12 @@
       <button id="fit" aria-label="Torna a la pàgina completa" title="Pàgina completa">100%</button>
       <button id="write" aria-pressed="false">✎ Escriu</button>
       <button id="highlight" aria-pressed="false">Subratlla</button>
-      <input id="ink-color" type="color" aria-label="Color de l’eina" hidden>
+      <button id="ink-color" type="button" aria-label="Tria el color de l’eina" aria-expanded="false" aria-controls="ink-palette" hidden><span aria-hidden="true"></span></button>
       <button id="undo-ink" aria-label="Desfés l’últim traç" title="Desfés" disabled>↶</button>
     </div>
     <button id="leave" hidden>Sortir</button>
   </header>
+  <div id="ink-palette" role="group" aria-label="Colors de l’eina" hidden></div>
   <main>
     <section id="lobby" aria-labelledby="title">
       <h1 id="title">Comparteix la pissarra amb l’aula</h1>

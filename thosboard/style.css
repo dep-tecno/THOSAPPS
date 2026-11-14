@@ -55,7 +55,11 @@ body.presenting { height: 100dvh; display: flex; flex-direction: column; }
 #ink { pointer-events: none; }
 #stage.inking { cursor: crosshair; }
 #view-tools button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
-#ink-color { width: 2.25rem; height: 2rem; padding: .15rem; }
+#ink-color { display: inline-grid; place-items: center; min-width: 2.25rem; }
+#ink-color span, #ink-palette span { width: 1.35rem; height: 1.35rem; border-radius: 50%; border: 1px solid #ffffff80; background: var(--swatch); }
+#ink-palette { position: fixed; z-index: 5; display: grid; grid-template-columns: repeat(4, 44px); gap: .25rem; padding: .35rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 4px 16px #0008; }
+#ink-palette button { display: grid; place-items: center; min-height: 44px; padding: 0; }
+#ink-palette button[aria-pressed="true"] { border: 2px solid var(--accent); }
 #stage { touch-action: none; }
 #stage.pan { cursor: grab; }
 #stage.pan.dragging { cursor: grabbing; }
