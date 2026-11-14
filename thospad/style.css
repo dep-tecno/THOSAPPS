@@ -269,6 +269,9 @@ select { max-width: min(60vw, 22rem); text-overflow: ellipsis; }
 }
 .board-surface .primary { background: var(--ink); border-color: var(--ink); color: #fff; }
 .board-surface .primary:hover { filter: brightness(1.2); }
+.canvas-zoom .primary { background: transparent; border-color: transparent; box-shadow: none; }
+.canvas-zoom .primary:hover:not(:disabled) { background: #ffffff26; filter: none; }
+.canvas-zoom .primary:focus-visible { outline-color: #fff; outline-offset: -3px; }
 .board-surface :focus-visible { outline-color: var(--ink); }
 h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
 h1 { font-size: clamp(1.15rem, 1.7vw, 1.55rem); line-height: 1.2; }
