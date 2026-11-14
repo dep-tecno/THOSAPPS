@@ -1,4 +1,4 @@
-const APP_ID = 'tecno-apps.cat/thosboard/v1';
+const APP_ID = 'tecno-apps.cat/thosboard/v2';
 export const MAX_FRAME_BYTES = 1024 * 1024;
 
 export function randomCode() {
@@ -26,12 +26,11 @@ export async function openSession(code, teacher, events) {
     maxReceiveBytes: MAX_FRAME_BYTES,
   }, code);
   const hello = room.makeAction('teacher');
-  const ask = room.makeAction('access');
-  const admission = room.makeAction('admission');
+  const follow = room.makeAction('follow');
+  const fingerprint = identity.userId.slice(0, 14);
   const frames = room.makeAction('page');
   const reset = room.makeAction('reset-page');
   const hosts = new Map();
-  const requests = new Map();
   const students = new Map();
 
   let closed = false;
@@ -41,7 +40,6 @@ export async function openSession(code, teacher, events) {
   let expected = '';
   let selected = null;
   let verifiedUserId = null;
-  let admitted = false;
 
   function send(action, data, target) {
     return action.send(data, { target }).catch(() => {
@@ -50,7 +48,7 @@ export async function openSession(code, teacher, events) {
   }
 
   function updateTeacher() {
-    if (!closed) events.roster(requests, students.size);
+    if (!closed) events.count(students.size);
   }
 
   async function deliver(peerId, student) {
@@ -76,7 +74,6 @@ export async function openSession(code, teacher, events) {
       : userId.startsWith(expected));
     if (candidates.length > 1 && expected) {
       selected = null;
-      admitted = false;
       shown = 0;
       events.clearPage();
       events.status('Identificador ambigu. Demana al professor que creï una sessió nova.');
@@ -88,8 +85,9 @@ export async function openSession(code, teacher, events) {
       return;
     }
     selected = candidates[0][0];
-    events.status('Sol·licitud enviada. Esperant que el professor t’admeti…');
-    void send(ask, 'request', selected);
+    verifiedUserId = candidates[0][1];
+    events.status('Connectat. Esperant la pàgina del professor…');
+    void send(follow, expected, selected);
   }
 
   room.onPeerJoin(({ peerId }) => {
@@ -103,40 +101,17 @@ export async function openSession(code, teacher, events) {
     if (!teacher) findTeacher();
   });
 
-  ask.onMessage((message, { peerId, userId }) => {
-    if (closed || !teacher || hosts.has(peerId)) return;
-    const student = students.get(peerId);
-    if (message === 'ready' && student) {
-      student.ready = true;
-      void deliver(peerId, student);
+  follow.onReceive(({ byteLength }) => teacher && byteLength === fingerprint.length);
+  follow.onMessage((value, { peerId }) => {
+    if (closed || !teacher || value !== fingerprint || hosts.has(peerId)) return;
+    if (!students.has(peerId)) {
+      students.set(peerId, { busy: false, sent: 0 });
+      updateTeacher();
     }
-    if (message !== 'request') return;
-    if (student) {
-      void send(admission, 'admitted', peerId);
-      return;
-    }
-    requests.set(peerId, userId);
-    updateTeacher();
+    void deliver(peerId, students.get(peerId));
   });
-
-  admission.onMessage((message, { peerId }) => {
-    if (closed || teacher || selected !== peerId) return;
-    if (message === 'admitted') {
-      admitted = true;
-      verifiedUserId = hosts.get(peerId);
-      events.status('Connectat. Esperant la pàgina del professor…');
-      void send(ask, 'ready', peerId);
-    } else if (message === 'denied') {
-      selected = null;
-      expected = '';
-      verifiedUserId = null;
-      events.status('El professor ha rebutjat la sol·licitud.');
-    }
-  });
-
-  ask.onReceive(({ byteLength }) => teacher && byteLength <= 32);
   reset.onMessage((nextRevision, { peerId }) => {
-    if (closed || teacher || !admitted || selected !== peerId
+    if (closed || teacher || selected !== peerId
       || !Number.isSafeInteger(nextRevision) || nextRevision <= shown) return;
     shown = nextRevision;
     events.clearPage();
@@ -144,7 +119,7 @@ export async function openSession(code, teacher, events) {
   });
 
   function accepts(peerId, metadata, byteLength) {
-    return !closed && !teacher && admitted && selected === peerId && validFrame(metadata)
+    return !closed && !teacher && selected === peerId && validFrame(metadata)
       && metadata.revision > shown && byteLength > 0 && byteLength <= MAX_FRAME_BYTES;
   }
   frames.onReceive(({ peerId, metadata, byteLength }) => accepts(peerId, metadata, byteLength));
@@ -160,12 +135,9 @@ export async function openSession(code, teacher, events) {
     hosts.delete(peerId);
     events.collision(teacher ? hosts.size > 0 : new Set(hosts.values()).size > 1);
     if (teacher) {
-      requests.delete(peerId);
-      students.delete(peerId);
-      updateTeacher();
+      if (students.delete(peerId)) updateTeacher();
     } else if (peerId === selected) {
       selected = null;
-      admitted = false;
       shown = 0;
       events.clearPage();
       events.status('Connexió amb el professor interrompuda. Esperant que es recuperi…');
@@ -186,35 +158,23 @@ export async function openSession(code, teacher, events) {
   }
 
   return {
-    fingerprint: identity.userId.slice(0, 14),
+    fingerprint,
     verify(value) {
-      if (teacher || admitted || selected) return;
+      if (teacher || selected) return;
       expected = value;
       if (verifiedUserId && value !== verifiedUserId.slice(0, 14)) verifiedUserId = null;
       findTeacher();
     },
-    decide(peerId, allow) {
-      if (!requests.delete(peerId)) return;
-      if (allow) {
-        students.set(peerId, { busy: false, sent: 0, ready: false });
-        void send(admission, 'admitted', peerId);
-      } else {
-        void send(admission, 'denied', peerId);
-      }
-      updateTeacher();
-    },
     clear() {
       frame = null;
       ++revision;
-      for (const [peerId, student] of students) {
-        if (student.ready) void send(reset, revision, peerId);
-      }
+      for (const peerId of students.keys()) void send(reset, revision, peerId);
     },
     publish(image, page, total) {
       const meta = { revision: ++revision, page, total, type: image.type };
       frame = { image, meta };
       for (const [peerId, student] of students) {
-        if (student.ready) void deliver(peerId, student);
+        void deliver(peerId, student);
       }
     },
     async close() {

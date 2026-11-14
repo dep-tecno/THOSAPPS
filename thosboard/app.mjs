@@ -38,22 +38,8 @@ function showPage(blob, { page, total }) {
   el('stage').hidden = false;
 }
 
-function showRoster(requests, count) {
-  el('count').textContent = `${count} ${count === 1 ? 'alumne admès' : 'alumnes admesos'}`;
-  el('admission').hidden = requests.size === 0;
-  const items = [...requests].map(([peerId, userId]) => {
-    const item = document.createElement('li');
-    item.className = 'row';
-    const admit = document.createElement('button');
-    admit.textContent = 'Admet';
-    admit.onclick = () => session?.decide(peerId, true);
-    const deny = document.createElement('button');
-    deny.textContent = 'Rebutja';
-    deny.onclick = () => session?.decide(peerId, false);
-    item.append(userId.slice(0, 14), admit, deny);
-    return item;
-  });
-  el('requests').replaceChildren(...items);
+function showCount(count) {
+  el('count').textContent = `${count} ${count === 1 ? 'alumne connectat' : 'alumnes connectats'}`;
 }
 
 async function enter(code, teacher) {
@@ -69,7 +55,7 @@ async function enter(code, teacher) {
     warning('');
     el('host-collision').hidden = el('student-collision').hidden = true;
     session = await openSession(code, teacher, {
-      status, warning, clearPage, page: showPage, roster: showRoster,
+      status, warning, clearPage, page: showPage, count: showCount,
       collision: found => { el(teacher ? 'host-collision' : 'student-collision').hidden = !found; },
     });
     el('lobby').hidden = true;
@@ -77,7 +63,7 @@ async function enter(code, teacher) {
     el('teacher').hidden = !teacher;
     el('verify').hidden = teacher;
     el('session-code').textContent = code;
-    el(teacher ? 'teacher-id' : 'student-id').textContent = session.fingerprint;
+    if (teacher) el('teacher-id').textContent = session.fingerprint;
     if (teacher) {
       el('pdf').focus();
     } else {
@@ -207,7 +193,7 @@ el('leave').onclick = async () => {
   el('lobby').hidden = false;
   el('host').disabled = el('join-button').disabled = false;
   el('pdf').value = el('fingerprint').value = '';
-  showRoster(new Map(), 0);
+  showCount(0);
   updateNavigation();
   el(mode === 'teacher' ? 'host' : 'code').focus();
   mode = undefined;

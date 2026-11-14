@@ -42,7 +42,7 @@
         <div class="row session-details">
           <div>Codi de sessió <strong id="session-code"></strong></div>
           <div>Identificador a mostrar a l’aula <strong id="teacher-id"></strong></div>
-          <span id="count" aria-live="polite">0 alumnes admesos</span>
+          <span id="count" aria-live="polite">0 alumnes connectats</span>
         </div>
         <p id="host-collision" class="notice" hidden>Hi ha un altre professor amb aquest codi. Per canviar-lo, surt i crea una sessió nova.</p>
         <div class="row">
@@ -52,20 +52,15 @@
           <output id="teacher-page" aria-live="polite">Cap PDF obert</output>
           <button id="next" aria-label="Pàgina següent" disabled>→</button>
         </div>
-        <div id="admission" hidden>
-          <h2>Sol·licituds d’accés</h2>
-          <p>Compara l’identificador amb el que l’alumne veu al seu dispositiu abans d’admetre’l.</p>
-          <ul id="requests"></ul>
-        </div>
       </section>
 
       <form id="verify" class="panel controls" hidden>
         <label for="fingerprint">Identificador del professor que veus a la pissarra</label>
         <div class="row">
           <input id="fingerprint" maxlength="14" autocomplete="off" autocapitalize="off" spellcheck="false" required>
-          <button class="primary">Demana accés</button>
+          <button class="primary">Connecta’t</button>
         </div>
-        <p>Respecta majúscules i minúscules. El teu identificador és <strong id="student-id"></strong>.</p>
+        <p>Respecta majúscules i minúscules.</p>
       </form>
       <p id="student-collision" class="notice" hidden>S’han trobat diversos professors amb aquest codi. Fes servir l’identificador de la teva pissarra.</p>
       <p id="status" role="status"></p>

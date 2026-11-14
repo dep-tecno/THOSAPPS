@@ -37,12 +37,8 @@ button:disabled { opacity: .5; cursor: default; }
 #fingerprint { width: 12rem; max-width: 100%; }
 #pdf { max-width: 100%; }
 .session-details { margin-bottom: .8rem; gap: .6rem 1.5rem; }
-.session-details strong, #student-id { color: var(--accent); margin-left: .25rem; font: bold 1.05rem ui-monospace, monospace; }
+.session-details strong { color: var(--accent); margin-left: .25rem; font: bold 1.05rem ui-monospace, monospace; }
 #count { color: var(--muted); }
-#admission { margin-top: 1rem; }
-#admission p { margin: 0; }
-#requests { display: grid; gap: .5rem; padding: 0; list-style: none; margin-bottom: 0; }
-#requests li { font-family: ui-monospace, monospace; }
 #error, #lobby-error, .notice { color: #ffd08a; }
 #status:empty, #error:empty, #student-page:empty, #lobby-error:empty { display: none; }
 #stage { display: grid; justify-items: center; background: #141822; border: 1px solid var(--line); border-radius: 12px; padding: clamp(.4rem, 1vw, 1rem); margin-top: 1rem; }
