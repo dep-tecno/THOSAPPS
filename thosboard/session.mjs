@@ -1,4 +1,4 @@
-const APP_ID = 'tecno-apps.cat/thosboard/v4';
+const APP_ID = 'tecno-apps.cat/thosboard/v5';
 export const MAX_FRAME_BYTES = 1024 * 1024;
 
 export function randomCode() {
@@ -14,6 +14,12 @@ function validView(state) {
     && [0, 90, 180, 270].includes(state.rotation)
     && Number.isFinite(state.x) && Math.abs(state.x) <= .5
     && Number.isFinite(state.y) && Math.abs(state.y) <= .5;
+}
+
+function validStroke(stroke) {
+  return (stroke?.tool === 'write' || stroke?.tool === 'highlight')
+    && typeof stroke.color === 'string' && /^#[0-9a-f]{6}$/i.test(stroke.color)
+    && typeof stroke.path === 'string' && stroke.path.length <= 12032;
 }
 
 function validFrame(meta) {
@@ -38,6 +44,7 @@ export async function openSession(code, teacher, events) {
   const frames = room.makeAction('page');
   const reset = room.makeAction('reset-page');
   const views = room.makeAction('view');
+  const annotations = room.makeAction('ink');
   const hosts = new Map();
   const students = new Map();
 
@@ -48,6 +55,9 @@ export async function openSession(code, teacher, events) {
   let viewVersion = 0;
   let pendingView;
   let viewTimer;
+  let inkTimer;
+  let inkVersion = 0;
+  let pendingInk;
   let discoveryTimer;
   let collision = false;
   let selected = null;
@@ -63,12 +73,27 @@ export async function openSession(code, teacher, events) {
     if (!closed) events.count(students.size);
   }
 
+  async function deliverInk(peerId, student) {
+    if (!frame || !student || student.inking || closed) return;
+    const { ink } = frame;
+    if (student.inkSent === ink) return;
+    student.inking = true;
+    try {
+      await send(annotations, ink, peerId);
+    } finally {
+      student.inking = false;
+      student.inkSent = ink;
+      if (frame && frame.ink !== ink && students.get(peerId) === student) void deliverInk(peerId, student);
+    }
+  }
+
   async function deliver(peerId, student) {
     if (!frame || student.busy || closed || student.sent === frame.meta.revision) return;
     student.busy = true;
     const current = frame;
     try {
       await frames.send(current.image, { target: peerId, metadata: current.meta });
+      if (frame === current) void deliverInk(peerId, student);
     } catch {
       if (!closed && students.has(peerId) && frame === current) {
         events.warning('Un alumne no ha rebut la pàgina. Pot tornar a entrar si la connexió no es recupera.');
@@ -127,6 +152,7 @@ export async function openSession(code, teacher, events) {
     if (closed || teacher || selected !== peerId
       || !Number.isSafeInteger(nextRevision) || nextRevision <= shown) return;
     shown = nextRevision;
+    if (pendingInk?.revision <= shown) pendingInk = undefined;
     if (pendingView?.revision <= shown) pendingView = undefined;
     events.clearPage();
     events.status('Esperant la pàgina del professor…');
@@ -146,7 +172,28 @@ export async function openSession(code, teacher, events) {
     if (pendingView?.revision <= shown) pendingView = undefined;
     viewVersion = metadata.viewVersion;
     events.page(new Blob([data], { type: metadata.type }), metadata);
+    inkVersion = 0;
+    if (pendingInk?.revision === shown) {
+      inkVersion = pendingInk.version;
+      events.ink(pendingInk.strokes, pendingInk.preview);
+    }
+    if (pendingInk?.revision <= shown) pendingInk = undefined;
     events.status('');
+  });
+  annotations.onReceive(({ peerId }) => !closed && !teacher && selected === peerId);
+  annotations.onMessage((message, { peerId }) => {
+    if (closed || teacher || selected !== peerId || !Number.isSafeInteger(message?.revision)
+      || message.revision < shown || !Number.isSafeInteger(message.version) || message.version < 1
+      || !Array.isArray(message.strokes) || !message.strokes.every(validStroke)
+      || (message.preview != null && !validStroke(message.preview))) return;
+    if (message.revision === shown) {
+      if (message.version <= inkVersion) return;
+      inkVersion = message.version;
+      events.ink(message.strokes, message.preview);
+    } else if (!pendingInk || message.revision > pendingInk.revision
+      || (message.revision === pendingInk.revision && message.version > pendingInk.version)) {
+      pendingInk = message;
+    }
   });
   views.onMessage((message, { peerId }) => {
     if (closed || teacher || selected !== peerId || !validView(message?.view)
@@ -172,6 +219,7 @@ export async function openSession(code, teacher, events) {
       selected = null;
       shown = 0;
       pendingView = undefined;
+      pendingInk = undefined;
       events.clearPage();
       events.status('Connexió amb el professor interrompuda. Esperant que es recuperi…');
       findTeacher();
@@ -196,12 +244,23 @@ export async function openSession(code, teacher, events) {
       ++revision;
       for (const peerId of students.keys()) void send(reset, revision, peerId);
     },
-    publish(image, page, total, view) {
+    publish(image, page, total, view, strokes = [], preview) {
       const meta = { revision: ++revision, page, total, type: image.type, view, viewVersion: 0 };
-      frame = { image, meta };
+      frame = { image, meta, ink: { revision, version: 1, strokes, preview: preview ?? null } };
       for (const [peerId, student] of students) {
         void deliver(peerId, student);
       }
+    },
+    updateInk(strokes, preview) {
+      if (!teacher || closed || !frame) return;
+      frame.ink = { revision, version: frame.ink.version + 1, strokes, preview: preview ? { ...preview } : null };
+      if (inkTimer) return;
+      inkTimer = setTimeout(() => {
+        inkTimer = undefined;
+        for (const [peerId, student] of students) {
+          if (student.sent === frame?.meta.revision) void deliverInk(peerId, student);
+        }
+      }, 50);
     },
     updateView(view) {
       if (!teacher || closed || !frame) return;
@@ -218,6 +277,7 @@ export async function openSession(code, teacher, events) {
       closed = true;
       clearTimeout(discoveryTimer);
       clearTimeout(viewTimer);
+      clearTimeout(inkTimer);
       frame = null;
       await room.leave();
     },

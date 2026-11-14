@@ -51,12 +51,16 @@ body.presenting { height: 100dvh; display: flex; flex-direction: column; }
 #board { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 #board > p { margin: 0 0 .5rem; }
 #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #141822; border: 1px solid var(--line); border-radius: 12px; padding: .35rem; }
-#stage :is(canvas, img) { position: absolute; left: 50%; top: 50%; user-select: none; }
+#stage :is(canvas, img, svg) { position: absolute; left: 50%; top: 50%; user-select: none; }
+#ink { pointer-events: none; }
+#stage.inking { cursor: crosshair; }
+#view-tools button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+#ink-color { width: 2.25rem; height: 2rem; padding: .15rem; }
 #stage { touch-action: none; }
 #stage.pan { cursor: grab; }
 #stage.pan.dragging { cursor: grabbing; }
 #pan[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 
 @media (any-pointer: coarse) {
-  .top button { min-width: 44px; min-height: 44px; }
+  .top button, #ink-color { min-width: 44px; min-height: 44px; }
 }

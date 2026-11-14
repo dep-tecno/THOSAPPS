@@ -1,4 +1,4 @@
-export function createPageView(el, changed) {
+export function createPageView(el, changed, ink) {
   const stage = el('stage');
   const tools = el('view-tools');
   const pan = el('pan');
@@ -59,6 +59,7 @@ export function createPageView(el, changed) {
     page.style.width = width * scale + 'px';
     page.style.height = height * scale + 'px';
     page.style.transform = 'translate(-50%, -50%) translate(' + x + 'px, ' + y + 'px) rotate(' + rotation + 'deg)';
+    ink.layout(page, width, height);
     el('zoom-out').disabled = zoom === 1;
     el('zoom-in').disabled = zoom === 4;
   }
@@ -87,7 +88,10 @@ export function createPageView(el, changed) {
   el('zoom-out').onclick = () => { zoom = Math.max(1, zoom / 1.25); update(); };
   el('rotate').onclick = () => { rotation = (rotation + 90) % 360; update(); };
   el('fit').onclick = reset;
-  pan.onclick = () => togglePan(!stage.classList.contains('pan'));
+  pan.onclick = () => {
+    ink.select(undefined);
+    togglePan(!stage.classList.contains('pan'));
+  };
 
   stage.onpointerdown = event => {
     if (!page || remoteView) return;
@@ -95,6 +99,16 @@ export function createPageView(el, changed) {
       if (touches.size >= 2 || drag) return;
       touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
       stage.setPointerCapture(event.pointerId);
+      if (touches.size === 2 && ink.pointer !== undefined && touches.has(ink.pointer)) {
+        ink.finish(false);
+      } else if (touches.size === 1 && ink.fingerDrawing && ink.pointer === undefined) {
+        ink.start(event);
+      }
+      return;
+    }
+    if (ink.enabled && ink.pointer === undefined && event.button === 0 && !drag) {
+      stage.setPointerCapture(event.pointerId);
+      ink.start(event);
       return;
     }
     if (!stage.classList.contains('pan') || event.button !== 0 || drag || touches.size) return;
@@ -103,6 +117,11 @@ export function createPageView(el, changed) {
     stage.classList.add('dragging');
   };
   stage.onpointermove = event => {
+    if (ink.pointer === event.pointerId) {
+      if (touches.has(event.pointerId)) touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      ink.move(event);
+      return;
+    }
     if (touches.has(event.pointerId)) {
       const before = touchPosition();
       touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -116,7 +135,7 @@ export function createPageView(el, changed) {
         x = after.x - centerX - (before.x - centerX - x) * ratio;
         y = after.y - centerY - (before.y - centerY - y) * ratio;
         zoom = nextZoom;
-      } else if (touches.size === 1 && zoom > 1) {
+      } else if (touches.size === 1 && zoom > 1 && !ink.fingerDrawing && ink.pointer === undefined) {
         x += after.x - before.x;
         y += after.y - before.y;
       }
@@ -129,6 +148,9 @@ export function createPageView(el, changed) {
     update();
   };
   stage.onpointerup = stage.onpointercancel = stage.onlostpointercapture = event => {
+    if (ink.pointer === event.pointerId) {
+      ink.finish(event.type === 'pointerup');
+    }
     if (touches.delete(event.pointerId) && stage.hasPointerCapture(event.pointerId)) {
       stage.releasePointerCapture(event.pointerId);
     }

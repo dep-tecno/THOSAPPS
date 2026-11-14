@@ -33,6 +33,10 @@
       <button id="pan" aria-label="Mà per desplaçar" aria-pressed="false">✋</button>
       <button id="rotate" aria-label="Gira la pàgina 90 graus a la dreta">↻</button>
       <button id="fit" aria-label="Torna a la pàgina completa" title="Pàgina completa">100%</button>
+      <button id="write" aria-pressed="false">✎ Escriu</button>
+      <button id="highlight" aria-pressed="false">Subratlla</button>
+      <input id="ink-color" type="color" aria-label="Color de l’eina" hidden>
+      <button id="undo-ink" aria-label="Desfés l’últim traç" title="Desfés" disabled>↶</button>
     </div>
     <button id="leave" hidden>Sortir</button>
   </header>
@@ -65,6 +69,7 @@
       <section id="stage" aria-label="Pàgina compartida" hidden>
         <canvas id="canvas" hidden></canvas>
         <img id="page-image" alt="" draggable="false" hidden>
+        <svg id="ink" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" hidden></svg>
       </section>
     </div>
     <p id="lobby-error" role="alert"></p>

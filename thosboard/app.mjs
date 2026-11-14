@@ -1,15 +1,23 @@
 import { openSession, randomCode } from './session.mjs';
 import { createPageView } from './page-view.mjs';
+import { createInk } from './ink.mjs';
 
 const el = id => document.getElementById(id);
 const status = message => { el('status').textContent = message; };
 const warning = message => { el('error').textContent = message; };
 const canvas = el('canvas');
 const image = el('page-image');
+const pageInk = new Map();
+let inkPage;
+const ink = createInk(el, (strokes, preview) => {
+  if (inkPage === undefined) return;
+  pageInk.set(inkPage, strokes);
+  if (latestPage?.[1] === inkPage) session?.updateInk(strokes, preview);
+});
 const view = createPageView(el, state => {
   currentView = state;
   if (latestPage) session?.updateView(state);
-});
+}, ink);
 
 let session;
 let mode;
@@ -27,6 +35,8 @@ let currentView;
 
 function clearPage() {
   view.clear();
+  ink.clear();
+  inkPage = undefined;
   image.removeAttribute('src');
   if (imageUrl) URL.revokeObjectURL(imageUrl);
   imageUrl = undefined;
@@ -59,6 +69,7 @@ function connect(code, teacher) {
   return openSession(code, teacher, {
     status, warning, clearPage, page: showPage, count: showCount,
     view: state => view.follow(state),
+    ink: (strokes, preview) => ink.show(strokes, preview),
     collision: found => {
       el(teacher ? 'host-collision' : 'student-collision').hidden = !found;
       if (found && !teacher) clearTimeout(connectionTimer);
@@ -132,11 +143,13 @@ function changePage(number, pdfModule) {
       canvas.hidden = el('stage').hidden = false;
       latestPage = undefined;
       currentView = { zoom: 1, rotation: 0, x: 0, y: 0 };
+      inkPage = number;
+      ink.show(pageInk.get(number));
       view.show(canvas);
       const blob = await pdfModule.compressPage(canvas);
       if (current !== generation) return;
       latestPage = [blob, number, proxy.numPages];
-      session?.publish(...latestPage, currentView);
+      session?.publish(...latestPage, currentView, pageInk.get(number));
       status('');
     } finally {
       renderTask = undefined;
@@ -156,6 +169,7 @@ el('pdf').onchange = async () => {
   const file = el('pdf').files[0];
   if (!file || !session) return;
   el('pdf').value = '';
+  pageInk.clear();
   latestPage = undefined;
   session.clear();
   const current = ++generation;
@@ -208,7 +222,7 @@ el('new-code').onclick = async () => {
     showCount(0);
     warning('');
     showCode(code);
-    if (latestPage) next.publish(...latestPage, currentView);
+    if (latestPage) next.publish(...latestPage, currentView, pageInk.get(latestPage[1]));
     await previous.close();
   } catch {
     warning('No s’ha pogut canviar el codi de sessió.');
@@ -238,6 +252,8 @@ el('leave').onclick = async () => {
   updateNavigation();
   el(mode === 'teacher' ? 'host' : 'code').focus();
   latestPage = undefined;
+  pageInk.clear();
+  ink.select(undefined);
   document.body.classList.remove('presenting');
   mode = undefined;
 };
