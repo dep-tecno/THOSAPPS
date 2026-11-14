@@ -38,15 +38,14 @@ function showPage(blob, { page, total }) {
   el('stage').hidden = false;
 }
 
-function showRoster(requests, count, max) {
-  el('count').textContent = `${count} de ${max} alumnes admesos`;
+function showRoster(requests, count) {
+  el('count').textContent = `${count} ${count === 1 ? 'alumne admès' : 'alumnes admesos'}`;
   el('admission').hidden = requests.size === 0;
   const items = [...requests].map(([peerId, userId]) => {
     const item = document.createElement('li');
     item.className = 'row';
     const admit = document.createElement('button');
     admit.textContent = 'Admet';
-    admit.disabled = count >= max;
     admit.onclick = () => session?.decide(peerId, true);
     const deny = document.createElement('button');
     deny.textContent = 'Rebutja';
@@ -208,7 +207,7 @@ el('leave').onclick = async () => {
   el('lobby').hidden = false;
   el('host').disabled = el('join-button').disabled = false;
   el('pdf').value = el('fingerprint').value = '';
-  showRoster(new Map(), 0, 30);
+  showRoster(new Map(), 0);
   updateNavigation();
   el(mode === 'teacher' ? 'host' : 'code').focus();
   mode = undefined;

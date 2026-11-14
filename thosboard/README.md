@@ -12,7 +12,7 @@ Si es detecten dos professors amb el mateix codi, es mostra un avís. Cada profe
 
 Es reutilitza el PDF.js de THOSPDF. La lectura es fa localment per blocs, sense límit fix de mida del fitxer. El cost depèn de la memòria disponible i de la complexitat del document. El PDF original queda al dispositiu del professor. Només s’envia la pàgina renderitzada i comprimida, amb un màxim d’1 MiB per imatge. Els receptors poden desar o capturar la pàgina que veuen.
 
-El professor manté fins a 30 alumnes admesos. Cada alumne pot tenir un enviament en curs i rep la versió més recent quan aquest acaba. La capacitat i la latència requereixen una prova amb l’aula. El trànsit de pàgina va per WebRTC directe, sense TURN ni servidor propi. L’aïllament de clients, les VLAN o el bloqueig dels relés poden impedir la connexió.
+Una aula de 30 alumnes és la referència per a les proves de rendiment. El professor pot admetre més alumnes i la capacitat efectiva depèn del dispositiu i de la xarxa. Cada alumne pot tenir un enviament en curs i rep la versió més recent quan aquest acaba. La capacitat i la latència requereixen una prova amb l’aula. El trànsit de pàgina va per WebRTC directe, sense TURN ni servidor propi. L’aïllament de clients, les VLAN o el bloqueig dels relés poden impedir la connexió.
 
 ## Compilació
 

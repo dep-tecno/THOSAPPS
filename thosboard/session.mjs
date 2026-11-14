@@ -1,5 +1,4 @@
 const APP_ID = 'tecno-apps.cat/thosboard/v1';
-const MAX_STUDENTS = 30;
 export const MAX_FRAME_BYTES = 1024 * 1024;
 
 export function randomCode() {
@@ -51,7 +50,7 @@ export async function openSession(code, teacher, events) {
   }
 
   function updateTeacher() {
-    if (!closed) events.roster(requests, students.size, MAX_STUDENTS);
+    if (!closed) events.roster(requests, students.size);
   }
 
   async function deliver(peerId, student) {
@@ -127,11 +126,11 @@ export async function openSession(code, teacher, events) {
       verifiedUserId = hosts.get(peerId);
       events.status('Connectat. Esperant la pàgina del professor…');
       void send(ask, 'ready', peerId);
-    } else if (message === 'denied' || message === 'full') {
+    } else if (message === 'denied') {
       selected = null;
       expected = '';
       verifiedUserId = null;
-      events.status(message === 'full' ? 'La sessió és plena.' : 'El professor ha rebutjat la sol·licitud.');
+      events.status('El professor ha rebutjat la sol·licitud.');
     }
   });
 
@@ -196,11 +195,11 @@ export async function openSession(code, teacher, events) {
     },
     decide(peerId, allow) {
       if (!requests.delete(peerId)) return;
-      if (allow && students.size < MAX_STUDENTS) {
+      if (allow) {
         students.set(peerId, { busy: false, sent: 0, ready: false });
         void send(admission, 'admitted', peerId);
       } else {
-        void send(admission, allow ? 'full' : 'denied', peerId);
+        void send(admission, 'denied', peerId);
       }
       updateTeacher();
     },
