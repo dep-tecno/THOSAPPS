@@ -1,0 +1,10 @@
+{
+  "name": "thosboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild transport.mjs --bundle --format=esm --minify --legal-comments=external --outfile=transport.bundle.mjs"
+  },
+  "dependencies": { "trystero": "0.27.0" },
+  "devDependencies": { "esbuild": "0.25.12" }
+}

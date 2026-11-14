@@ -1,0 +1,50 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  --background: #0f1117;
+  --panel: #1a1d27;
+  --line: #333b51;
+  --text: #e2e8f0;
+  --muted: #aab4c7;
+  --accent: #00e676;
+  color: var(--text);
+  background: var(--background);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+.top, .row { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; }
+.top { justify-content: space-between; background: #141822; border-bottom: 1px solid var(--line); padding: .6rem clamp(1rem, 3vw, 2rem); }
+.brand { display: inline-flex; align-items: center; text-decoration: none; color: var(--text); font-weight: 800; }
+.brand > span:last-child { color: var(--accent); }
+.brand-icon { border: 2px solid var(--accent); border-radius: 5px; width: 1.8rem; height: 1.25rem; margin-right: .65rem; }
+main { width: min(100%, 100rem); margin: auto; padding: 1rem clamp(.75rem, 3vw, 2rem); }
+#lobby { max-width: 53rem; margin: clamp(1rem, 7vh, 4rem) auto 0; }
+h1 { font-size: clamp(1.7rem, 5vw, 2.7rem); }
+h2 { margin: 0 0 .6rem; font-size: 1.1rem; }
+p { color: var(--muted); }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; }
+label { display: inline-block; margin-bottom: .4rem; }
+button, input:not([type="file"]) { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: .55rem .75rem; color: var(--text); background: #232a3b; }
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+.primary { background: #17382e; color: #c3f8dc; border-color: #397757; font-weight: 650; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+#code { width: 6rem; }
+#fingerprint { width: 12rem; max-width: 100%; }
+#pdf { max-width: 100%; }
+.session-details { margin-bottom: .8rem; gap: .6rem 1.5rem; }
+.session-details strong, #student-id { color: var(--accent); margin-left: .25rem; font: bold 1.05rem ui-monospace, monospace; }
+#count { color: var(--muted); }
+#admission { margin-top: 1rem; }
+#admission p { margin: 0; }
+#requests { display: grid; gap: .5rem; padding: 0; list-style: none; margin-bottom: 0; }
+#requests li { font-family: ui-monospace, monospace; }
+#error, #lobby-error, .notice { color: #ffd08a; }
+#status:empty, #error:empty, #student-page:empty, #lobby-error:empty { display: none; }
+#stage { display: grid; justify-items: center; background: #141822; border: 1px solid var(--line); border-radius: 12px; padding: clamp(.4rem, 1vw, 1rem); margin-top: 1rem; }
+#stage :is(canvas, img) { display: block; max-width: 100%; height: auto; object-fit: contain; }
+#student-page { margin-bottom: 0; }

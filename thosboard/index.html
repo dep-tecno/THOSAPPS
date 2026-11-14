@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>THOSBOARD · Pissarra d’aula</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="../" aria-label="THOSBOARD · Torna a TECNO-APPS">
+      <span class="brand-icon" aria-hidden="true"></span>
+      THOS<span>BOARD</span>
+    </a>
+    <button id="leave" hidden>Sortir de la sessió</button>
+  </header>
+  <main>
+    <section id="lobby" aria-labelledby="title">
+      <h1 id="title">Comparteix la pissarra amb l’aula</h1>
+      <div class="choices">
+        <section class="panel">
+          <h2>Professorat</h2>
+          <p>Obre un PDF i mostra’n la pàgina actual als alumnes.</p>
+          <button id="host" class="primary">Crea una sessió</button>
+        </section>
+        <form id="join" class="panel">
+          <h2>Alumnat</h2>
+          <label for="code">Codi de la sessió</label>
+          <div class="row">
+            <input id="code" name="code" placeholder="0000" inputmode="numeric" autocomplete="off"
+              pattern="[0-9]{4}" maxlength="4" required>
+            <button id="join-button" class="primary">Entra</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <div id="board" hidden>
+      <section id="teacher" class="panel controls" aria-label="Controls del professorat" hidden>
+        <div class="row session-details">
+          <div>Codi de sessió <strong id="session-code"></strong></div>
+          <div>Identificador a mostrar a l’aula <strong id="teacher-id"></strong></div>
+          <span id="count" aria-live="polite">0 de 30 alumnes admesos</span>
+        </div>
+        <p id="host-collision" class="notice" hidden>Hi ha un altre professor amb aquest codi. Per canviar-lo, surt i crea una sessió nova.</p>
+        <div class="row">
+          <label for="pdf">Tria un PDF</label>
+          <input id="pdf" type="file" accept=".pdf,application/pdf">
+          <button id="previous" aria-label="Pàgina anterior" disabled>←</button>
+          <output id="teacher-page" aria-live="polite">Cap PDF obert</output>
+          <button id="next" aria-label="Pàgina següent" disabled>→</button>
+        </div>
+        <div id="admission" hidden>
+          <h2>Sol·licituds d’accés</h2>
+          <p>Compara l’identificador amb el que l’alumne veu al seu dispositiu abans d’admetre’l.</p>
+          <ul id="requests"></ul>
+        </div>
+      </section>
+
+      <form id="verify" class="panel controls" hidden>
+        <label for="fingerprint">Identificador del professor que veus a la pissarra</label>
+        <div class="row">
+          <input id="fingerprint" maxlength="14" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+          <button class="primary">Demana accés</button>
+        </div>
+        <p>Respecta majúscules i minúscules. El teu identificador és <strong id="student-id"></strong>.</p>
+      </form>
+      <p id="student-collision" class="notice" hidden>S’han trobat diversos professors amb aquest codi. Fes servir l’identificador de la teva pissarra.</p>
+      <p id="status" role="status"></p>
+      <p id="error" role="alert"></p>
+      <section id="stage" aria-label="Pàgina compartida" hidden>
+        <canvas id="canvas" hidden></canvas>
+        <img id="page-image" alt="" hidden>
+        <p id="student-page"></p>
+      </section>
+    </div>
+    <p id="lobby-error" role="alert"></p>
+  </main>
+</body>
+</html>
