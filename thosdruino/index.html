@@ -57,6 +57,9 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 #sel-bar .sel-btn.del:hover{border-color:#ff5555;color:#ff5555}
 .wire{fill:none;stroke-width:2;stroke-linecap:round;cursor:context-menu;transition:stroke-width .15s,opacity .15s}
 .wire:hover{stroke-width:3;opacity:.75}
+.wire.verify-highlight{stroke:#ffbd59;stroke-width:5;opacity:1;filter:drop-shadow(0 0 3px #ff7b39)}
+.vi-path{display:block;margin-top:.3rem;padding:.18rem .45rem;border:1px solid currentColor;border-radius:4px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.vi-path:hover,.vi-path:focus-visible{background:rgba(255,255,255,.12)}
 #btn-mode{font-size:1rem;min-width:34px;transition:all .2s}
 #btn-mode.cable-on{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.12);font-weight:600}
 #palette{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
@@ -1992,7 +1995,10 @@ function drawWire(g,pts,color,wid){
   const d=multiPath(pts);
   g.appendChild(s('path',{d,fill:'none',stroke:'rgba(0,0,0,0.35)','stroke-width':'3.5','stroke-linecap':'round','stroke-linejoin':'round',transform:'translate(1,2)','pointer-events':'none'}));
   const mp=s('path',{d,fill:'none',stroke:color,'stroke-width':'2','stroke-linecap':'round','stroke-linejoin':'round',class:'wire'});
-  if(wid!==undefined)mp.dataset.wireId=wid;
+  if(wid!==undefined){
+    mp.dataset.wireId=wid;
+    mp.classList.toggle('verify-highlight',verifiedWires.has(wid));
+  }
   g.appendChild(mp);
   g.appendChild(s('path',{d,fill:'none',stroke:'rgba(255,255,255,0.22)','stroke-width':'0.7','stroke-linecap':'round','stroke-linejoin':'round','pointer-events':'none'}));
   [[pts[0].x,pts[0].y],[pts[pts.length-1].x,pts[pts.length-1].y]].forEach(([cx,cy])=>{
@@ -2309,7 +2315,7 @@ canvas.addEventListener('contextmenu',e=>{
   btn.textContent='✕ Esborrar cable';
   btn.onmouseenter=()=>btn.style.background='rgba(255,85,85,.12)';
   btn.onmouseleave=()=>btn.style.background='';
-  btn.onclick=()=>{state.wires=state.wires.filter(w=>w.id!==wid);renderWires();hideWireCtx();};
+  btn.onclick=()=>{state.wires=state.wires.filter(w=>w.id!==wid);clearVerification();renderWires();hideWireCtx();};
   wireCtx.appendChild(btn);
   wireCtx.style.display='block';
   wireCtx.style.left=e.clientX+'px';
@@ -2406,12 +2412,14 @@ function closeProps(){document.getElementById('props').classList.remove('open');
 const hist=[];let histIdx=-1;
 function stateSnap(){return JSON.stringify({boards:state.boards,components:state.components,wires:state.wires,texts:state.texts});}
 function snapshot(){
+  clearVerification();
   hist.splice(histIdx+1);
   hist.push(stateSnap());
   if(hist.length>60)hist.shift();else histIdx++;
   syncUR();
 }
 function restoreSnap(json){
+  clearVerification();
   const d=JSON.parse(json);
   state.boards=d.boards||[];state.components=d.components||[];
   state.wires=d.wires||[];state.texts=d.texts||[];
@@ -2566,26 +2574,109 @@ document.getElementById('sel-dup').onclick=dupSelected;
 document.getElementById('sel-del').onclick=()=>document.getElementById('btn-delete').click();
 
 // ── Verificador de circuit ──
+const verifiedWires=new Set();
+
+function highlightWires(ids){
+  verifiedWires.clear();
+  ids.forEach(id=>verifiedWires.add(id));
+  document.querySelectorAll('#wires .wire').forEach(wire=>{
+    wire.classList.toggle('verify-highlight',verifiedWires.has(Number(wire.dataset.wireId)));
+  });
+}
+
+function clearVerification(){
+  highlightWires([]);
+  document.getElementById('verify-panel').style.display='none';
+  document.getElementById('btn-verify').className='';
+}
+
 function pinRole(pin){
   const p=pin.toUpperCase();
-  if(/^(GND|G|-|VSS|NEG)$/.test(p))return'gnd';
-  if(/^(5V|VCC|V\+|VIN|\+5V)$/.test(p))return'5v';
-  if(/^(3V3|3\.3V|3V|3\.3)$/.test(p))return'3v3';
+  if(/^(GND\d*|G|-|VSS|NEG)$/.test(p))return 'gnd';
+  if(/^(5V|\+5V)$/.test(p))return '5v';
+  if(/^(3V3|3\.3V|3V|3\.3)$/.test(p))return '3v3';
+  if(/^(VCC|V\+|VIN)$/.test(p))return 'supply';
   return null;
 }
+
+function findPowerConflicts(wires,boards){
+  const boardTypes=new Map(boards.map(board=>[board.id,board.type]));
+  const nodes=new Map();
+
+  function getNode(endpoint){
+    const role=endpoint.kind==='board'?pinRole(endpoint.pin):null;
+    let terminal=endpoint.pin;
+    if(endpoint.kind==='board'){
+      // The ground pins on a microcontroller board share a connection.
+      if(role==='gnd')terminal='GND';
+      const type=boardTypes.get(endpoint.id);
+      if(type==='proto830'||type==='mb102'){
+        // Each group of five holes connects within its own half.
+        const strip=terminal.match(/^([UL]\d+)_([0-4])$/);
+        if(strip)terminal=strip[1];
+      }
+    }
+    const key=`${endpoint.kind}-${endpoint.id}:${terminal}`;
+    if(!nodes.has(key))nodes.set(key,{role,edges:[]});
+    return nodes.get(key);
+  }
+
+  for(const wire of wires){
+    const from=getNode(wire.from);
+    const to=getNode(wire.to);
+    from.edges.push({node:to,id:wire.id});
+    to.edges.push({node:from,id:wire.id});
+  }
+
+  function findPath(sources,targetRole){
+    const queue=[...sources];
+    const previous=new Map(queue.map(node=>[node,null]));
+    for(let i=0;i<queue.length;i++){
+      const node=queue[i];
+      if(node.role===targetRole){
+        const ids=[];
+        for(let edge=previous.get(node);edge;edge=previous.get(edge.node))ids.push(edge.id);
+        return ids;
+      }
+      for(const edge of node.edges){
+        if(previous.has(edge.node))continue;
+        previous.set(edge.node,{node,id:edge.id});
+        queue.push(edge.node);
+      }
+    }
+    return [];
+  }
+
+  const conflicts=[];
+  const visited=new Set();
+  const checks=[
+    ['gnd','5v','Curt circuit: GND i 5 V comparteixen connexió'],
+    ['gnd','3v3','Curt circuit: GND i 3,3 V comparteixen connexió'],
+    ['5v','3v3','Tensions incompatibles: 5 V i 3,3 V comparteixen connexió']
+  ];
+  for(const start of nodes.values()){
+    if(visited.has(start))continue;
+    const net=[start];
+    visited.add(start);
+    for(let i=0;i<net.length;i++){
+      for(const {node} of net[i].edges){
+        if(visited.has(node))continue;
+        visited.add(node);
+        net.push(node);
+      }
+    }
+    for(const [source,target,message] of checks){
+      const sources=net.filter(node=>node.role===source);
+      if(!sources.length||!net.some(node=>node.role===target))continue;
+      conflicts.push({l:'err',m:message,wires:findPath(sources,target)});
+    }
+  }
+  return conflicts;
+}
+
 function verifyCircuit(){
-  const issues=[];
-  // Curt circuits i incompatibilitats de tensió
-  state.wires.forEach(w=>{
-    const r1=pinRole(w.from.pin),r2=pinRole(w.to.pin);
-    if(!r1||!r2)return;
-    if((r1==='gnd'&&r2==='5v')||(r1==='5v'&&r2==='gnd'))
-      issues.push({l:'err',m:'Curt circuit: GND connectat directament a 5V'});
-    if((r1==='gnd'&&r2==='3v3')||(r1==='3v3'&&r2==='gnd'))
-      issues.push({l:'err',m:'Curt circuit: GND connectat directament a 3.3V'});
-    if((r1==='5v'&&r2==='3v3')||(r1==='3v3'&&r2==='5v'))
-      issues.push({l:'err',m:'Tensió incompatible: pin 5V connectat a pin 3.3V'});
-  });
+  const issues=findPowerConflicts(state.wires,state.boards);
+  highlightWires(issues.flatMap(issue=>issue.wires));
   // Components sense cap connexió
   const connComps=new Set();
   state.wires.forEach(w=>{
@@ -2609,8 +2700,8 @@ function verifyCircuit(){
   });
   state.components.forEach(c=>{
     COMPS[c.type].pins.forEach(p=>{
-      const r=pinRole(p.id);
-      if((r==='5v'||r==='gnd')&&!connPins.has(`comp-${c.id}:${p.id}`))
+      const r=p.id==='G'&&['ky009','ky011','ky016'].includes(c.type)?null:pinRole(p.id);
+      if(r&&!connPins.has(`comp-${c.id}:${p.id}`))
         issues.push({l:'warn',m:`Pin ${p.id} de ${COMPS[c.type].label} sense connexió`});
     });
   });
@@ -2621,7 +2712,7 @@ function verifyCircuit(){
   if(issues.length===0){
     const el=document.createElement('div');
     el.className='vi ok';
-    el.innerHTML='<span>✅</span><span>Cap problema detectat. Circuit correcte!</span>';
+    el.innerHTML='<span>✅</span><span>Cap problema detectat en la verificació del cablejat.</span>';
     body.appendChild(el);
     btn.className='ok';
   } else {
@@ -2631,6 +2722,18 @@ function verifyCircuit(){
       const el=document.createElement('div');
       el.className='vi '+(i.l==='err'?'err':'warn');
       el.innerHTML=`<span>${i.l==='err'?'❌':'⚠️'}</span><span>${i.m}</span>`;
+      if(i.wires?.length){
+        const show=document.createElement('button');
+        show.type='button';
+        show.className='vi-path';
+        show.textContent='Mostra el recorregut';
+        show.onclick=()=>{
+          highlightWires(i.wires);
+          document.getElementById('verify-panel').style.display='none';
+          document.getElementById('btn-verify').focus();
+        };
+        el.lastElementChild.appendChild(show);
+      }
       body.appendChild(el);
     });
     if(issues.length>1){
@@ -2645,8 +2748,8 @@ function verifyCircuit(){
 }
 document.getElementById('btn-verify').onclick=verifyCircuit;
 document.getElementById('btn-verify-close').onclick=()=>{
-  document.getElementById('verify-panel').style.display='none';
-  document.getElementById('btn-verify').className='';
+  clearVerification();
+  document.getElementById('btn-verify').focus();
 };
 function toggleHelp(){const p=document.getElementById('help-panel');p.style.display=p.style.display==='flex'?'none':'flex';}
 document.getElementById('btn-help').onclick=toggleHelp;
