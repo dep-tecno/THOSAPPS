@@ -40,6 +40,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .pal-section[open]{padding-bottom:.25rem}
 .pal-item{display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:1px;transition:all .15s}
 .pal-item:hover{background:var(--bg3);color:var(--green)}
+.project-component{width:100%;border:0;background:transparent;color:inherit;font:inherit;font-size:.71rem;text-align:left;overflow-wrap:anywhere}
+.project-empty{margin:.3rem .5rem .55rem;font-size:.7rem;color:var(--muted)}
 .pal-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:5px;font-size:1rem}
 .pal-text{font-size:.75rem;line-height:1.3;flex:1}
 .pal-label{font-weight:500}
@@ -392,22 +394,52 @@ function createDipPackage(count,wide=false){
   };
 }
 
-function ledFootprint(label,color){
+
+function ledFootprint(defaultColor){
+  const tipY=20;
+  const artTop=tipY-12.5*HOLE_PITCH/2.54;
   return {
-    label,w:22,h:23,mountable:true,leadSpans:[1,2,3],defaultSpan:1,
-    pins:[{id:'A',x:7,y:20},{id:'K',x:15,y:20}],
+    label:'LED',w:22,h:23,artTop,mountable:true,leadSpans:[1,2,3],defaultSpan:1,defaultColor,
+    pins:[{id:'A',x:7,y:tipY},{id:'K',x:15,y:tipY}],
     render(g,component,pins){
       const mid=(pins[0].x+pins[1].x)/2;
-      pins.forEach((pin,i)=>g.appendChild(s('path',{
-        d:`M${mid+(i?3:-3)} 10 L${pin.x} 15 V${pin.y}`,fill:'none',stroke:'#aeb3b8',
-        'stroke-width':1.5,'stroke-linecap':'round'
-      })));
-      const tint=component.ledColor||color;
-      g.appendChild(s('circle',{cx:mid,cy:7,r:6.2,fill:`url(#led-${tint})`,stroke:'#555','stroke-width':.5}));
-      g.appendChild(s('ellipse',{cx:mid-1.6,cy:5,rx:2.2,ry:1.2,fill:'#fff',opacity:.5}));
-      g.appendChild(s('path',{d:`M${mid+4} 4 V10`,stroke:'#f2f3f5','stroke-width':.65,opacity:.72}));
+      pins.forEach(pin=>{
+        const cathode=pin.id==='K';
+        const stem=mid+(cathode?4:-4);
+        const bend=cathode?' V13.6 l2.8 2.2':' V15.8';
+        const d='M'+stem+' '+(artTop+26)+bend+' L'+pin.x+' 18.2 V'+pin.y;
+        g.appendChild(s('path',{d,fill:'none',stroke:'#62686d','stroke-width':1.8,'stroke-linecap':'round'}));
+        g.appendChild(s('path',{d,fill:'none',stroke:'#d7dde1','stroke-width':.85,'stroke-linecap':'round'}));
+      });
+      const tint=component.ledColor||defaultColor;
+      const lens=s('g',{transform:'translate('+mid+' '+artTop+')'});
+      const dome='M-7.9 25 V7.9 A7.9 7.9 0 0 1 7.9 7.9 V25 Z';
+      lens.appendChild(s('path',{d:dome,fill:'url(#led-'+tint+')',stroke:'#263039','stroke-width':.55}));
+      lens.appendChild(s('path',{d:'M-4 26 V17 H-.8',fill:'none',stroke:'#fff6e7','stroke-width':.85,opacity:.62}));
+      lens.appendChild(s('path',{d:'M3.2 26 V20 L.65 17 H5.1 L4.35 20 V26 Z',fill:'#3b302c',stroke:'#fff0df','stroke-width':.55,opacity:.66}));
+      lens.appendChild(s('path',{d:'M-5.8 8.4 A5.8 5.8 0 0 1 -1.7 2.65',fill:'none',stroke:'#fff','stroke-width':1.15,'stroke-linecap':'round',opacity:.77}));
+      lens.appendChild(s('path',{d:'M6.1 9.5 V22',fill:'none',stroke:'#1c2935','stroke-width':.65,opacity:.54}));
+      lens.appendChild(s('path',{d:'M-8.8 24 H7.15 L8.2 25 V26 L7.15 27 H-8.8 Q-9.8 25.5 -8.8 24 Z',fill:'url(#led-'+tint+')',stroke:'#242e36','stroke-width':.55}));
+      lens.appendChild(s('path',{d:'M-7.8 24.6 H6.7',stroke:'#fff','stroke-width':.55,opacity:.55}));
+      g.appendChild(lens);
     }
   };
+}
+
+function drawLedLens(g,x,y,r,color){
+  const lens=s('g',{transform:'translate('+x+' '+y+') scale('+r/6.5+')'});
+  lens.appendChild(s('path',{d:'M4.7 -4.5 A6.5 6.5 0 1 0 4.7 4.5 Z',fill:'url(#led-'+color+')',stroke:'#20272c','stroke-width':.55}));
+  lens.appendChild(s('path',{d:'M4.7 -4.3 V4.3',stroke:'#eff4f6','stroke-width':.55,opacity:.7}));
+  lens.appendChild(s('path',{d:'M-4 2 A4.5 4.5 0 0 0 2.2 4.2',fill:'none',stroke:'#111820','stroke-width':.75,opacity:.45}));
+  lens.appendChild(s('ellipse',{cx:-1.9,cy:-2.8,rx:2.45,ry:1.16,fill:'#fff',opacity:.66,transform:'rotate(-23 -1.9 -2.8)'}));
+  g.appendChild(lens);
+}
+
+function drawPiezoHousing(g,x,y,radius){
+  g.appendChild(s('circle',{cx:x,cy:y+.6,r:radius,fill:'#0a0b0d',stroke:'#565a5c','stroke-width':.6}));
+  g.appendChild(s('circle',{cx:x,cy:y,r:radius-1.2,fill:'url(#black-plastic)',stroke:'#17191a','stroke-width':.75}));
+  g.appendChild(s('circle',{cx:x,cy:y,r:2.4,fill:'#090a0b',stroke:'#676b6d','stroke-width':.65}));
+  g.appendChild(s('ellipse',{cx:x-radius*.25,cy:y-radius*.46,rx:radius*.44,ry:radius*.09,fill:'#a4a9ac',opacity:.26}));
 }
 
 const COMPS={
@@ -415,80 +447,72 @@ const COMPS={
   'dip-24-wide':createDipPackage(24,true),
   'dip-28-wide':createDipPackage(28,true),
   'traffic-light':{
-    label:'Semàfor LED',w:78,h:158,
-    pins:[
-      {id:'GND',x:15,y:158},{id:'R',x:31,y:158},
-      {id:'Y',x:47,y:158},{id:'G',x:63,y:158}
-    ],
+    label:'Semàfor LED',w:39,h:79,mountable:true,
+    pins:[{id:'GND',x:7.5,y:79},{id:'R',x:15.5,y:79},{id:'Y',x:23.5,y:79},{id:'G',x:31.5,y:79}],
     render(g){
-      const outline='M21 2 H57 Q60 2 60 5 V98 H49 V118 H73 Q76 118 76 121 V144 H2 V121 Q2 118 5 118 H29 V98 H18 V5 Q18 2 21 2 Z';
-      g.appendChild(s('path',{d:outline,fill:'#15171a',stroke:'#71767e','stroke-width':1.2}));
-      [8,70].forEach(cx=>{
-        g.appendChild(s('circle',{cx,cy:124,r:3.5,fill:'#0a0c10',stroke:'#9a9da4','stroke-width':1}));
+      const outline='M9 1 H30 V49 H25 V59 H37 Q38 59 38 60 V72 H1 V60 Q1 59 2 59 H14 V49 H9 Z';
+      g.appendChild(s('path',{d:outline,transform:'translate(0 .7)',fill:'#090a0a',stroke:'#777b77','stroke-width':.65}));
+      g.appendChild(s('path',{d:outline,fill:'#202522',stroke:'#454b45','stroke-width':.65}));
+      [4,35].forEach(cx=>g.appendChild(s('circle',{cx,cy:62,r:1.65,fill:'#0d1010',stroke:'#9d9f95','stroke-width':.6})));
+      ['red','yellow','green'].forEach((color,i)=>{
+        const y=9+i*15;
+        g.appendChild(s('circle',{cx:19.5,cy:y,r:7,fill:'#151916',stroke:'#b0a870','stroke-width':.5}));
+        g.appendChild(s('rect',{x:22,y:y+7,width:3,height:1.35,rx:.25,fill:'#c3bc9d'}));
+        drawLedLens(g,19.5,y,6.5,color);
       });
-      const lenses=[
-        {y:19,color:'red',rim:'#8e1819'},
-        {y:49,color:'yellow',rim:'#867321'},
-        {y:79,color:'green',rim:'#116339'}
-      ];
-      for(const {y,color,rim} of lenses){
-        g.appendChild(s('circle',{cx:39,cy:y,r:13,fill:rim,stroke:'#292d31','stroke-width':1}));
-        g.appendChild(s('circle',{cx:39,cy:y-1,r:10.5,fill:`url(#led-${color})`}));
-        g.appendChild(s('ellipse',{cx:36,cy:y-5,rx:4,ry:2.1,fill:'#fff',opacity:.42,transform:`rotate(-22 36 ${y-5})`}));
-      }
-      g.appendChild(s('rect',{x:8,y:137,width:62,height:9,rx:2,fill:'#24272c',stroke:'#42464c'}));
-      for(const {id,x,y} of this.pins){
-        g.appendChild(s('text',{x,y:134,'text-anchor':'middle','font-size':7,'font-family':'monospace',fill:'#eceef2'},id));
-        g.appendChild(s('rect',{x:x-1.4,y:140,width:2.8,height:y-140,rx:.6,fill:'#c7cbd0'}));
-      }
+      g.appendChild(s('rect',{x:4,y:69,width:31,height:4.5,rx:.7,fill:'#100f10',stroke:'#555750','stroke-width':.4}));
+      this.pins.forEach(pin=>{
+        g.appendChild(s('text',{x:pin.x,y:67.5,'text-anchor':'middle','font-size':3.2,'font-family':'monospace',fill:'#eef1ea'},pin.id));
+        g.appendChild(s('line',{x1:pin.x,y1:71,x2:pin.x,y2:pin.y,stroke:'#cbd0d4','stroke-width':1.15}));
+      });
     }
   },
-  'led-red':ledFootprint('LED Vermell','red'),
-  'led-green':ledFootprint('LED Verd','green'),
-  'led-blue':ledFootprint('LED Blau','blue'),
+  led:ledFootprint('red'),
+  // Keep the original keys for saved projects.
+  'led-red':ledFootprint('red'),
+  'led-green':ledFootprint('green'),
+  'led-blue':ledFootprint('blue'),
   resistor:{
     label:'Resistència',w:42,h:11,mountable:true,leadSpans:[4,5,6,7,8],defaultSpan:5,
     pins:[{id:'1',x:1,y:5.5},{id:'2',x:41,y:5.5}],
     render(g,component,pins){
       const left=pins[0].x,right=pins[1].x,mid=(left+right)/2;
-      g.appendChild(s('line',{x1:left,y1:5.5,x2:right,y2:5.5,stroke:'#aeb3b8','stroke-width':1.5}));
+      g.appendChild(s('line',{x1:left,y1:5.5,x2:right,y2:5.5,stroke:'#6f7477','stroke-width':1.9}));
+      g.appendChild(s('line',{x1:left,y1:5.2,x2:right,y2:5.2,stroke:'#d9dde0','stroke-width':.65}));
       g.appendChild(s('rect',{x:mid-10,y:1,width:20,height:9,rx:3.5,fill:'url(#resistor-body)',stroke:'#84613e','stroke-width':.55}));
       const colors=['#262221','#653a29','#c73832','#ef8b39','#e8bd39','#6c9c43','#416fbd','#8d61a6','#909394','#eee4d0'];
       const value=component.value||'4.7kΩ';
       const ohms=parseFloat(value)*(value.includes('k')?1000:value.includes('M')?1000000:1);
       const exponent=Math.max(0,Math.floor(Math.log10(ohms))-1);
       const digits=Math.round(ohms/10**exponent);
-      [colors[Math.floor(digits/10)],colors[digits%10],colors[exponent],'#ae904e'].forEach((fill,i)=>{
-        g.appendChild(s('rect',{x:mid-6+4*i,y:1.3,width:1.6,height:8.4,fill}));
+      [colors[Math.floor(digits/10)],colors[digits%10],colors[exponent],'#b89242'].forEach((fill,i)=>{
+        g.appendChild(s('rect',{x:mid+[-7,-3,1,7][i],y:1.65,width:1.6,height:7.7,rx:.2,fill:fill||'#303030'}));
       });
     }
   },
-  'button':{icon:'⊙',label:'Botó',w:48,h:32,pins:[{id:'1',x:0,y:8},{id:'2',x:0,y:24},{id:'3',x:48,y:8},{id:'4',x:48,y:24}],render(g){
-    g.appendChild(s('line',{x1:0,y1:8,x2:10,y2:8,stroke:'url(#silver)','stroke-width':'2'}));
-    g.appendChild(s('line',{x1:0,y1:24,x2:10,y2:24,stroke:'url(#silver)','stroke-width':'2'}));
-    g.appendChild(s('line',{x1:48,y1:8,x2:38,y2:8,stroke:'url(#silver)','stroke-width':'2'}));
-    g.appendChild(s('line',{x1:48,y1:24,x2:38,y2:24,stroke:'url(#silver)','stroke-width':'2'}));
-    // Housing
-    g.appendChild(s('rect',{x:10,y:3,width:28,height:26,rx:3,fill:'#3a3a3a',stroke:'#1a1a1a','stroke-width':'1.5'}));
-    g.appendChild(s('rect',{x:12,y:5,width:24,height:22,rx:2,fill:'#4a4a4a'}));
-    // Button cap
-    g.appendChild(s('circle',{cx:24,cy:16,r:9,fill:'#212121',stroke:'#000','stroke-width':'1'}));
-    g.appendChild(s('circle',{cx:24,cy:16,r:7,fill:'#e53935',stroke:'#b71c1c','stroke-width':'0.8'}));
-    g.appendChild(s('ellipse',{cx:21,cy:13,rx:3.5,ry:2.5,fill:'rgba(255,255,255,.4)'}));
-  }},
-  'buzzer':{icon:'🔊',label:'Buzzer',w:56,h:56,pins:[{id:'+',x:16,y:56},{id:'-',x:40,y:56}],render(g){
-    g.appendChild(s('circle',{cx:28,cy:24,r:22,fill:'url(#black-plastic)',stroke:'#000','stroke-width':'1.5'}));
-    g.appendChild(s('circle',{cx:28,cy:24,r:18,fill:'#1a1a1a',stroke:'#3a3a3a','stroke-width':'1'}));
-    g.appendChild(s('circle',{cx:28,cy:24,r:5,fill:'#000',stroke:'#444','stroke-width':'1'}));
-    for(let i=0;i<8;i++){
-      const a=i*Math.PI/4;
-      g.appendChild(s('circle',{cx:28+Math.cos(a)*11,cy:24+Math.sin(a)*11,r:1.2,fill:'#000'}));
+  button:{
+    label:'Polsador tàctil',w:24,h:16,mountable:true,
+    pins:[{id:'1',x:0,y:4},{id:'2',x:0,y:12},{id:'3',x:24,y:4},{id:'4',x:24,y:12}],
+    render(g,component,pins){
+      pins.forEach(pin=>{
+        g.appendChild(s('path',{d:'M'+pin.x+' '+pin.y+' H'+(pin.x?17:7),stroke:'#c4cbce','stroke-width':1.45,'stroke-linecap':'round'}));
+      });
+      g.appendChild(s('rect',{x:4,y:.4,width:16,height:15.2,rx:1.3,fill:'#252527',stroke:'#45474a','stroke-width':.65}));
+      g.appendChild(s('rect',{x:4.8,y:1.15,width:14.4,height:13.1,rx:1.2,fill:'#acb0af',stroke:'#d1d4d1','stroke-width':.55}));
+      [6.7,17.3].forEach(cx=>[3,13].forEach(cy=>g.appendChild(s('circle',{cx,cy,r:.85,fill:'#383b3d'}))));
+      g.appendChild(s('circle',{cx:12,cy:8,r:4.6,fill:'url(#black-plastic)',stroke:'#111315','stroke-width':.8}));
+      g.appendChild(s('path',{d:'M9.2 6.7 Q10.5 4.2 13 5.3',fill:'none',stroke:'#d2d5d7','stroke-width':.55,opacity:.52}));
     }
-    g.appendChild(s('text',{x:28,y:43,'text-anchor':'middle','font-size':'5','fill':'#ff3333','font-weight':'bold'},'+'));
-    g.appendChild(s('line',{x1:16,y1:46,x2:16,y2:56,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:40,y1:46,x2:40,y2:56,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));
-    g.appendChild(s('ellipse',{cx:24,cy:14,rx:8,ry:4,fill:'rgba(255,255,255,0.12)'}));
-  }},
+  },
+  buzzer:{
+    label:'Brunzidor piezoelèctric',w:56,h:56,mountable:true,
+    pins:[{id:'+',x:16,y:56},{id:'-',x:40,y:56}],
+    render(g,component,pins){
+      pins.forEach(pin=>g.appendChild(s('line',{x1:pin.x,y1:40,x2:pin.x,y2:pin.y,stroke:'#bbc0c4','stroke-width':1.7,'stroke-linecap':'round'})));
+      drawPiezoHousing(g,28,26,22);
+      g.appendChild(s('text',{x:16,y:45,'text-anchor':'middle','font-size':6,fill:'#ecede9'},'+'));
+    }
+  },
   'dht11':{icon:'💧',label:'DHT11',w:64,h:88,pins:[{id:'V',x:18,y:86},{id:'D',x:32,y:86},{id:'G',x:46,y:86}],render(g){
     g.appendChild(s('rect',{x:6,y:8,width:52,height:62,rx:5,fill:'#1976d2',stroke:'#0d47a1','stroke-width':'2'}));
     g.appendChild(s('rect',{x:9,y:11,width:46,height:56,rx:3,fill:'#1565c0'}));
@@ -978,22 +1002,21 @@ const COMPS={
     g.appendChild(s('path',{d:'M 11 10 Q 14 6, 19 9 Q 17 14, 13 16 Z',fill:'rgba(255,255,255,.7)'}));
     g.appendChild(s('path',{d:'M 31 10 Q 34 6, 39 9 Q 37 14, 33 16 Z',fill:'rgba(255,255,255,.7)'}));
   }},
-  'ky012':{icon:'🔊',label:'KY012 Buzzer',w:54,h:60,pins:[{id:'+',x:16,y:58},{id:'-',x:38,y:58}],render(g){
-    // PCB
-    g.appendChild(s('rect',{x:6,y:34,width:42,height:18,rx:2,fill:'url(#pcb)',stroke:'#0d3d14','stroke-width':'1.5'}));
-    // Buzzer cylinder
-    g.appendChild(s('ellipse',{cx:27,cy:14,rx:15,ry:5,fill:'#0a0a0a',stroke:'#333','stroke-width':'1'}));
-    g.appendChild(s('rect',{x:12,y:14,width:30,height:22,fill:'#0f0f0f',stroke:'#333','stroke-width':'0.8'}));
-    g.appendChild(s('ellipse',{cx:27,cy:36,rx:15,ry:5,fill:'#1a1a1a',stroke:'#333','stroke-width':'0.8'}));
-    // Vent holes on top
-    for(let i=0;i<3;i++)for(let j=0;j<2;j++)g.appendChild(s('circle',{cx:20+i*5,cy:11+j*5,r:0.9,fill:'#000'}));
-    // + polarity mark
-    g.appendChild(s('text',{x:16,y:31,'text-anchor':'middle','font-size':'7',fill:'rgba(255,80,80,0.75)','font-weight':'bold'},'+'));
-    // Top highlight
-    g.appendChild(s('ellipse',{cx:22,cy:12,rx:8,ry:2.5,fill:'rgba(255,255,255,0.1)'}));
-    // Leads
-    [16,38].forEach(x=>{g.appendChild(s('line',{x1:x,y1:52,x2:x,y2:58,stroke:'url(#silver)','stroke-width':'2.5','stroke-linecap':'round'}));});
-  }},
+  'ky012':{
+    label:'Brunzidor actiu KY-012',w:55,h:62,mountable:true,
+    pins:[{id:'-',x:19.5,y:58},{id:'NC',x:27.5,y:58},{id:'+',x:35.5,y:58}],
+    render(g,component,pins){
+      g.appendChild(s('rect',{x:2,y:1,width:51,height:50,rx:2,fill:'#252829',stroke:'#555952','stroke-width':.7}));
+      [6,49].forEach(cx=>g.appendChild(s('circle',{cx,cy:5,r:1.9,fill:'#131515',stroke:'#b8b6a2','stroke-width':.65})));
+      drawPiezoHousing(g,27.5,23,16);
+      g.appendChild(s('text',{x:27.5,y:43,'text-anchor':'middle','font-size':5,fill:'#ebece4','font-family':'monospace'},'KY-012'));
+      g.appendChild(s('rect',{x:15.5,y:48,width:24,height:4,rx:.6,fill:'#141414',stroke:'#646664','stroke-width':.4}));
+      pins.forEach((pin,i)=>{
+        g.appendChild(s('line',{x1:pin.x,y1:50,x2:pin.x,y2:pin.y,stroke:'#cbd0d4','stroke-width':1.35}));
+        g.appendChild(s('text',{x:pin.x,y:47,'text-anchor':'middle','font-size':3.4,fill:'#ebece4'},['−','NC','S'][i]));
+      });
+    }
+  },
   'ky016':{icon:'🌈',label:'KY016 RGB LED 3C',w:52,h:58,pins:[{id:'R',x:12,y:56},{id:'G',x:26,y:56},{id:'B',x:40,y:56}],render(g){
     // Glow halos
     [[12,18,'red'],[26,18,'green'],[40,18,'blue']].forEach(([cx,cy,n])=>{
@@ -1405,8 +1428,8 @@ function createBreadboard(label,bodyColor,columns,railContacts){
 
 // Bring selected catalogue parts onto the protoboard pitch without changing their pin IDs.
 for(const [type,sx,sy] of [
-  ['traffic-light',.5,.5],['dht11',4/7,.55],['button',.5,.5],['cap-cer',1,.65],
-  ['oled',1,1],['buzzer',1,1],['pot',.5,.5],['ne555',3/7,1]
+  ['dht11',4/7,.55],['cap-cer',1,.65],
+  ['oled',1,1],['pot',.5,.5],['ne555',3/7,1]
 ]){
   const original=COMPS[type];
   COMPS[type]={
@@ -1859,18 +1882,20 @@ function updatePropsPanel(){
     sel.onchange=()=>{c.value=sel.value;renderComponents();snapshot();};
     makeRow(lbl,sel);
   }
-  if(c.type.startsWith('led-')){
-    const ledOpts=[{n:'Vermell',c:'red',bg:'#ff3232'},{n:'Verd',c:'green',bg:'#00d96b'},{n:'Blau',c:'blue',bg:'#1a66ff'},{n:'Groc',c:'yellow',bg:'#ffeb3b'},{n:'Blanc',c:'white',bg:'#f5f5f5'}];
-    const row=document.createElement('div');row.className='prop-row';
-    const l=document.createElement('div');l.className='prop-lbl';l.textContent='Color LED';row.appendChild(l);
-    const dots=document.createElement('div');dots.style.cssText='display:flex;gap:5px;flex-wrap:wrap;margin-top:2px';
-    ledOpts.forEach(opt=>{
-      const d=document.createElement('div');d.className='wc-dot'+(c.ledColor===opt.c?' active':'');
-      d.style.cssText=`background:${opt.bg};width:18px;height:18px`;d.title=opt.n;
-      d.onclick=()=>{dots.querySelectorAll('.wc-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');c.ledColor=opt.c;renderComponents();snapshot();};
-      dots.appendChild(d);
+  if(def.defaultColor){
+    const colors={red:'Vermell',green:'Verd',blue:'Blau',yellow:'Groc',white:'Blanc'};
+    const select=document.createElement('select');
+    select.className='prop-sel';
+    select.setAttribute('aria-label','Color del LED');
+    Object.entries(colors).forEach(([value,label])=>{
+      const option=document.createElement('option');
+      option.value=value;
+      option.textContent=label;
+      option.selected=value===(c.ledColor||def.defaultColor);
+      select.appendChild(option);
     });
-    row.appendChild(dots);body.appendChild(row);
+    select.onchange=()=>{c.ledColor=select.value;renderComponents();snapshot();};
+    makeRow('Color del LED',select);
   }
   if(def.leadSpans){
     const leadSelect=document.createElement('select');
@@ -1936,20 +1961,58 @@ function buildBoardsPanel(){
   });
 }
 
+function refreshProjectComponents(){
+  const section=document.getElementById('project-components');
+  const list=document.getElementById('project-component-list');
+  list.replaceChildren();
+  state.components.forEach((component,index)=>{
+    const name=COMPS[component.type].label;
+    const label=[component.label?.trim()||name,component.value].filter(Boolean).join(' · ');
+    const item=document.createElement('button');
+    item.type='button';
+    item.className='pal-item project-component';
+    item.textContent=(index+1)+'. '+label;
+    item.dataset.label=(label+' '+name).toLowerCase();
+    item.onclick=()=>select(component.id);
+    list.appendChild(item);
+  });
+  if(!state.components.length){
+    const empty=document.createElement('p');
+    empty.className='project-empty';
+    empty.textContent='Encara no hi ha components al projecte.';
+    list.appendChild(empty);
+  }
+  const query=document.getElementById('pal-search').value.trim().toLowerCase();
+  if(query)filterPaletteSection(section,query);
+}
+
+function filterPaletteSection(section,query){
+  let match=false;
+  section.querySelectorAll('.pal-item').forEach(item=>{
+    const show=!query||item.dataset.label.includes(query);
+    item.style.display=show?'':'none';
+    if(show)match=true;
+  });
+  section.hidden=Boolean(query)&&!match;
+  if(query)section.open=match;
+}
+
 function buildPalette(){
   const p=document.getElementById('pal-list');
+  const project=document.createElement('details');
+  project.id='project-components';
+  project.className='pal-section';
+  project.open=true;
+  const summary=document.createElement('summary');
+  summary.className='pal-title';
+  summary.textContent='Components del projecte';
+  const projectList=document.createElement('div');
+  projectList.id='project-component-list';
+  project.append(summary,projectList);
+  p.appendChild(project);
   const categories=[
-    ['⚡ Bàsics',[
-      {name:'led-red',icon:'🔴',label:'LED Vermell'},
-      {name:'led-green',icon:'🟢',label:'LED Verd'},
-      {name:'led-blue',icon:'🔵',label:'LED Blau'},
-      {name:'traffic-light',icon:'🚦',label:'Semàfor LED'},
-      {name:'resistor',icon:'〰️',label:'Resistència'},
-      {name:'button',icon:'⊙',label:'Botó (KY004)'},
-      {name:'buzzer',icon:'🔊',label:'Buzzer (KY006)'},
-      {name:'ky012',icon:'🔊',label:'KY012 Buzzer Passiu'}
-    ]],
     ['🔩 Discrets',[
+      {name:'resistor',icon:'〰️',label:'Resistència'},
       {name:'transistor',icon:'🔺',label:'Transistor BC547'},
       {name:'diode',icon:'⬡',label:'Díode 1N4007'},
       {name:'cap-elec',icon:'🔋',label:'Condensador 100µF'},
@@ -1959,6 +2022,8 @@ function buildPalette(){
     ['Encapsulats DIP',[...DIP_PIN_COUNTS.map(count=>`dip-${count}`),'dip-24-wide','dip-28-wide']
       .map(name=>({name,icon:'▣',label:COMPS[name].label}))],
     ['🔌 Actuadors',[
+      {name:'buzzer',icon:'🔊',label:'Brunzidor piezoelèctric'},
+      {name:'ky012',icon:'🔊',label:'Brunzidor actiu KY-012'},
       {name:'pot',icon:'🎚️',label:'Potenciòmetre'},
       {name:'servo',icon:'⚙️',label:'Servo'},
       {name:'motor',icon:'⚡',label:'Motor DC'},
@@ -1972,6 +2037,8 @@ function buildPalette(){
       {name:'ky028',icon:'🌡️',label:'KY028 Temp Digital'}
     ]],
     ['💡 LEDs',[
+      {name:'led',icon:'💡',label:'LED'},
+      {name:'traffic-light',icon:'🚦',label:'Semàfor LED'},
       {name:'ky008',icon:'🔴',label:'KY008 Laser'},
       {name:'ky009',icon:'🌈',label:'KY009 RGB SMD'},
       {name:'ky011',icon:'🔆',label:'KY011 LED Bicolor'},
@@ -2007,6 +2074,7 @@ function buildPalette(){
       {name:'ky031',icon:'📳',label:'KY031 Knock'}
     ]],
     ['🎮 Interacció',[
+      {name:'button',icon:'⊙',label:'Polsador tàctil'},
       {name:'ky023',icon:'🕹️',label:'KY023 Joystick'},
       {name:'ky040',icon:'🔄',label:'KY040 Encoder'},
       {name:'ky036',icon:'🖐️',label:'KY036 Tàctil Metal'},
@@ -2019,15 +2087,14 @@ function buildPalette(){
       {name:'hc05',icon:'📶',label:'HC-05 Bluetooth'}
     ]]
   ];
-  categories.forEach(([title,items],index)=>{
+  categories.forEach(([title,items])=>{
     const sec=document.createElement('details');
     sec.className='pal-section';
-    sec.open=index===0;
     const tit=document.createElement('summary');
     tit.className='pal-title';
     tit.textContent=title;
     sec.appendChild(tit);
-    items.forEach(sensor=>{
+    items.slice().sort((a,b)=>a.label.localeCompare(b.label,'ca',{numeric:true})).forEach(sensor=>{
       const item=document.createElement('div');
       item.className='pal-item';
       item.dataset.label=sensor.label.toLowerCase();
@@ -2048,15 +2115,8 @@ function buildPalette(){
     clr.style.display=q?'block':'none';
     if(q&&!openBeforeSearch)openBeforeSearch=sections.map(section=>section.open);
     sections.forEach((section,index)=>{
-      let match=false;
-      section.querySelectorAll('.pal-item').forEach(item=>{
-        const show=!q||item.dataset.label.includes(q);
-        item.style.display=show?'':'none';
-        if(show)match=true;
-      });
-      section.hidden=Boolean(q)&&!match;
-      if(q)section.open=match;
-      else if(openBeforeSearch)section.open=openBeforeSearch[index];
+      filterPaletteSection(section,q);
+      if(!q&&openBeforeSearch)section.open=openBeforeSearch[index];
     });
     if(!q)openBeforeSearch=null;
   };
@@ -2292,7 +2352,8 @@ function renderComponents(){
     cg.dataset.id=c.id;
     if(state.selected===c.id||state.multiSel.some(m=>m.kind==='comp'&&m.id===c.id))cg.classList.add('selected');
     d.render(cg,c,d.pins);
-    cg.appendChild(s('rect',{class:'comp-rect',x:-5,y:-5,width:d.w+10,height:d.h+10,rx:4}));
+    const artTop=d.artTop||0;
+    cg.appendChild(s('rect',{class:'comp-rect',x:-5,y:artTop-5,width:d.w+10,height:d.h+10-artTop,rx:4}));
     d.pins.forEach(p=>{
       cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:d.mountable?3.7:8,class:mounted?'pin-circle mounted-pin':'pin-circle','data-pin':p.id}));
       cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:d.mountable?1.6:3,class:'pin-dot','data-pin':p.id}));
@@ -2592,7 +2653,16 @@ canvas.addEventListener('contextmenu',e=>{
   wireCtx.style.top=e.clientY+'px';
 });
 document.addEventListener('mousedown',e=>{if(!wireCtx.contains(e.target))hideWireCtx();});
-canvas.addEventListener('wheel',e=>{e.preventDefault();state.view.s*=e.deltaY>0?0.9:1.1;updateView();},{passive:false});
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  if(dragComp||panStart||rectSelStart||!e.deltaY)return;
+  const bounds=canvas.getBoundingClientRect();
+  const x=e.clientX-bounds.left,y=e.clientY-bounds.top;
+  const unit=e.deltaMode===1?16:e.deltaMode===2?bounds.height:1;
+  const delta=Math.max(-160,Math.min(160,e.deltaY*unit));
+  zoomAt(Math.exp(-delta*.0016),x,y);
+  if(state.wireMode)updatePreview((x-state.view.x)/state.view.s,(y-state.view.y)/state.view.s);
+},{passive:false});
 document.addEventListener('keydown',e=>{
   if(e.target===textInput)return;
   if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();return;}
@@ -2615,8 +2685,8 @@ document.addEventListener('keydown',e=>{
 document.getElementById('btn-text').onclick=()=>setMode(state.mode==='text'?'move':'text');
 
 document.getElementById('btn-mode').onclick=()=>setMode(state.mode==='move'?'wire':'move');
-document.getElementById('btn-zoom-in').onclick=()=>{state.view.s*=1.2;updateView();};
-document.getElementById('btn-zoom-out').onclick=()=>{state.view.s/=1.2;updateView();};
+document.getElementById('btn-zoom-in').onclick=()=>zoomAtCenter(1.2);
+document.getElementById('btn-zoom-out').onclick=()=>zoomAtCenter(1/1.2);
 document.getElementById('btn-delete').onclick=()=>{
   if(state.multiSel.length>0){
     const cids=new Set(state.multiSel.filter(m=>m.kind==='comp').map(m=>m.id));
@@ -2681,6 +2751,22 @@ function updateSelBar(){
 }
 function select(id){state.selected=id;state.selectedBoard=null;state.multiSel=[];document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`comp-${id}`);if(el)el.classList.add('selected');}updateSelBar();updatePropsPanel();}
 function selectBoard(id){state.selectedBoard=id;state.selected=null;state.multiSel=[];document.querySelectorAll('.comp-group,.board-group').forEach(e=>e.classList.remove('selected'));if(id!=null){const el=document.getElementById(`board-${id}`);if(el)el.classList.add('selected');}updateSelBar();updatePropsPanel();}
+function zoomAt(factor,x,y){
+  const view=state.view;
+  const nextScale=Math.max(.2,Math.min(5,view.s*factor));
+  if(nextScale===view.s)return;
+  const ratio=nextScale/view.s;
+  view.x=x+(view.x-x)*ratio;
+  view.y=y+(view.y-y)*ratio;
+  view.s=nextScale;
+  updateView();
+}
+
+function zoomAtCenter(factor){
+  const {width,height}=canvas.getBoundingClientRect();
+  zoomAt(factor,width/2,height/2);
+}
+
 function updateView(){document.getElementById('world').setAttribute('transform',`translate(${state.view.x},${state.view.y})scale(${state.view.s})`);document.getElementById('zoom-pct').textContent=Math.round(state.view.s*100)+'%';updateSelBar();}
 function setPanelExpanded(toggle,expanded){
   if(toggle.getAttribute('aria-expanded')===String(expanded))return;
@@ -2704,6 +2790,7 @@ const hist=[];let histIdx=-1;
 function stateSnap(){return JSON.stringify({boards:state.boards,components:state.components,wires:state.wires,texts:state.texts});}
 function snapshot(){
   clearVerification();
+  refreshProjectComponents();
   hist.splice(histIdx+1);
   hist.push(stateSnap());
   if(hist.length>60)hist.shift();else histIdx++;
@@ -2714,7 +2801,7 @@ function restoreSnap(json){
   const d=JSON.parse(json);
   state.boards=d.boards||[];state.components=d.components||[];
   state.wires=d.wires||[];state.texts=d.texts||[];
-  renderAll();syncUR();
+  renderAll();refreshProjectComponents();syncUR();
 }
 function undo(){if(histIdx>0){histIdx--;restoreSnap(hist[histIdx]);}}
 function redo(){if(histIdx<hist.length-1){histIdx++;restoreSnap(hist[histIdx]);}}
