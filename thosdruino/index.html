@@ -50,6 +50,10 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
 .pin-circle:hover+.pin-dot{fill:#00e676;stroke:#fff;stroke-width:2}
 .pin-circle.wiring+.pin-dot{fill:#ffd54f;stroke:var(--green);stroke-width:2.5}
 .pin-circle.hover-pin+.pin-dot{fill:#00e676;stroke:#fff;stroke-width:2}
+.breadboard-hole{fill:#464641;stroke:#b5b2a7;stroke-width:.5;pointer-events:none}
+.breadboard-pin:hover+.breadboard-hole,.breadboard-pin.wiring+.breadboard-hole,.breadboard-pin.hover-pin+.breadboard-hole{fill:#00b878;stroke:#056548;stroke-width:1}
+.mounted-pin+.pin-dot{fill:#b9c2c6;stroke:#535b60;stroke-width:.55}
+.mounted-pin:hover+.pin-dot,.mounted-pin.wiring+.pin-dot,.mounted-pin.hover-pin+.pin-dot{fill:#00e676;stroke:#05705b;stroke-width:1}
 .comp-group.selected>.comp-rect,.board-group.selected>.comp-rect{display:block}
 .comp-rect{display:none;fill:rgba(0,230,118,.06);stroke:var(--green);stroke-width:2.5;stroke-dasharray:8 4;pointer-events:none}
 #sel-bar{position:fixed;display:none;z-index:250;background:#1a1d27;border:1.5px solid var(--green);border-radius:10px;padding:5px 10px;align-items:center;gap:7px;box-shadow:0 4px 20px rgba(0,0,0,.7),0 0 12px rgba(0,230,118,.2);transform:translateX(-50%);pointer-events:all;white-space:nowrap}
@@ -174,6 +178,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
     <div class="hk"><kbd>W</kbd><span>Mode cable</span></div>
     <div class="hk"><kbd>T</kbd><span>Mode text</span></div>
     <div class="hk"><kbd>R</kbd><span>Girar 90°</span></div>
+    <div class="hk"><kbd>Arrossega</kbd><span>Insereix les potes si coincideixen amb els forats</span></div>
     <div class="hk"><kbd>Esc</kbd><span>Cancel·lar / Moure</span></div>
     <div class="hk"><kbd>Delete</kbd><span>Eliminar selecció</span></div>
     <div class="hk"><kbd>Ctrl+Z</kbd><span>Desfer</span></div>
@@ -211,7 +216,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.97);backdrop-fi
     <div id="pal-list"></div>
   </div>
 </aside>
-<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><g id="texts"></g><path id="wire-preview" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g><rect id="sel-box" fill="rgba(0,230,118,0.08)" stroke="#00e676" stroke-width="1" stroke-dasharray="4 3" pointer-events="none" display="none" x="0" y="0" width="0" height="0"/></g></svg></div>
+<div id="canvas-wrap"><svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs id="defs"></defs><g id="world"><g id="boards"></g><g id="components"></g><g id="wires"></g><g id="texts"></g><path id="wire-preview" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="" pointer-events="none" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"/><g id="wire-preview-pts" pointer-events="none"></g><g id="mount-preview" pointer-events="none"></g><rect id="sel-box" fill="rgba(0,230,118,0.08)" stroke="#00e676" stroke-width="1" stroke-dasharray="4 3" pointer-events="none" display="none" x="0" y="0" width="0" height="0"/></g></svg></div>
 <aside id="props" aria-labelledby="props-title">
   <div class="panel-header" id="props-hdr">
     <span class="panel-title" id="props-title">Plaques</span>
@@ -354,38 +359,61 @@ function setupDefs(){
   ]));
 }
 
+const HOLE_PITCH=8;
 const DIP_PIN_COUNTS=[6,8,14,16,18,20,24,28,32,40];
 
-function createDipPackage(count){
+function createDipPackage(count,wide=false){
   const rows=count/2;
-  const width=76;
-  const height=36+(rows-1)*17;
+  const width=wide?56:32;
+  const height=(rows+1)*HOLE_PITCH;
+  const right=width-4;
   const pins=Array.from({length:count},(_,index)=>{
     const left=index<rows;
     const row=left?index:count-1-index;
-    return {id:String(index+1),x:left?4:72,y:18+row*17};
+    return {id:String(index+1),x:left?4:right,y:HOLE_PITCH*(row+1)};
   });
   return {
-    label:`DIP-${count}`,w:width,h:height,pins,
+    label:`DIP-${count}${wide?' · 15,24 mm':''}`,w:width,h:height,pins,mountable:true,crossChannel:true,
     render(g){
       for(const {x,y} of pins){
-        g.appendChild(s('rect',{x:x===4?2:62,y:y-2.5,width:12,height:5,rx:1,fill:'url(#silver)',stroke:'#657081','stroke-width':.6}));
+        g.appendChild(s('rect',{x:x===4?2:x-6,y:y-1.6,width:8,height:3.2,rx:.6,fill:'url(#silver)',stroke:'#687078','stroke-width':.5}));
       }
-      const outline=`M16 2 H30 A8 8 0 0 0 46 2 H60 Q64 2 64 6 V${height-6} Q64 ${height-2} 60 ${height-2} H16 Q12 ${height-2} 12 ${height-6} V6 Q12 2 16 2 Z`;
-      g.appendChild(s('path',{d:outline,fill:'#22262c',stroke:'#727b88','stroke-width':1.2}));
-      g.appendChild(s('circle',{cx:18,cy:8,r:2,fill:'#cbd5e1'}));
+      const mid=width/2;
+      const outline=`M7 2 H${mid-4} Q${mid} 10 ${mid+4} 2 H${width-7} V${height-2} H7 Z`;
+      g.appendChild(s('path',{d:outline,fill:'#22262c',stroke:'#6b7280','stroke-width':.8}));
+      g.appendChild(s('path',{d:`M9 4 V${height-4}`,stroke:'#424751','stroke-width':1}));
       for(const {id,x,y} of pins){
         g.appendChild(s('text',{
-          x:x===4?22:54,y:y+3,'text-anchor':'middle',fill:'#e2e8f0',
-          'font-family':'monospace','font-size':9
+          x:x===4?12:width-12,y:y+1.8,'text-anchor':'middle',fill:'#e2e8f0',
+          'font-family':'monospace','font-size':5
         },id));
       }
     }
   };
 }
 
+function ledFootprint(label,color){
+  return {
+    label,w:22,h:23,mountable:true,leadSpans:[1,2,3],defaultSpan:1,
+    pins:[{id:'A',x:7,y:20},{id:'K',x:15,y:20}],
+    render(g,component,pins){
+      const mid=(pins[0].x+pins[1].x)/2;
+      pins.forEach((pin,i)=>g.appendChild(s('path',{
+        d:`M${mid+(i?3:-3)} 10 L${pin.x} 15 V${pin.y}`,fill:'none',stroke:'#aeb3b8',
+        'stroke-width':1.5,'stroke-linecap':'round'
+      })));
+      const tint=component.ledColor||color;
+      g.appendChild(s('circle',{cx:mid,cy:7,r:6.2,fill:`url(#led-${tint})`,stroke:'#555','stroke-width':.5}));
+      g.appendChild(s('ellipse',{cx:mid-1.6,cy:5,rx:2.2,ry:1.2,fill:'#fff',opacity:.5}));
+      g.appendChild(s('path',{d:`M${mid+4} 4 V10`,stroke:'#f2f3f5','stroke-width':.65,opacity:.72}));
+    }
+  };
+}
+
 const COMPS={
-  ...Object.fromEntries(DIP_PIN_COUNTS.map(count=>[`dip-${count}`,createDipPackage(count)])),
+  ...Object.fromEntries(DIP_PIN_COUNTS.map(count=>[`dip-${count}`,createDipPackage(count,count>=32)])),
+  'dip-24-wide':createDipPackage(24,true),
+  'dip-28-wide':createDipPackage(28,true),
   'traffic-light':{
     label:'Semàfor LED',w:78,h:158,
     pins:[
@@ -415,54 +443,26 @@ const COMPS={
       }
     }
   },
-  'led-red':{icon:'🔴',label:'LED Vermell',w:32,h:64,pins:[{id:'A',x:8,y:64},{id:'K',x:24,y:64}],render(g){
-    g.appendChild(s('circle',{cx:16,cy:15,r:14,fill:'url(#led-glow-red)'}));
-    g.appendChild(s('ellipse',{cx:16,cy:15,rx:11,ry:14,fill:'url(#led-red)',stroke:'#7a0000','stroke-width':'1.2'}));
-    g.appendChild(s('path',{d:'M 8 4 Q 11 0, 15 3 Q 13 9 9 10 Z',fill:'rgba(255,255,255,.65)'}));
-    g.appendChild(s('rect',{x:4,y:26,width:24,height:8,rx:2,fill:'#3a3a3a',stroke:'#222','stroke-width':'0.8'}));
-    g.appendChild(s('rect',{x:25,y:25,width:3,height:10,rx:0,fill:'#2a2a2a'}));
-    g.appendChild(s('line',{x1:8,y1:34,x2:8,y2:64,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:24,y1:34,x2:24,y2:55,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:20,y1:55,x2:28,y2:55,stroke:'url(#silver)','stroke-width':'1.5'}));
-    g.appendChild(s('line',{x1:24,y1:55,x2:24,y2:64,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('text',{x:8,y:49,'text-anchor':'middle','font-size':'5',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'+'));
-    g.appendChild(s('text',{x:24,y:49,'text-anchor':'middle','font-size':'5',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'−'));
-  }},
-  'led-green':{icon:'🟢',label:'LED Verd',w:32,h:64,pins:[{id:'A',x:8,y:64},{id:'K',x:24,y:64}],render(g){
-    g.appendChild(s('circle',{cx:16,cy:15,r:14,fill:'url(#led-glow-green)'}));
-    g.appendChild(s('ellipse',{cx:16,cy:15,rx:11,ry:14,fill:'url(#led-green)',stroke:'#003d1a','stroke-width':'1.2'}));
-    g.appendChild(s('path',{d:'M 8 4 Q 11 0, 15 3 Q 13 9 9 10 Z',fill:'rgba(255,255,255,.65)'}));
-    g.appendChild(s('rect',{x:4,y:26,width:24,height:8,rx:2,fill:'#3a3a3a',stroke:'#222','stroke-width':'0.8'}));
-    g.appendChild(s('rect',{x:25,y:25,width:3,height:10,rx:0,fill:'#2a2a2a'}));
-    g.appendChild(s('line',{x1:8,y1:34,x2:8,y2:64,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:24,y1:34,x2:24,y2:55,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:20,y1:55,x2:28,y2:55,stroke:'url(#silver)','stroke-width':'1.5'}));
-    g.appendChild(s('line',{x1:24,y1:55,x2:24,y2:64,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('text',{x:8,y:49,'text-anchor':'middle','font-size':'5',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'+'));
-    g.appendChild(s('text',{x:24,y:49,'text-anchor':'middle','font-size':'5',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'−'));
-  }},
-  'led-blue':{icon:'🔵',label:'LED Blau',w:32,h:64,pins:[{id:'A',x:8,y:64},{id:'K',x:24,y:64}],render(g){
-    g.appendChild(s('circle',{cx:16,cy:15,r:14,fill:'url(#led-glow-blue)'}));
-    g.appendChild(s('ellipse',{cx:16,cy:15,rx:11,ry:14,fill:'url(#led-blue)',stroke:'#001a4d','stroke-width':'1.2'}));
-    g.appendChild(s('path',{d:'M 8 4 Q 11 0, 15 3 Q 13 9 9 10 Z',fill:'rgba(255,255,255,.65)'}));
-    g.appendChild(s('rect',{x:4,y:26,width:24,height:8,rx:2,fill:'#3a3a3a',stroke:'#222','stroke-width':'0.8'}));
-    g.appendChild(s('rect',{x:25,y:25,width:3,height:10,rx:0,fill:'#2a2a2a'}));
-    g.appendChild(s('line',{x1:8,y1:34,x2:8,y2:64,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:24,y1:34,x2:24,y2:55,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:20,y1:55,x2:28,y2:55,stroke:'url(#silver)','stroke-width':'1.5'}));
-    g.appendChild(s('line',{x1:24,y1:55,x2:24,y2:64,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('text',{x:9,y:49,'text-anchor':'middle','font-size':'5',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'+'));
-    g.appendChild(s('text',{x:24,y:49,'text-anchor':'middle','font-size':'5',fill:'rgba(255,255,255,0.5)','font-family':'monospace'},'−'));
-  }},
-  'resistor':{icon:'〰️',label:'Resistència',w:56,h:16,pins:[{id:'1',x:0,y:8},{id:'2',x:56,y:8}],render(g){
-    g.appendChild(s('line',{x1:0,y1:8,x2:10,y2:8,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('line',{x1:46,y1:8,x2:56,y2:8,stroke:'url(#silver)','stroke-width':'2','stroke-linecap':'round'}));
-    g.appendChild(s('path',{d:'M 10 8 Q 10 0, 16 0 L 40 0 Q 46 0, 46 8 Q 46 16, 40 16 L 16 16 Q 10 16, 10 8 Z',fill:'url(#resistor-body)',stroke:'#7a5530','stroke-width':'1'}));
-    [['#5d4037',15],['#e53935',20],['#000000',25],['#fdd835',30],['#a87d50',36]].forEach(([c,x])=>{
-      g.appendChild(s('rect',{x,y:1,width:2.5,height:14,fill:c,opacity:'0.95'}));
-    });
-    g.appendChild(s('path',{d:'M 10 3 Q 16 1, 46 3',fill:'none',stroke:'rgba(255,255,255,0.35)','stroke-width':'1.2'}));
-  }},
+  'led-red':ledFootprint('LED Vermell','red'),
+  'led-green':ledFootprint('LED Verd','green'),
+  'led-blue':ledFootprint('LED Blau','blue'),
+  resistor:{
+    label:'Resistència',w:42,h:11,mountable:true,leadSpans:[4,5,6,7,8],defaultSpan:5,
+    pins:[{id:'1',x:1,y:5.5},{id:'2',x:41,y:5.5}],
+    render(g,component,pins){
+      const left=pins[0].x,right=pins[1].x,mid=(left+right)/2;
+      g.appendChild(s('line',{x1:left,y1:5.5,x2:right,y2:5.5,stroke:'#aeb3b8','stroke-width':1.5}));
+      g.appendChild(s('rect',{x:mid-10,y:1,width:20,height:9,rx:3.5,fill:'url(#resistor-body)',stroke:'#84613e','stroke-width':.55}));
+      const colors=['#262221','#653a29','#c73832','#ef8b39','#e8bd39','#6c9c43','#416fbd','#8d61a6','#909394','#eee4d0'];
+      const value=component.value||'4.7kΩ';
+      const ohms=parseFloat(value)*(value.includes('k')?1000:value.includes('M')?1000000:1);
+      const exponent=Math.max(0,Math.floor(Math.log10(ohms))-1);
+      const digits=Math.round(ohms/10**exponent);
+      [colors[Math.floor(digits/10)],colors[digits%10],colors[exponent],'#ae904e'].forEach((fill,i)=>{
+        g.appendChild(s('rect',{x:mid-6+4*i,y:1.3,width:1.6,height:8.4,fill}));
+      });
+    }
+  },
   'button':{icon:'⊙',label:'Botó',w:48,h:32,pins:[{id:'1',x:0,y:8},{id:'2',x:0,y:24},{id:'3',x:48,y:8},{id:'4',x:48,y:24}],render(g){
     g.appendChild(s('line',{x1:0,y1:8,x2:10,y2:8,stroke:'url(#silver)','stroke-width':'2'}));
     g.appendChild(s('line',{x1:0,y1:24,x2:10,y2:24,stroke:'url(#silver)','stroke-width':'2'}));
@@ -1345,6 +1345,83 @@ const COMPS={
     }}
 };
 
+function createBreadboard(label,bodyColor,columns,railContacts){
+  const railStart=columns===30?1:2;
+  const width=36+(columns-1)*HOLE_PITCH;
+  const height=160;
+  const upper=36;
+  const lower=92;
+  const railYs=[12,20,140,148];
+  const pins=[];
+  const grid=new Map();
+  const byId=new Map();
+  function addPin(id,col,y,net){
+    const pin={id,x:18+col*HOLE_PITCH,y,net};
+    pins.push(pin);
+    grid.set(`${pin.x}:${pin.y}`,pin);
+    byId.set(id,pin);
+  }
+  for(let col=0;col<columns;col++){
+    for(let row=0;row<5;row++){
+      addPin(`U${col}_${row}`,col,upper+row*HOLE_PITCH,`U${col}`);
+      addPin(`L${col}_${row}`,col,lower+row*HOLE_PITCH,`L${col}`);
+    }
+  }
+  railYs.forEach((y,rail)=>{
+    for(let i=0;i<railContacts;i++)addPin(`P${rail}_${i}`,railStart+i+Math.floor(i/5),y,`P${rail}`);
+  });
+  return {
+    label,w:width,h:height,pins,grid,byId,
+    render(g){
+      g.appendChild(s('rect',{x:1,y:2,width:width-2,height:height-2,rx:5,fill:'#9c998d'}));
+      g.appendChild(s('rect',{x:.5,y:.5,width:width-1,height:height-3,rx:5,fill:bodyColor,stroke:'#c6c2b6'}));
+      g.appendChild(s('rect',{x:3,y:75,width:width-6,height:10,rx:2,fill:'#d6d0c4'}));
+      g.appendChild(s('path',{d:`M4 76 H${width-4}`,stroke:'#bbb5a7','stroke-width':1}));
+      railYs.forEach((y,rail)=>{
+        const color=rail%2?'#376aa3':'#a73736';
+        const lineY=y+(rail<2?-4:4);
+        g.appendChild(s('path',{d:`M24 ${lineY} H${width-24}`,stroke:color,'stroke-width':1}));
+        [10,width-10].forEach(x=>{
+          g.appendChild(s('text',{x,y:y+2.2,'text-anchor':'middle','font-size':7,fill:color},rail%2?'−':'+'));
+        });
+      });
+      for(let col=0;col<columns;col++){
+        if(col!==0&&(col+1)%5!==0&&col!==columns-1)continue;
+        [30,134].forEach(y=>g.appendChild(s('text',{
+          x:18+col*HOLE_PITCH,y,'text-anchor':'middle','font-size':5.5,fill:'#5c5b54'
+        },String(col+1))));
+      }
+      [upper,lower].forEach((base,half)=>{
+        for(let row=0;row<5;row++){
+          g.appendChild(s('text',{x:9,y:base+row*HOLE_PITCH+2,'text-anchor':'middle','font-size':5.5,fill:'#5c5b54'},'ABCDEFGHIJ'[half*5+row]));
+        }
+      });
+      for(const pin of pins){
+        g.appendChild(s('rect',{x:pin.x-2.5,y:pin.y-2.5,width:5,height:5,rx:1.1,fill:'#d3cfc2','pointer-events':'none'}));
+      }
+    }
+  };
+}
+
+// Bring selected catalogue parts onto the protoboard pitch without changing their pin IDs.
+for(const [type,sx,sy] of [
+  ['traffic-light',.5,.5],['dht11',4/7,.55],['button',.5,.5],['cap-cer',1,.65],
+  ['oled',1,1],['buzzer',1,1],['pot',.5,.5],['ne555',3/7,1]
+]){
+  const original=COMPS[type];
+  COMPS[type]={
+    ...original,w:original.w*sx,h:original.h*sy,mountable:true,crossChannel:type==='ne555',
+    pins:original.pins.map(pin=>({...pin,x:pin.x*sx,y:pin.y*sy})),
+    render(g){
+      const art=s('g',{transform:`scale(${sx} ${sy})`});
+      original.render(art);
+      g.appendChild(art);
+    }
+  };
+}
+
+const breadboard830=createBreadboard('Protoboard 830','#f3f0e9',63,50);
+
 const BOARDS={
   'uno':{icon:'🔵',label:'Arduino Uno',w:300,h:222,
     pins:[
@@ -1745,61 +1822,11 @@ const BOARDS={
       [[16,7,116,10],[142,7,116,10],[16,205,102,10],[158,205,88,10]].forEach(([x,y,w,h])=>g.appendChild(s('rect',{x,y,width:w,height:h,rx:2,fill:'none',stroke:'rgba(255,255,255,0.2)','stroke-width':'0.5'})));
     }
   },
-  'mb102':{icon:'⬜',label:'MB-102',w:320,h:120,
-    render(g){
-      g.appendChild(s('rect',{x:0,y:0,width:320,height:120,rx:4,fill:'#eeeadf',stroke:'#c0b898','stroke-width':'1.5'}));
-      g.appendChild(s('rect',{x:8,y:3,width:304,height:16,rx:2,fill:'rgba(255,255,255,0.4)'}));
-      g.appendChild(s('rect',{x:8,y:101,width:304,height:16,rx:2,fill:'rgba(255,255,255,0.4)'}));
-      g.appendChild(s('line',{x1:12,y1:8,x2:308,y2:8,stroke:'#e53935','stroke-width':'1.5','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:12,y1:16,x2:308,y2:16,stroke:'#1e88e5','stroke-width':'1.5','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:12,y1:106,x2:308,y2:106,stroke:'#e53935','stroke-width':'1.5','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:12,y1:114,x2:308,y2:114,stroke:'#1e88e5','stroke-width':'1.5','stroke-linecap':'round'}));
-      g.appendChild(s('text',{x:4,y:10,'font-size':'7',fill:'#c00','font-weight':'bold'},'+'));
-      g.appendChild(s('text',{x:4,y:18,'font-size':'7',fill:'#00c','font-weight':'bold'},'−'));
-      g.appendChild(s('text',{x:4,y:108,'font-size':'7',fill:'#c00','font-weight':'bold'},'+'));
-      g.appendChild(s('text',{x:4,y:116,'font-size':'7',fill:'#00c','font-weight':'bold'},'−'));
-      // Center channel gap: after upper row e (y=24+4*8=56), gap y=58..66, lower starts y=72
-      g.appendChild(s('rect',{x:8,y:59,width:304,height:9,rx:1,fill:'#d4ccb8',stroke:'#b8b0a0','stroke-width':'0.5'}));
-      ['a','b','c','d','e'].forEach((l,i)=>g.appendChild(s('text',{x:5,y:24+i*8+3,'font-size':'4',fill:'rgba(0,0,0,0.3)','font-family':'monospace'},l)));
-      ['f','g','h','i','j'].forEach((l,i)=>g.appendChild(s('text',{x:5,y:72+i*8+3,'font-size':'4',fill:'rgba(0,0,0,0.3)','font-family':'monospace'},l)));
-      for(let col=0;col<30;col++){
-        if(col%5===0)g.appendChild(s('text',{x:16+col*8,y:21,'text-anchor':'middle','font-size':'4',fill:'rgba(0,0,0,0.25)','font-family':'monospace'},''+(col+1)));
-        for(let row=0;row<5;row++){
-          const pu='U'+col+'_'+row,pl='L'+col+'_'+row,cx=16+col*8;
-          g.appendChild(s('circle',{cx,cy:24+row*8,r:3.5,class:'pin-circle','data-pin':pu}));
-          g.appendChild(s('circle',{cx,cy:24+row*8,r:2,fill:'#a8a090',stroke:'#888','stroke-width':'0.3','pointer-events':'none'}));
-          g.appendChild(s('circle',{cx,cy:72+row*8,r:3.5,class:'pin-circle','data-pin':pl}));
-          g.appendChild(s('circle',{cx,cy:72+row*8,r:2,fill:'#a8a090',stroke:'#888','stroke-width':'0.3','pointer-events':'none'}));
-        }
-      }
-    }
-  },
-  'proto830':{icon:'⬜',label:'Protoboard 830',w:280,h:168,
-    render(g){
-      g.appendChild(s('rect',{x:0,y:0,width:280,height:168,rx:4,fill:'#f5f0e8',stroke:'#ccc','stroke-width':'2'}));
-      g.appendChild(s('rect',{x:8,y:3,width:264,height:16,rx:2,fill:'#ff6b6b',opacity:'0.35'}));
-      g.appendChild(s('rect',{x:8,y:149,width:264,height:16,rx:2,fill:'#4a90e2',opacity:'0.35'}));
-      g.appendChild(s('line',{x1:12,y1:8,x2:268,y2:8,stroke:'#e53935','stroke-width':'1.2','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:12,y1:15,x2:268,y2:15,stroke:'#1e88e5','stroke-width':'1.2','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:12,y1:154,x2:268,y2:154,stroke:'#e53935','stroke-width':'1.2','stroke-linecap':'round'}));
-      g.appendChild(s('line',{x1:12,y1:161,x2:268,y2:161,stroke:'#1e88e5','stroke-width':'1.2','stroke-linecap':'round'}));
-      g.appendChild(s('text',{x:4,y:11,'font-size':'6',fill:'#c00','font-weight':'bold'},'+'));
-      g.appendChild(s('text',{x:4,y:158,'font-size':'6','fill':'#00c','font-weight':'bold'},'−'));
-      // center channel gap between upper row e (y=32+4*8=64) and lower row f (y=96)
-      g.appendChild(s('rect',{x:8,y:67,width:264,height:10,rx:1,fill:'#ddd8cc',stroke:'#c8c0b0','stroke-width':'0.5'}));
-      for(let col=0;col<30;col++){
-        if(col%5===0)g.appendChild(s('text',{x:16+col*8,y:28,'text-anchor':'middle','font-size':'4',fill:'rgba(0,0,0,0.3)','font-family':'monospace'},''+(col+1)));
-        for(let row=0;row<5;row++){
-          const pu='U'+col+'_'+row,pl='L'+col+'_'+row,cx=16+col*8;
-          g.appendChild(s('circle',{cx,cy:32+row*8,r:4,class:'pin-circle','data-pin':pu}));
-          g.appendChild(s('circle',{cx,cy:32+row*8,r:2.2,fill:'#888',stroke:'#555','stroke-width':'0.4','pointer-events':'none'}));
-          g.appendChild(s('circle',{cx,cy:96+row*8,r:4,class:'pin-circle','data-pin':pl}));
-          g.appendChild(s('circle',{cx,cy:96+row*8,r:2.2,fill:'#888',stroke:'#555','stroke-width':'0.4','pointer-events':'none'}));
-        }
-      }
-    }
-  },
+  mb102:breadboard830, // Legacy project type.
+  proto830:breadboard830,
+  proto400:createBreadboard('Protoboard 400','#f3f0e9',30,25),
 };
+
 
 const state={boards:[],components:[],wires:[],texts:[],view:{x:0,y:0,s:1},selected:null,selectedBoard:null,multiSel:[],wireMode:false,wireStart:null,wirePoints:[],wireColor:'#e53935',compId:0,boardId:0,wireId:0,textId:0,mode:'move',clipboard:null};
 
@@ -1845,6 +1872,26 @@ function updatePropsPanel(){
     });
     row.appendChild(dots);body.appendChild(row);
   }
+  if(def.leadSpans){
+    const leadSelect=document.createElement('select');
+    leadSelect.className='prop-sel';
+    leadSelect.setAttribute('aria-label','Separació de les potes');
+    def.leadSpans.forEach(span=>{
+      const option=document.createElement('option');
+      option.value=span;
+      option.textContent=`${span} × 2,54 mm`;
+      option.selected=span===(c.leadSpan||def.defaultSpan);
+      leadSelect.appendChild(option);
+    });
+    leadSelect.onchange=()=>{
+      detachComponent(c);
+      c.leadSpan=Number(leadSelect.value);
+      snapComponent(c);
+      renderAll();
+      snapshot();
+    };
+    makeRow('Separació de les potes',leadSelect);
+  }
   const sep=document.createElement('div');sep.className='prop-sep';body.appendChild(sep);
   const back=document.createElement('button');back.className='prop-back';back.textContent='← Tornar a Plaques';
   back.onclick=()=>select(null);body.appendChild(back);
@@ -1867,8 +1914,8 @@ function buildBoardsPanel(){
       {type:'shield-proto', icon:'🛡️',label:'Proto Shield',    desc:'Protoboard 22×12 integrada'},
     ]},
     {title:'⬜ Protoboard',items:[
-      {type:'mb102',  icon:'⬜',label:'MB-102',         desc:'830 forats · allargada'},
-      {type:'proto830',icon:'⬜',label:'Protoboard 830',desc:'830 forats · quadrada'},
+      {type:'proto400',icon:'⬜',label:'Protoboard 400',desc:'400 forats · 4 carrils'},
+      {type:'proto830',icon:'⬜',label:'Protoboard 830',desc:'830 forats · 4 carrils'},
     ]},
   ];
   sections.forEach(sec=>{
@@ -1909,10 +1956,8 @@ function buildPalette(){
       {name:'cap-cer',icon:'🟠',label:'Condensador 100nF'},
       {name:'ne555',icon:'⏱️',label:'NE555 Timer'}
     ]],
-    ['Encapsulats DIP',DIP_PIN_COUNTS.map(count=>{
-      const name=`dip-${count}`;
-      return {name,icon:'▣',label:COMPS[name].label};
-    })],
+    ['Encapsulats DIP',[...DIP_PIN_COUNTS.map(count=>`dip-${count}`),'dip-24-wide','dip-28-wide']
+      .map(name=>({name,icon:'▣',label:COMPS[name].label}))],
     ['🔌 Actuadors',[
       {name:'pot',icon:'🎚️',label:'Potenciòmetre'},
       {name:'servo',icon:'⚙️',label:'Servo'},
@@ -2027,12 +2072,20 @@ function addBoard(type){
   renderAll();snapshot();
 }
 
+function componentDef(component){
+  const def=COMPS[component.type];
+  if(!def.leadSpans?.includes(component.leadSpan)||component.leadSpan===def.defaultSpan)return def;
+  const spanChange=(component.leadSpan-def.defaultSpan)*HOLE_PITCH;
+  return {...def,w:def.w+spanChange,pins:def.pins.map((pin,index)=>index?{...pin,x:pin.x+spanChange}:pin)};
+}
+
 function addComponent(cid){
   const c=COMPS[cid];
   const r=document.getElementById('canvas').getBoundingClientRect();
   const x=(r.width/2-state.view.x)/state.view.s;
   const y=(r.height/2-state.view.y)/state.view.s;
   const comp={id:state.compId++,type:cid,x,y};
+  if(c.crossChannel||cid==='button')comp.rot=90;
   state.components.push(comp);
   renderAll();select(comp.id);snapshot();
 }
@@ -2058,31 +2111,133 @@ function rotPt(px,py,cx,cy,deg){
   const dx=px-cx,dy=py-cy;
   return{x:dx*cos-dy*sin+cx,y:dx*sin+dy*cos+cy};
 }
+function worldPoint(piece,def,pin){
+  const point=piece.rot?rotPt(pin.x,pin.y,def.w/2,def.h/2,piece.rot):pin;
+  return {x:piece.x+point.x,y:piece.y+point.y};
+}
+
+function boardLocalPoint(board,def,point){
+  return rotPt(point.x-board.x,point.y-board.y,def.w/2,def.h/2,-(board.rot||0));
+}
+
+function componentMount(component,def){
+  const mount=component.mount;
+  if(!def.mountable||!Array.isArray(mount?.holes)||mount.holes.length!==def.pins.length||
+     ![0,90,180,270].includes(mount.rotation))return null;
+  const board=state.boards.find(board=>board.id===mount.boardId);
+  const boardDef=board&&BOARDS[board.type];
+  if(!boardDef?.byId)return null;
+  const holes=mount.holes.map(id=>boardDef.byId.get(id));
+  if(holes.some(hole=>!hole))return null;
+  return {mount,board,boardDef,holes};
+}
+
+function componentPose(component,def){
+  const placement=componentMount(component,def);
+  if(!placement)return component;
+  const {mount,board,boardDef,holes}=placement;
+  const rot=((board.rot||0)+mount.rotation)%360;
+  const anchor=worldPoint(board,boardDef,holes[0]);
+  const pin=def.pins[0];
+  const local=rotPt(pin.x,pin.y,def.w/2,def.h/2,rot);
+  return {x:anchor.x-local.x,y:anchor.y-local.y,rot};
+}
+
+function detachComponent(component){
+  if(!component.mount)return;
+  Object.assign(component,componentPose(component,componentDef(component)));
+  delete component.mount;
+}
+
 function getPinPos(ep){
-  if(ep.kind==='comp'){
-    const c=state.components.find(c=>c.id===ep.id);
-    if(!c)return null;
-    const d=COMPS[c.type];
-    const p=d.pins.find(p=>p.id===ep.pin);
-    if(!p)return null;
-    const rot=c.rot||0;
-    if(rot){const rp=rotPt(p.x,p.y,d.w/2,d.h/2,rot);return{x:c.x+rp.x,y:c.y+rp.y};}
-    return{x:c.x+p.x,y:c.y+p.y};
+  const isComponent=ep.kind==='comp';
+  const piece=(isComponent?state.components:state.boards).find(piece=>piece.id===ep.id);
+  if(!piece)return null;
+  const def=isComponent?componentDef(piece):BOARDS[piece.type];
+  const pin=def.byId?.get(ep.pin)||def.pins?.find(pin=>pin.id===ep.pin);
+  if(!pin)return null;
+  return worldPoint(isComponent?componentPose(piece,def):piece,def,pin);
+}
+
+function findMount(component){
+  const def=componentDef(component);
+  if(!def.mountable)return null;
+  const pose=componentPose(component,def);
+  const anchor=worldPoint(pose,def,def.pins[0]);
+  const occupied=new Map();
+  for(const other of state.components){
+    if(other===component)continue;
+    const placement=componentMount(other,componentDef(other));
+    if(!placement)continue;
+    const {board,holes}=placement;
+    if(!occupied.has(board.id))occupied.set(board.id,new Set());
+    holes.forEach(hole=>occupied.get(board.id).add(hole.id));
   }
-  const b=state.boards.find(b=>b.id===ep.id);
-  if(!b)return null;
-  // Protoboard: decode pin ID (e.g. 'U5_3' or 'L12_0')
-  if(b.type==='proto830'||b.type==='mb102'){
-    const m=ep.pin.match(/^([UL])(\d+)_(\d+)$/);
-    if(!m)return null;
-    const isU=m[1]==='U',col=+m[2],row=+m[3];
-    if(b.type==='mb102') return{x:b.x+16+col*8, y:b.y+(isU?24+row*8:72+row*8)};
-    return{x:b.x+16+col*8, y:b.y+(isU?32+row*8:96+row*8)};
+  let best=null;
+  for(const board of state.boards){
+    const boardDef=BOARDS[board.type];
+    if(!boardDef.grid)continue;
+    const rotation=((pose.rot||0)-(board.rot||0)+360)%360;
+    const local=boardLocalPoint(board,boardDef,anchor);
+    const [first,...pins]=def.pins.map(pin=>rotPt(pin.x,pin.y,0,0,rotation));
+    const offsets=pins.map(pin=>({x:pin.x-first.x,y:pin.y-first.y}));
+    const offGrid=offsets.some(({x,y})=>Math.abs(x/HOLE_PITCH-Math.round(x/HOLE_PITCH))>1e-6||
+      Math.abs(y/HOLE_PITCH-Math.round(y/HOLE_PITCH))>1e-6);
+    if(offGrid)continue;
+    const column=Math.round((local.x-18)/HOLE_PITCH);
+    const row=Math.round((local.y-12)/HOLE_PITCH);
+    for(let dx=-1;dx<=1;dx++){
+      for(let dy=-1;dy<=1;dy++){
+        const x=18+(column+dx)*HOLE_PITCH,y=12+(row+dy)*HOLE_PITCH;
+        const distance=Math.hypot(local.x-x,local.y-y);
+        if(distance>6||(best&&distance>=best.distance))continue;
+        const holes=[boardDef.grid.get(`${x}:${y}`)];
+        for(const pin of offsets){
+          holes.push(boardDef.grid.get(`${x+Math.round(pin.x)}:${y+Math.round(pin.y)}`));
+        }
+        if(holes.some(hole=>!hole||occupied.get(board.id)?.has(hole.id)))continue;
+        if(def.crossChannel){
+          const sides=new Set(holes.map(hole=>hole.id[0]));
+          if(sides.size!==2||!sides.has('U')||!sides.has('L'))continue;
+        }
+        best={boardId:board.id,rotation,holes:holes.map(hole=>hole.id),distance};
+      }
+    }
   }
-  const pins=BOARDS[b.type].pins;
-  if(!pins)return null;
-  const p=pins.find(p=>p.id===ep.pin);
-  return p?{x:b.x+p.x,y:b.y+p.y}:null;
+  return best;
+}
+
+function snapComponent(component,placement=findMount(component)){
+  if(!placement)return false;
+  const {boardId,rotation,holes}=placement;
+  component.mount={boardId,rotation,holes};
+  return true;
+}
+
+function showMountPreview(placement){
+  const preview=document.getElementById('mount-preview');
+  preview.replaceChildren();
+  if(!placement)return;
+  for(const pin of placement.holes){
+    const {x,y}=getPinPos({kind:'board',id:placement.boardId,pin});
+    preview.appendChild(s('circle',{cx:x,cy:y,r:3.7,fill:'none',stroke:'#04d389','stroke-width':1.4}));
+  }
+}
+
+function pieceTransform(piece,def){
+  return `translate(${piece.x},${piece.y}) rotate(${piece.rot||0},${def.w/2},${def.h/2})`;
+}
+
+function updatePiecePositions(){
+  state.boards.forEach(board=>{
+    document.getElementById(`board-${board.id}`).setAttribute('transform',pieceTransform(board,BOARDS[board.type]));
+  });
+  state.components.forEach(component=>{
+    const def=componentDef(component);
+    document.getElementById(`comp-${component.id}`).setAttribute('transform',pieceTransform(componentPose(component,def),def));
+  });
+  renderWires();
+  updateSelBar();
 }
 function multiPath(pts){
   if(pts.length<2)return'';
@@ -2112,16 +2267,15 @@ function renderBoards(){
   g.innerHTML='';
   state.boards.forEach(b=>{
     const d=BOARDS[b.type];
-    const rot=b.rot||0;
-    const tf=rot?`translate(${b.x},${b.y}) rotate(${rot},${d.w/2},${d.h/2})`:`translate(${b.x},${b.y})`;
+    const tf=pieceTransform(b,d);
     const bg=s('g',{id:`board-${b.id}`,class:'board-group',transform:tf,style:'cursor:grab'});
     bg.dataset.boardId=b.id;
     if(state.selectedBoard===b.id||state.multiSel.some(m=>m.kind==='board'&&m.id===b.id))bg.classList.add('selected');
     d.render(bg);
     bg.appendChild(s('rect',{class:'comp-rect',x:-5,y:-5,width:d.w+10,height:d.h+10,rx:4}));
     if(d.pins)d.pins.forEach(p=>{
-      bg.appendChild(s('circle',{cx:p.x,cy:p.y,r:8,class:'pin-circle','data-pin':p.id}));
-      bg.appendChild(s('circle',{cx:p.x,cy:p.y,r:3,class:'pin-dot','data-pin':p.id}));
+      bg.appendChild(s('circle',{cx:p.x,cy:p.y,r:d.grid?3.7:8,class:d.grid?'pin-circle breadboard-pin':'pin-circle','data-pin':p.id}));
+      bg.appendChild(s('circle',{cx:p.x,cy:p.y,r:d.grid?1.7:3,class:d.grid?'breadboard-hole':'pin-dot','data-pin':p.id}));
     });
     g.appendChild(bg);
   });
@@ -2131,23 +2285,17 @@ function renderComponents(){
   const g=document.getElementById('components');
   g.innerHTML='';
   state.components.forEach(c=>{
-    const d=COMPS[c.type];
-    const rot=c.rot||0;
-    const tf=rot?`translate(${c.x},${c.y}) rotate(${rot},${d.w/2},${d.h/2})`:`translate(${c.x},${c.y})`;
+    const d=componentDef(c);
+    const mounted=Boolean(componentMount(c,d));
+    const tf=pieceTransform(componentPose(c,d),d);
     const cg=s('g',{id:`comp-${c.id}`,class:'comp-group',transform:tf,style:'cursor:grab'});
     cg.dataset.id=c.id;
     if(state.selected===c.id||state.multiSel.some(m=>m.kind==='comp'&&m.id===c.id))cg.classList.add('selected');
-    d.render(cg);
-    if(c.ledColor&&c.type.startsWith('led-')){
-      const ch=cg.children;
-      const strk={red:'#7a0000',green:'#003d1a',blue:'#001a4d',yellow:'#827717',white:'#9e9e9e'};
-      if(ch[0])ch[0].setAttribute('fill',`url(#led-glow-${c.ledColor})`);
-      if(ch[1]){ch[1].setAttribute('fill',`url(#led-${c.ledColor})`);if(strk[c.ledColor])ch[1].setAttribute('stroke',strk[c.ledColor]);}
-    }
+    d.render(cg,c,d.pins);
     cg.appendChild(s('rect',{class:'comp-rect',x:-5,y:-5,width:d.w+10,height:d.h+10,rx:4}));
     d.pins.forEach(p=>{
-      cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:8,class:'pin-circle','data-pin':p.id}));
-      cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:3,class:'pin-dot','data-pin':p.id}));
+      cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:d.mountable?3.7:8,class:mounted?'pin-circle mounted-pin':'pin-circle','data-pin':p.id}));
+      cg.appendChild(s('circle',{cx:p.x,cy:p.y,r:d.mountable?1.6:3,class:'pin-dot','data-pin':p.id}));
     });
     if(c.label||c.value){
       const txt=c.value?(c.label?`${c.label} · ${c.value}`:c.value):c.label;
@@ -2312,7 +2460,10 @@ canvas.addEventListener('mousemove',e=>{
   // Pin tooltip (always)
   const tip=document.getElementById('pin-tip');
   if(t&&t.classList.contains('pin-circle')&&t.dataset.pin){
-    tip.textContent=t.dataset.pin;
+    const match=t.classList.contains('breadboard-pin')&&t.dataset.pin.match(/^([ULP])(\d+)_(\d+)$/);
+    if(!match)tip.textContent=t.dataset.pin;
+    else if(match[1]==='P')tip.textContent=`Carril ${Number(match[2])+1} ${Number(match[2])%2?'−':'+'} · ${Number(match[3])+1}`;
+    else tip.textContent=`${'ABCDEFGHIJ'[(match[1]==='U'?0:5)+Number(match[3])]}${Number(match[2])+1}`;
     tip.style.display='block';
     tip.style.left=(e.clientX+14)+'px';
     tip.style.top=(e.clientY-28)+'px';
@@ -2328,18 +2479,34 @@ canvas.addEventListener('mousemove',e=>{
 
   if(dragComp){
     const dx=x-dragComp.sx,dy=y-dragComp.sy;
-    if(dragComp.multi&&state.multiSel.length>0){
-      state.multiSel.forEach(m=>{
-        if(m.kind==='board'){const b=state.boards.find(b=>b.id===m.id);if(b){b.x+=dx;b.y+=dy;}}
-        else{const c=state.components.find(c=>c.id===m.id);if(c){c.x+=dx;c.y+=dy;}}
-      });
-      dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();
-    } else if(dragComp.isBoard){
-      const b=state.boards.find(b=>b.id===dragComp.id);
-      if(b){b.x+=dx;b.y+=dy;dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
-    } else {
-      const c=state.components.find(c=>c.id===dragComp.id);
-      if(c){c.x+=dx;c.y+=dy;dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;renderAll();}
+    if(dx||dy){
+      if(dragComp.multi&&state.multiSel.length>0){
+        const movingBoards=new Set(state.multiSel.filter(item=>item.kind==='board').map(item=>item.id));
+        state.multiSel.forEach(item=>{
+          if(item.kind==='board'){
+            const board=state.boards.find(board=>board.id===item.id);
+            if(board){board.x+=dx;board.y+=dy;}
+          } else {
+            const component=state.components.find(component=>component.id===item.id);
+            if(component&&!movingBoards.has(component.mount?.boardId)){
+              detachComponent(component);
+              component.x+=dx;component.y+=dy;
+            }
+          }
+        });
+      } else if(dragComp.isBoard){
+        const board=state.boards.find(board=>board.id===dragComp.id);
+        if(board){board.x+=dx;board.y+=dy;}
+      } else {
+        const component=state.components.find(component=>component.id===dragComp.id);
+        if(component){
+          detachComponent(component);
+          component.x+=dx;component.y+=dy;
+          showMountPreview(findMount(component));
+        }
+      }
+      dragComp.sx=x;dragComp.sy=y;dragComp.moved=true;
+      updatePiecePositions();
     }
   }
   if(rectSelStart){
@@ -2359,7 +2526,7 @@ canvas.addEventListener('mouseup',e=>{
     if(dragComp.multi&&state.multiSel.length>0){
       state.multiSel.forEach(m=>{
         if(m.kind==='board'){const b=state.boards.find(b=>b.id===m.id);if(b){b.x=snap8(b.x);b.y=snap8(b.y);}}
-        else{const c=state.components.find(c=>c.id===m.id);if(c){c.x=snap8(c.x);c.y=snap8(c.y);}}
+        else{const c=state.components.find(c=>c.id===m.id);if(c&&!c.mount){c.x=snap8(c.x);c.y=snap8(c.y);}}
       });
       renderAll();
     } else if(dragComp.isBoard){
@@ -2367,10 +2534,14 @@ canvas.addEventListener('mouseup',e=>{
       if(b){b.x=snap8(b.x);b.y=snap8(b.y);renderAll();}
     } else {
       const c=state.components.find(c=>c.id===dragComp.id);
-      if(c){c.x=snap8(c.x);c.y=snap8(c.y);renderAll();}
+      if(c){
+        if(!snapComponent(c)){c.x=snap8(c.x);c.y=snap8(c.y);}
+        renderAll();
+      }
     }
     snapshot();
   }
+  if(dragComp)showMountPreview(null);
   dragComp=null;
   if(rectSelStart){
     const r=canvas.getBoundingClientRect();
@@ -2454,6 +2625,7 @@ document.getElementById('btn-delete').onclick=()=>{
       !(cids.has(w.from.id)&&w.from.kind==='comp')&&!(cids.has(w.to.id)&&w.to.kind==='comp')&&
       !(bids.has(w.from.id)&&w.from.kind==='board')&&!(bids.has(w.to.id)&&w.to.kind==='board'));
     state.components=state.components.filter(c=>!cids.has(c.id));
+    state.components.forEach(c=>{if(bids.has(c.mount?.boardId))detachComponent(c);});
     state.boards=state.boards.filter(b=>!bids.has(b.id));
     state.multiSel=[];renderAll();snapshot();
   } else if(state.selected!==null){
@@ -2464,6 +2636,7 @@ document.getElementById('btn-delete').onclick=()=>{
   } else if(state.selectedBoard!==null){
     const id=state.selectedBoard;
     state.wires=state.wires.filter(w=>!(w.from.kind==='board'&&w.from.id===id)&&!(w.to.kind==='board'&&w.to.id===id));
+    state.components.forEach(c=>{if(c.mount?.boardId===id)detachComponent(c);});
     state.boards=state.boards.filter(b=>b.id!==id);
     state.selectedBoard=null;renderAll();snapshot();
   }
@@ -2497,10 +2670,9 @@ function updateSelBar(){
   }
   if(!el){bar.style.display='none';return;}
   try{
-    const bbox=el.getBBox();
-    const svgRect=canvas.getBoundingClientRect();
-    const cx=svgRect.left+state.view.x+(bbox.x+bbox.width/2)*state.view.s;
-    const top=svgRect.top+state.view.y+bbox.y*state.view.s-52;
+    const bounds=el.getBoundingClientRect();
+    const cx=bounds.left+bounds.width/2;
+    const top=bounds.top-52;
     document.getElementById('sel-label').textContent=label;
     bar.style.left=cx+'px';
     bar.style.top=Math.max(60,top)+'px';
@@ -2643,7 +2815,9 @@ function dupSelected(){
   if(state.selected!==null){
     const orig=state.components.find(c=>c.id===state.selected);
     if(!orig)return;
-    const nc={...orig,id:state.compId++,x:orig.x+24,y:orig.y+24};
+    const nc={...orig,...componentPose(orig,componentDef(orig)),id:state.compId++};
+    delete nc.mount;
+    nc.x+=24;nc.y+=24;
     state.components.push(nc);renderAll();select(nc.id);snapshot();
   } else if(state.selectedBoard!==null){
     const orig=state.boards.find(b=>b.id===state.selectedBoard);
@@ -2656,7 +2830,10 @@ function rotateSelected(){
   if(state.selected!==null){
     const c=state.components.find(c=>c.id===state.selected);
     if(!c)return;
+    const wasMounted=Boolean(c.mount);
+    detachComponent(c);
     c.rot=((c.rot||0)+90)%360;
+    if(wasMounted)snapComponent(c);
     renderAll();snapshot();
   } else if(state.selectedBoard!==null){
     const b=state.boards.find(b=>b.id===state.selectedBoard);
@@ -2668,7 +2845,11 @@ function rotateSelected(){
 function copySelected(){
   if(state.selected!==null){
     const orig=state.components.find(c=>c.id===state.selected);
-    if(orig)state.clipboard={kind:'comp',data:JSON.parse(JSON.stringify(orig))};
+    if(orig){
+      const data={...orig,...componentPose(orig,componentDef(orig))};
+      delete data.mount;
+      state.clipboard={kind:'comp',data};
+    }
   } else if(state.selectedBoard!==null){
     const orig=state.boards.find(b=>b.id===state.selectedBoard);
     if(orig)state.clipboard={kind:'board',data:JSON.parse(JSON.stringify(orig))};
@@ -2718,29 +2899,20 @@ function pinRole(pin){
   return null;
 }
 
-function findPowerConflicts(wires,boards){
+function findPowerConflicts(wires,boards,mountEdges=[]){
   const boardTypes=new Map(boards.map(board=>[board.id,board.type]));
   const nodes=new Map();
 
   function getNode(endpoint){
     const role=endpoint.kind==='board'?pinRole(endpoint.pin):null;
-    let terminal=endpoint.pin;
-    if(endpoint.kind==='board'){
-      // The ground pins on a microcontroller board share a connection.
-      if(role==='gnd')terminal='GND';
-      const type=boardTypes.get(endpoint.id);
-      if(type==='proto830'||type==='mb102'){
-        // Each group of five holes connects within its own half.
-        const strip=terminal.match(/^([UL]\d+)_([0-4])$/);
-        if(strip)terminal=strip[1];
-      }
-    }
+    const boardDef=endpoint.kind==='board'?BOARDS[boardTypes.get(endpoint.id)]:null;
+    const terminal=boardDef?.byId?.get(endpoint.pin)?.net||(role==='gnd'?'GND':endpoint.pin);
     const key=`${endpoint.kind}-${endpoint.id}:${terminal}`;
     if(!nodes.has(key))nodes.set(key,{role,edges:[]});
     return nodes.get(key);
   }
 
-  for(const wire of wires){
+  for(const wire of [...wires,...mountEdges]){
     const from=getNode(wire.from);
     const to=getNode(wire.to);
     from.edges.push({node:to,id:wire.id});
@@ -2754,7 +2926,9 @@ function findPowerConflicts(wires,boards){
       const node=queue[i];
       if(node.role===targetRole){
         const ids=[];
-        for(let edge=previous.get(node);edge;edge=previous.get(edge.node))ids.push(edge.id);
+        for(let edge=previous.get(node);edge;edge=previous.get(edge.node)){
+          if(edge.id!==undefined)ids.push(edge.id);
+        }
         return ids;
       }
       for(const edge of node.edges){
@@ -2794,11 +2968,21 @@ function findPowerConflicts(wires,boards){
 }
 
 function verifyCircuit(){
-  const issues=findPowerConflicts(state.wires,state.boards);
+  const mountEdges=state.components.flatMap(component=>{
+    const def=componentDef(component);
+    const placement=componentMount(component,def);
+    if(!placement)return [];
+    return def.pins.map((pin,index)=>({
+      from:{kind:'comp',id:component.id,pin:pin.id},
+      to:{kind:'board',id:placement.board.id,pin:placement.holes[index].id}
+    }));
+  });
+  const connections=[...state.wires,...mountEdges];
+  const issues=findPowerConflicts(state.wires,state.boards,mountEdges);
   highlightWires(issues.flatMap(issue=>issue.wires));
   // Components sense cap connexió
   const connComps=new Set();
-  state.wires.forEach(w=>{
+  connections.forEach(w=>{
     if(w.from.kind==='comp')connComps.add(w.from.id);
     if(w.to.kind==='comp')connComps.add(w.to.id);
   });
@@ -2813,7 +2997,7 @@ function verifyCircuit(){
     issues.push({l:'warn',m:'No hi ha cap placa (Arduino/ESP32) al canvas'});
   // Pins de potència de component sense connexió
   const connPins=new Set();
-  state.wires.forEach(w=>{
+  connections.forEach(w=>{
     connPins.add(`${w.from.kind}-${w.from.id}:${w.from.pin}`);
     connPins.add(`${w.to.kind}-${w.to.id}:${w.to.pin}`);
   });
