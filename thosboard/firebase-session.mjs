@@ -44,6 +44,22 @@ export async function openFirebaseSession(code, teacher, events) {
   let timer;
   let writes = Promise.resolve();
 
+  async function request(target, method, data, signal) {
+    const token = await user.getIdToken();
+    const url = new URL(target + '.json', firebaseConfig.databaseURL);
+    url.searchParams.set('auth', token);
+    if (method === 'PATCH') url.searchParams.set('print', 'silent');
+    const response = await fetch(url, {
+      method,
+      cache: 'no-store',
+      headers: data === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: data === undefined ? undefined : JSON.stringify(data),
+      signal,
+    });
+    if (!response.ok) throw new Error('Firebase ha respost amb HTTP ' + response.status + '.');
+    if (method === 'GET') return response.json();
+  }
+
   function failed(error) {
     if (closed) return;
     console.error('THOSBOARD · Firebase', error);
@@ -61,6 +77,7 @@ export async function openFirebaseSession(code, teacher, events) {
     return writes;
   }
 
+  let pageDownload;
   if (teacher) {
     const result = await runTransaction(room, existing => {
       if (existing && existing.expiresAt > Date.now()) return;
@@ -82,6 +99,7 @@ export async function openFirebaseSession(code, teacher, events) {
     let teacherUid;
     let online = false;
     let registering = false;
+    let pageRevision;
 
     async function register() {
       if (!teacherUid || !online || closed || registering) return;
@@ -98,7 +116,10 @@ export async function openFirebaseSession(code, teacher, events) {
 
     watch(connected, value => {
       online = value === true;
-      if (online) void register();
+      if (online) {
+        void register();
+        void downloadPage();
+      }
     });
     watch(owner, uid => {
       teacherUid = uid;
@@ -119,19 +140,40 @@ export async function openFirebaseSession(code, teacher, events) {
         events.ink(state.ink?.strokes ?? [], state.ink?.preview);
       }
     });
-    watch(ref(database, path + '/frame'), frame => {
-      if (!frame) {
+    async function downloadPage() {
+      const expected = pageRevision;
+      if (!online || !expected || (shown && shown >= expected) || pageDownload) return;
+      const download = new AbortController();
+      pageDownload = download;
+      const started = performance.now();
+      try {
+        const frame = await request(path + '/frame', 'GET', undefined, download.signal);
+        if (closed || download.signal.aborted || !frame || frame.revision < expected) return;
+        const view = state?.revision === frame.revision ? state.view : frame.view;
+        const bytes = Uint8Array.from(atob(frame.image), value => value.charCodeAt(0));
+        shown = frame.revision;
+        events.page(new Blob([bytes], { type: frame.type }), { page: frame.page, total: frame.total, view });
+        if (state?.revision === shown) events.ink(state.ink?.strokes ?? [], state.ink?.preview);
+        events.status('');
+        console.debug('THOSBOARD · Descàrrega de pàgina', frame.page, Math.round(performance.now() - started), 'ms');
+      } catch (error) {
+        if (!download.signal.aborted) failed(error);
+      } finally {
+        if (pageDownload === download) pageDownload = undefined;
+      }
+    }
+
+    watch(ref(database, path + '/frame/revision'), next => {
+      pageRevision = next;
+      pageDownload?.abort();
+      pageDownload = undefined;
+      if (!next) {
         shown = undefined;
         events.clearPage();
         if (teacherUid) events.status('Connectat. Esperant la pàgina del professor…');
         return;
       }
-      const view = state?.revision === frame.revision ? state.view : frame.view;
-      const bytes = Uint8Array.from(atob(frame.image), value => value.charCodeAt(0));
-      shown = frame.revision;
-      events.page(new Blob([bytes], { type: frame.type }), { page: frame.page, total: frame.total, view });
-      if (state?.revision === shown) events.ink(state.ink?.strokes ?? [], state.ink?.preview);
-      events.status('');
+      void downloadPage();
     });
   }
 
@@ -170,10 +212,12 @@ export async function openFirebaseSession(code, teacher, events) {
         if (current !== revision) return;
         const data = await encode(image);
         if (closed || current !== revision) return;
-        await update(room, {
+        const started = performance.now();
+        await request(path, 'PATCH', {
           frame: { revision: current, image: data, page, total, type: image.type, view: frameState.view },
           state: frameState,
         });
+        console.debug('THOSBOARD · Pujada de pàgina', page, image.size, 'bytes', Math.round(performance.now() - started), 'ms');
       });
     },
     updateView(view) {
@@ -184,6 +228,7 @@ export async function openFirebaseSession(code, teacher, events) {
     },
     async close() {
       closed = true;
+      pageDownload?.abort();
       resetPending();
       for (const stop of listeners) stop();
       const target = teacher ? room : student;
