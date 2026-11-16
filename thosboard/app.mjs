@@ -7,6 +7,7 @@ const status = message => { el('status').textContent = message; };
 const warning = message => { el('error').textContent = message; };
 const canvas = el('canvas');
 const image = el('page-image');
+const useFirebase = new URLSearchParams(location.search).get('transport') === 'firebase';
 const pageInk = new Map();
 let inkPage;
 const ink = createInk(el, (strokes, preview) => {
@@ -64,9 +65,12 @@ function showCount(count) {
   el('count').textContent = count;
 }
 
-function connect(code, teacher) {
+async function connect(code, teacher) {
+  const connectSession = useFirebase
+    ? (await import('./firebase-session.mjs')).openFirebaseSession
+    : openSession;
   el('host-collision').hidden = el('student-collision').hidden = true;
-  return openSession(code, teacher, {
+  return connectSession(code, teacher, {
     status, warning, clearPage, page: showPage, count: showCount,
     view: state => view.follow(state),
     ink: (strokes, preview) => ink.show(strokes, preview),
@@ -88,8 +92,11 @@ async function enter(code, teacher) {
   el('host').disabled = el('join-button').disabled = true;
   el('lobby-error').textContent = '';
   try {
-    if (!isSecureContext || !globalThis.RTCPeerConnection || location.protocol === 'file:') {
-      throw new Error('Obre THOSBOARD des d’HTTPS o localhost amb un navegador compatible amb WebRTC.');
+    if (!isSecureContext || location.protocol === 'file:') {
+      throw new Error('Obre THOSBOARD des d’HTTPS o localhost.');
+    }
+    if (!useFirebase && !globalThis.RTCPeerConnection) {
+      throw new Error('Obre THOSBOARD amb un navegador compatible amb WebRTC.');
     }
     status('');
     warning('');
@@ -104,7 +111,9 @@ async function enter(code, teacher) {
       el('choose-pdf').focus();
     } else {
       connectionTimer = setTimeout(() => {
-        warning('Si encara esperes, comprova el codi i que la xarxa permeti la connexió directa.');
+        warning(useFirebase
+          ? 'Si encara esperes, comprova el codi i que el navegador tingui accés a Firebase.'
+          : 'Si encara esperes, comprova el codi i que la xarxa permeti la connexió directa.');
       }, 20000);
     }
   } catch (error) {

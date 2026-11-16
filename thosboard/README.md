@@ -21,3 +21,8 @@ Una aula de 30 alumnes és la referència per a les proves de rendiment. Es pode
 El paquet de transport està inclòs per servir el repositori com a web estàtica. Per reconstruir-lo, executa `npm ci` i `npm run build` dins de `thosboard/`. L’aplicació requereix HTTPS o localhost.
 
 Les anotacions i el llenç compartit es poden afegir en una fase posterior amb Yjs, usant una via de sincronització de traços independent de les imatges i definint qui pot editar el llenç.
+## Mode de prova amb Firebase
+
+Obre THOSBOARD amb `?transport=firebase` tant al professor com a l’alumnat. El mode prova Realtime Database amb HTTPS i peticions amb espera. Necessita Firebase Authentication amb el proveïdor anònim activat i les regles de `database.rules.json`. En un projecte amb altres dades cal integrar el bloc `thosboard` amb les regles existents.
+
+El codi de sis xifres dona accés de lectura a la sala a qui el conegui o l’endevini. Només qui crea la sala pot publicar-ne les pàgines, la vista i els traços. El servidor conserva només la imatge actual de cada sala. En sortir o en detectar la desconnexió del professor, Firebase elimina la sala. La reserva del codi caduca al cap de tres hores. Si el professor perd la connexió i la sala s’elimina, ha de crear-ne una de nova.

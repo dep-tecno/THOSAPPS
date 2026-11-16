@@ -1,0 +1,32 @@
+{
+  "rules": {
+    "thosboard": {
+      "rooms": {
+        "$code": {
+          ".read": "auth != null && $code.matches(/^[0-9]{6}$/)",
+          ".write": "auth != null && $code.matches(/^[0-9]{6}$/) && ((!data.exists() && newData.child('owner').val() === auth.uid) || (data.child('owner').val() === auth.uid && (!newData.exists() || newData.child('owner').val() === auth.uid)) || (data.exists() && data.child('expiresAt').val() <= now && newData.child('owner').val() === auth.uid))",
+          ".validate": "newData.hasChildren(['owner', 'expiresAt'])",
+          "owner": {
+            ".validate": "newData.isString()"
+          },
+          "expiresAt": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 14400000 && (newData.val() > now || newData.val() === data.val())"
+          },
+          "frame": {
+            ".validate": "newData.hasChildren(['revision', 'image', 'page', 'total', 'type', 'view']) && newData.child('revision').isNumber() && newData.child('page').isNumber() && newData.child('page').val() >= 1 && newData.child('total').isNumber() && newData.child('total').val() >= newData.child('page').val() && (newData.child('type').val() === 'image/webp' || newData.child('type').val() === 'image/jpeg' || newData.child('type').val() === 'image/png') && newData.child('image').isString() && newData.child('image').val().length <= 1398104"
+          },
+          "state": {
+            ".validate": "newData.hasChildren(['revision', 'view']) && newData.child('revision').isNumber()"
+          },
+          "students": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && $code.matches(/^[0-9]{6}$/) && root.child('thosboard').child('rooms').child($code).child('owner').isString() && (!newData.exists() || root.child('thosboard').child('rooms').child($code).child('expiresAt').val() > now)",
+              ".validate": "newData.val() === true"
+            }
+          },
+          "$other": { ".validate": false }
+        }
+      }
+    }
+  }
+}
