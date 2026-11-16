@@ -7,7 +7,7 @@ const status = message => { el('status').textContent = message; };
 const warning = message => { el('error').textContent = message; };
 const canvas = el('canvas');
 const image = el('page-image');
-const useFirebase = new URLSearchParams(location.search).get('transport') === 'firebase';
+const useFirebase = new URLSearchParams(location.search).get('transport') !== 'webrtc';
 const pageInk = new Map();
 let inkPage;
 const ink = createInk(el, (strokes, preview) => {
