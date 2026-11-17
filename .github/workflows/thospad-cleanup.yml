@@ -1,9 +1,6 @@
 name: THOSPAD · Neteja de sales
 
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/thospad-cleanup.yml']
   schedule:
     - cron: '23 3 * * *'
   workflow_dispatch:
@@ -39,6 +36,6 @@ jobs:
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email
           create_credentials_file: false
-      - run: node thospad/p2p/cleanup-rooms.mjs ${{ (github.event_name == 'push' || inputs.dry_run) && '--dry-run' || '' }}
+      - run: node thospad/p2p/cleanup-rooms.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           FIREBASE_CLEANUP_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
