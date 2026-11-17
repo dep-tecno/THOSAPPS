@@ -25,8 +25,24 @@ export async function padRoom(roomId, password, initial, { changed, connection, 
   const { db, database, user } = await connectFirebase();
   const path = 'thospad/rooms/' + roomId;
   const at = name => db.ref(database, path + '/' + name);
-  if (initial) await db.set(at('access'), { owner: user.uid, secret: password, created: db.serverTimestamp() });
-  await db.set(at('members/' + user.uid), password);
+  const denied = error => /permission.denied/i.test(error.code ?? error.message);
+  if (initial) {
+    const access = { owner: user.uid, secret: password, created: db.serverTimestamp() };
+    try {
+      await db.set(at('access'), { ...access, expiring: true });
+    } catch (error) {
+      if (!denied(error)) throw error;
+      await db.set(at('access'), access);
+    }
+  }
+  try {
+    await db.set(at('members/' + user.uid), password);
+  } catch (error) {
+    if (!initial && denied(error)) {
+      throw new Error('Aquest enllaç ha caducat o és incorrecte. Demana un enllaç nou.');
+    }
+    throw error;
+  }
   const doc = new Y.Doc();
   const meta = doc.getMap('pad');
   const cards = doc.getMap('cards');
@@ -70,7 +86,11 @@ export async function padRoom(roomId, password, initial, { changed, connection, 
   let failed = false;
   let count = 0;
   const presence = at('presence/' + user.uid);
-  const disconnect = db.onDisconnect(presence);
+  const roomRef = db.ref(database, path);
+  const disconnect = db.onDisconnect(roomRef);
+  const legacyDisconnect = db.onDisconnect(presence);
+  let tracksDeparture = false;
+  const departure = () => ({ ['presence/' + user.uid]: null, idleSince: db.serverTimestamp() });
   const listeners = [];
   const pending = [];
   let writing = false;
@@ -141,7 +161,14 @@ export async function padRoom(roomId, password, initial, { changed, connection, 
     report();
     if (!online || closed) return;
     try {
-      await disconnect.remove();
+      tracksDeparture = false;
+      try {
+        await disconnect.update(departure());
+        tracksDeparture = true;
+      } catch (error) {
+        if (!denied(error)) throw error;
+        await legacyDisconnect.remove();
+      }
       if (closed) return;
       await db.set(presence, true);
       void sendPending();
@@ -153,7 +180,10 @@ export async function padRoom(roomId, password, initial, { changed, connection, 
     closed = true;
     clearInterval(timer);
     for (const stop of listeners) stop();
-    if (online) void db.remove(presence).catch(() => {});
+    if (online) {
+      const leave = tracksDeparture ? db.update(roomRef, departure()) : db.remove(presence);
+      void leave.then(() => tracksDeparture ? disconnect.cancel() : legacyDisconnect.cancel()).catch(() => {});
+    }
     doc.destroy();
   } };
 }

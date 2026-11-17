@@ -1,0 +1,25 @@
+name: Neteja de sales THOSPAD
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: thospad-cleanup
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          if [ -z "$THOSPAD_CLEANUP_CREDENTIALS" ]; then
+            echo "::notice::Neteja pendent de configurar: falta THOSPAD_CLEANUP_CREDENTIALS."
+            exit 0
+          fi
+          node thospad/p2p/cleanup-rooms.mjs
+        env:
+          THOSPAD_CLEANUP_CREDENTIALS: ${{ secrets.THOSPAD_CLEANUP_CREDENTIALS }}

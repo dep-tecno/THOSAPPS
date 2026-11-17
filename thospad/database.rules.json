@@ -6,34 +6,54 @@
           "access": {
             ".write": "auth != null && $room.matches(/^[a-f0-9]{32}$/) && !data.exists() && newData.child('owner').val() === auth.uid",
             ".validate": "newData.hasChildren(['owner', 'secret', 'created'])",
-            "owner": { ".validate": "newData.isString()" },
-            "secret": { ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{32}$/)" },
-            "created": { ".validate": "newData.isNumber() && newData.val() === now" },
-            "$other": { ".validate": false }
+            "owner": {
+              ".validate": "newData.isString()"
+            },
+            "secret": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{32}$/)"
+            },
+            "created": {
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "$other": {
+              ".validate": false
+            },
+            "expiring": {
+              ".validate": "newData.val() === true"
+            }
           },
           "members": {
             "$uid": {
-              ".write": "auth != null && auth.uid === $uid && newData.isString() && newData.val() === root.child('thospad/rooms').child($room).child('access/secret').val()"
+              ".write": "auth != null && auth.uid === $uid && newData.isString() && newData.val() === root.child('thospad/rooms').child($room).child('access/secret').val() && (data.parent().parent().child('presence').exists() || (data.parent().parent().child('idleSince').isNumber() ? data.parent().parent().child('idleSince').val() > now - 172800000 : (data.parent().parent().child('access/expiring').val() !== true || data.parent().parent().child('access/created').val() > now - 172800000)))"
             }
           },
           "updates": {
-            ".read": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists()",
+            ".read": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists() && (data.parent().child('presence').exists() || (data.parent().child('idleSince').isNumber() ? data.parent().child('idleSince').val() > now - 172800000 : (data.parent().child('access/expiring').val() !== true || data.parent().child('access/created').val() > now - 172800000)))",
             "$update": {
-              ".write": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists() && !data.exists() && newData.child('author').val() === auth.uid",
+              ".write": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists() && !data.exists() && newData.child('author').val() === auth.uid && (data.parent().parent().child('presence').exists() || (data.parent().parent().child('idleSince').isNumber() ? data.parent().parent().child('idleSince').val() > now - 172800000 : (data.parent().parent().child('access/expiring').val() !== true || data.parent().parent().child('access/created').val() > now - 172800000)))",
               ".validate": "newData.hasChildren(['author', 'parts']) && newData.child('parts/0').exists()",
-              "author": { ".validate": "newData.isString()" },
-              "parts": {
-                "$index": { ".validate": "$index.matches(/^(0|[1-9]|[12][0-9]|3[01])$/) && newData.isString() && newData.val().length <= 500000" }
+              "author": {
+                ".validate": "newData.isString()"
               },
-              "$other": { ".validate": false }
+              "parts": {
+                "$index": {
+                  ".validate": "$index.matches(/^(0|[1-9]|[12][0-9]|3[01])$/) && newData.isString() && newData.val().length <= 500000"
+                }
+              },
+              "$other": {
+                ".validate": false
+              }
             }
           },
           "presence": {
-            ".read": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists()",
+            ".read": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists() && (data.parent().child('presence').exists() || (data.parent().child('idleSince').isNumber() ? data.parent().child('idleSince').val() > now - 172800000 : (data.parent().child('access/expiring').val() !== true || data.parent().child('access/created').val() > now - 172800000)))",
             "$uid": {
-              ".write": "auth != null && auth.uid === $uid && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists()",
+              ".write": "auth != null && auth.uid === $uid && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists() && (!newData.exists() || (data.parent().parent().child('presence').exists() || (data.parent().parent().child('idleSince').isNumber() ? data.parent().parent().child('idleSince').val() > now - 172800000 : (data.parent().parent().child('access/expiring').val() !== true || data.parent().parent().child('access/created').val() > now - 172800000))))",
               ".validate": "newData.val() === true"
             }
+          },
+          "idleSince": {
+            ".write": "auth != null && data.parent().child('members').child(auth.uid).exists() && newData.val() === now && !newData.parent().child('presence').child(auth.uid).exists() && (data.parent().child('presence').exists() || (data.parent().child('idleSince').isNumber() ? data.parent().child('idleSince').val() > now - 172800000 : (data.parent().child('access/expiring').val() !== true || data.parent().child('access/created').val() > now - 172800000)))"
           }
         }
       }

@@ -879,7 +879,7 @@ async function joinSharedPad(invite, board) {
   sharingBusy = true;
   sharePad.disabled = true;
   try {
-    const { padRoom } = await import('./p2p/firebase-room.bundle.mjs');
+    const { padRoom } = await import('./p2p/firebase-room.bundle.mjs?v=2');
     const padId = board?.id ?? makePadId();
     const url = new URL('./', new URL(location.pathname.endsWith('/') || location.pathname.endsWith('.html')
       ? location.href : location.pathname + '/', location.origin));
