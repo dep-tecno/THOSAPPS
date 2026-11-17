@@ -10,7 +10,7 @@ let sharePeerCount = 0;
 function renderShareSummary() {
   byId('share-summary').textContent = shared?.padId === activeId && shared
     ? (sharePeerCount + 1) + (sharePeerCount ? ' connectats' : ' connectat')
-    : 'Mateixa Wi-Fi';
+    : 'Per enllaç';
 }
 
 function readShareInvitation(hash) {
@@ -29,7 +29,7 @@ function showShareConnections(count, error = false) {
   byId('share-state').textContent = count ? participants + ' navegadors connectats (inclòs el teu).'
     : '1 navegador connectat (el teu). Esperant altres participants…';
   byId('share-connection-note').textContent = error
-    ? 'Hi ha hagut un problema de connexió. Comproveu que sou a la mateixa Wi-Fi i que l’altre navegador continua obert.' : '';
+    ? 'Hi ha hagut un problema de connexió. Comprova la connexió a Internet.' : '';
 }
 const content = byId('content');
 const padZoom = new Map();
@@ -879,7 +879,7 @@ async function joinSharedPad(invite, board) {
   sharingBusy = true;
   sharePad.disabled = true;
   try {
-    const { padRoom } = await import('./p2p/pad-room.bundle.js?v=4');
+    const { padRoom } = await import('./p2p/firebase-room.bundle.mjs');
     const padId = board?.id ?? makePadId();
     const url = new URL('./', new URL(location.pathname.endsWith('/') || location.pathname.endsWith('.html')
       ? location.href : location.pathname + '/', location.origin));
@@ -889,7 +889,7 @@ async function joinSharedPad(invite, board) {
     showShareConnections(0);
     if (!board) byId('share-state').textContent = 'Invitació rebuda. Esperant el PAD compartit…';
     let received = Boolean(board);
-    const room = padRoom(invite.sala, invite.clau, board, {
+    const room = await padRoom(invite.sala, invite.clau, board, {
       busy: () => saving || dialog.open || deleteDialog.open || Boolean(content.querySelector('.column-editor, .dragging, .resizing')),
       connection: (count, error) => {
         showShareConnections(count, error);
@@ -923,9 +923,9 @@ async function joinSharedPad(invite, board) {
     });
     shared = { room, padId };
     if (!shareDialog.open) shareDialog.showModal();
-  } catch {
-    byId('share-summary').textContent = 'Mateixa Wi-Fi';
-    status.textContent = 'No s’ha pogut obrir la sala compartida.';
+  } catch (error) {
+    byId('share-summary').textContent = 'Per enllaç';
+    status.textContent = error.message;
   } finally {
     sharingBusy = false;
     render();
@@ -1118,18 +1118,21 @@ async function init() {
     try {
       room.flush();
       await room.close();
-    } finally {
-      shared = undefined;
-      byId('share-summary').textContent = 'Mateixa Wi-Fi';
+    } catch (error) {
       sharingBusy = false;
-      const clean = new URL(location.href);
-      clean.hash = '';
-      clean.searchParams.delete('qr');
-      clean.searchParams.delete('participa');
-      history.replaceState(null, '', clean.href);
-      shareDialog.close();
-      render();
+      byId('share-connection-note').textContent = error.message;
+      return;
     }
+    shared = undefined;
+    byId('share-summary').textContent = 'Per enllaç';
+    sharingBusy = false;
+    const clean = new URL(location.href);
+    clean.hash = '';
+    clean.searchParams.delete('qr');
+    clean.searchParams.delete('participa');
+    history.replaceState(null, '', clean.href);
+    shareDialog.close();
+    render();
   });
   dialog.addEventListener('close', () => shared?.room.flush());
   const split = byId('kanban-split');

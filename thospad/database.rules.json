@@ -1,0 +1,42 @@
+{
+  "rules": {
+    "thospad": {
+      "rooms": {
+        "$room": {
+          "access": {
+            ".write": "auth != null && $room.matches(/^[a-f0-9]{32}$/) && !data.exists() && newData.child('owner').val() === auth.uid",
+            ".validate": "newData.hasChildren(['owner', 'secret', 'created'])",
+            "owner": { ".validate": "newData.isString()" },
+            "secret": { ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{32}$/)" },
+            "created": { ".validate": "newData.isNumber() && newData.val() === now" },
+            "$other": { ".validate": false }
+          },
+          "members": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && newData.isString() && newData.val() === root.child('thospad/rooms').child($room).child('access/secret').val()"
+            }
+          },
+          "updates": {
+            ".read": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists()",
+            "$update": {
+              ".write": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists() && !data.exists() && newData.child('author').val() === auth.uid",
+              ".validate": "newData.hasChildren(['author', 'parts']) && newData.child('parts/0').exists()",
+              "author": { ".validate": "newData.isString()" },
+              "parts": {
+                "$index": { ".validate": "$index.matches(/^(0|[1-9]|[12][0-9]|3[01])$/) && newData.isString() && newData.val().length <= 500000" }
+              },
+              "$other": { ".validate": false }
+            }
+          },
+          "presence": {
+            ".read": "auth != null && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists()",
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && root.child('thospad/rooms').child($room).child('members').child(auth.uid).exists()",
+              ".validate": "newData.val() === true"
+            }
+          }
+        }
+      }
+    }
+  }
+}
