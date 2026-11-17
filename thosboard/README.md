@@ -25,4 +25,12 @@ Les anotacions i el llenç compartit es poden afegir en una fase posterior amb Y
 
 L’adreça habitual de THOSBOARD fa servir Realtime Database amb HTTPS i peticions amb espera. Necessita Firebase Authentication amb el proveïdor anònim activat i les regles de `database.rules.json`. En un projecte amb altres dades cal integrar el bloc `thosboard` amb les regles existents. Per fer una prova comparativa amb WebRTC, obre `?transport=webrtc` tant al professor com a l’alumnat.
 
-El codi de sis xifres dona accés de lectura a la sala a qui el conegui o l’endevini. Només qui crea la sala pot publicar-ne les pàgines, la vista i els traços. El servidor conserva només la imatge actual de cada sala. En sortir o en detectar la desconnexió del professor, Firebase elimina la sala. La reserva del codi caduca al cap de tres hores. Si el professor perd la connexió i la sala s’elimina, ha de crear-ne una de nova.
+El codi de sis xifres dona accés de lectura a la sala a qui el conegui o l’endevini. Només qui crea la sala pot publicar-ne les pàgines, la vista i els traços. El servidor conserva només la imatge actual de cada sala. En sortir o en detectar la desconnexió del professor, Firebase elimina la sala. Mentre la pestanya del professor està oberta i connectada, renova cada cinc minuts la reserva del codi per tres hores. Si el professor perd la connexió i la sala s’elimina, ha de crear-ne una de nova.
+
+### Neteja diària de sales
+
+La tasca GitHub Actions «THOSBOARD · Neteja de sales» comprova cada dia a les 03.23 UTC si hi ha sales caducades des de fa almenys quinze minuts. Només actua sobre `thosboard/rooms`. Abans d’esborrar cada sala comprova que encara està caducada i condiciona l’esborrat a que Firebase conservi la mateixa versió.
+
+Per activar-la, configura Workload Identity Federation al projecte de THOSBOARD. Restringeix el proveïdor a `dep-tecno/THOSAPPS`, `refs/heads/main` i el fitxer `.github/workflows/thosboard-cleanup.yml`. Autoritza aquesta identitat de GitHub a fer servir un compte de servei dedicat amb accés d’escriptura a Realtime Database només al projecte de THOSBOARD. Al repositori, crea les variables `THOSBOARD_WIF_PROVIDER` (nom complet del proveïdor) i `THOSBOARD_CLEANUP_SERVICE_ACCOUNT` (correu del compte de servei). Ambdues són necessàries perquè s’executi la tasca.
+
+A GitHub Actions, usa «Run workflow» amb `dry_run` activat per veure el recompte abans d’executar una neteja real. GitHub pot desactivar els horaris dels repositoris públics després de 60 dies sense activitat.

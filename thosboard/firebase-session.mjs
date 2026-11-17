@@ -7,6 +7,8 @@ const app = initializeApp(firebaseConfig, 'thosboard');
 const auth = initializeAuth(app, { persistence: inMemoryPersistence });
 forceLongPolling();
 const database = getDatabase(app);
+const ROOM_LIFETIME_MS = 3 * 60 * 60 * 1000;
+const ROOM_RENEWAL_MS = 5 * 60 * 1000;
 
 function encode(blob) {
   return new Promise((resolve, reject) => {
@@ -42,6 +44,7 @@ export async function openFirebaseSession(code, teacher, events) {
   let pending = {};
   let frameState;
   let timer;
+  let renewalTimer;
   let writes = Promise.resolve();
 
   async function request(target, method, data, signal) {
@@ -81,7 +84,7 @@ export async function openFirebaseSession(code, teacher, events) {
   if (teacher) {
     const result = await runTransaction(room, existing => {
       if (existing && existing.expiresAt > Date.now()) return;
-      return { owner: user.uid, expiresAt: Date.now() + 3 * 60 * 60 * 1000 };
+      return { owner: user.uid, expiresAt: Date.now() + ROOM_LIFETIME_MS };
     }, { applyLocally: false });
     if (!result.committed) throw new Error('Aquest codi ja està en ús. Crea una sessió amb un altre codi.');
     try {
@@ -94,6 +97,9 @@ export async function openFirebaseSession(code, teacher, events) {
     watch(owner, uid => {
       if (uid !== user.uid) events.warning('La sessió s’ha tancat. Crea’n una de nova.');
     });
+    renewalTimer = setInterval(() => {
+      void set(ref(database, path + '/expiresAt'), Date.now() + ROOM_LIFETIME_MS).catch(failed);
+    }, ROOM_RENEWAL_MS);
   } else {
     let joined = false;
     let teacherUid;
@@ -228,6 +234,7 @@ export async function openFirebaseSession(code, teacher, events) {
     },
     async close() {
       closed = true;
+      clearInterval(renewalTimer);
       pageDownload?.abort();
       resetPending();
       for (const stop of listeners) stop();

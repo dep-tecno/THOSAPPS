@@ -1,0 +1,41 @@
+name: THOSBOARD · Neteja de sales
+
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Simula la neteja sense esborrar sales'
+        type: boolean
+        default: true
+
+concurrency:
+  group: thosboard-room-cleanup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  cleanup:
+    if: ${{ vars.THOSBOARD_WIF_PROVIDER != '' && vars.THOSBOARD_CLEANUP_SERVICE_ACCOUNT != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.THOSBOARD_WIF_PROVIDER }}
+          service_account: ${{ vars.THOSBOARD_CLEANUP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email
+          create_credentials_file: false
+      - run: node thosboard/scripts/cleanup-rooms.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          FIREBASE_CLEANUP_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
