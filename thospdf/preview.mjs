@@ -52,8 +52,8 @@ function draw(row,state) {
   drawThumbnails(state.grid, source, state.pages.slice(state.offset,state.offset+batch),
     () => current === generation && states.get(row) === state && token === state.token && row.isConnected);
 }
-function drawThumbnails(grid, source, pages, valid) {
-  grid.replaceChildren();
+function drawThumbnails(grid, source, pages, valid, append = false) {
+  if (!append) grid.replaceChildren();
   for (const index of pages) {
     const card = document.createElement('figure'), canvas = document.createElement('canvas'), caption = document.createElement('figcaption');
     caption.textContent = `Pàgina ${index+1}`; canvas.setAttribute('role','img'); canvas.setAttribute('aria-label',caption.textContent);
@@ -72,6 +72,7 @@ function drawThumbnails(grid, source, pages, valid) {
   }
 }
 export function documentPreview(file) {
+  const pagesPerLoad = 10;
   const details = document.createElement('details');
   details.className = 'merge-preview';
   const summary = document.createElement('summary');
@@ -83,36 +84,32 @@ export function documentPreview(file) {
   grid.className = 'interval-pages';
   const nav = document.createElement('div');
   nav.className = 'interval-navigation';
-  const previous = document.createElement('button'), next = document.createElement('button');
-  for (const button of [previous,next]) {
-    button.type = 'button';
-    button.className = 'secondary';
-  }
-  previous.textContent = '← Anteriors';
-  next.textContent = 'Següents →';
-  nav.append(previous,next);
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'secondary';
+  next.textContent = 'Mostra més pàgines';
+  nav.append(next);
   details.append(summary,hint,grid,nav);
   let loading, source, offset = 0, revision = 0;
   function close() {
     revision++;
     source = null;
+    offset = 0;
     grid.replaceChildren();
     nav.hidden = true;
     if (loading) void loading.destroy().catch(()=>{});
     loading = null;
   }
   function drawBatch() {
-    const end = Math.min(offset+batch, source.numPages);
-    const current = ++revision;
-    hint.textContent = `Pàgines ${offset+1}–${end} de ${source.numPages}`;
-    nav.hidden = source.numPages <= batch;
-    previous.disabled = offset === 0;
-    next.disabled = end === source.numPages;
+    const end = Math.min(offset + pagesPerLoad, source.numPages);
+    const current = revision;
     drawThumbnails(grid,source,Array.from({length:end-offset},(_,i)=>offset+i),
-      ()=>current===revision && details.open && details.isConnected);
+      ()=>current===revision && details.open && details.isConnected, true);
+    offset = end;
+    hint.textContent = `Pàgines 1–${end} de ${source.numPages}`;
+    nav.hidden = end === source.numPages;
   }
-  previous.onclick = () => {if (source && offset>0) {offset-=batch; drawBatch();}};
-  next.onclick = () => {if (source && offset+batch<source.numPages) {offset+=batch; drawBatch();}};
+  next.onclick = () => {if (source && offset<source.numPages) drawBatch();};
   details.ontoggle = async () => {
     close();
     if (!details.open || !details.isConnected) return;
@@ -127,7 +124,6 @@ export function documentPreview(file) {
       const loaded = await loading.promise;
       if (current !== revision) return;
       source = loaded;
-      offset = 0;
       drawBatch();
     } catch {
       if (current === revision) {
