@@ -1,13 +1,26 @@
-name: Neteja de sales THOSPAD
+name: THOSPAD · Neteja de sales
+
 on:
   schedule:
     - cron: '23 3 * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Simula la neteja sense esborrar sales'
+        type: boolean
+        default: true
+
+concurrency:
+  group: thospad-room-cleanup
+  cancel-in-progress: false
+
 permissions:
   contents: read
-concurrency: thospad-cleanup
+  id-token: write
+
 jobs:
   cleanup:
+    if: ${{ vars.THOSPAD_WIF_PROVIDER != '' && vars.THOSPAD_CLEANUP_SERVICE_ACCOUNT != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -15,11 +28,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: |
-          if [ -z "$THOSPAD_CLEANUP_CREDENTIALS" ]; then
-            echo "::notice::Neteja pendent de configurar: falta THOSPAD_CLEANUP_CREDENTIALS."
-            exit 0
-          fi
-          node thospad/p2p/cleanup-rooms.mjs
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.THOSPAD_WIF_PROVIDER }}
+          service_account: ${{ vars.THOSPAD_CLEANUP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email
+          create_credentials_file: false
+      - run: node thospad/p2p/cleanup-rooms.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
-          THOSPAD_CLEANUP_CREDENTIALS: ${{ secrets.THOSPAD_CLEANUP_CREDENTIALS }}
+          FIREBASE_CLEANUP_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
