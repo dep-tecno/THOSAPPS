@@ -1,0 +1,60 @@
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#e8f5fa;background:#0d2635}*{box-sizing:border-box}body{margin:0}header.top{background:#102c3e;border-bottom:2px solid #205267;padding:10px 20px;display:flex;align-items:center;gap:15px;min-height:58px}.app-brand{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;white-space:nowrap}.app-brand img{width:32px;height:32px;border-radius:6px}h1{font-size:22px;margin:0}h1 span{color:#63d5e5}.tagline{font-size:13px;color:#bdd5de}.local-tag{margin-left:auto;border:1px solid #3b7584;border-radius:20px;padding:5px 10px;color:#8ee5ed;font-size:12px;white-space:nowrap}main{max-width:1500px;margin:22px auto;padding:0 18px}.card{background:#163547;border:1px solid #35596b;border-radius:15px;padding:20px;margin-bottom:16px}h2{font-size:19px;margin:0 0 12px}p{line-height:1.5;color:#bdd5de;margin:8px 0}.intro{display:flex;align-items:center;justify-content:space-between;gap:18px}.intro h2{font-size:23px}.intro p{max-width:900px}.stage{background:#102e40;border:1px solid #3b7584;border-radius:12px;padding:12px 15px;white-space:nowrap;font-weight:700;color:#86dce9}.stage small{display:block;font-weight:400;color:#b5d2dd;margin-top:3px}.workspace{display:grid;grid-template-columns:minmax(280px,330px) minmax(0,1fr);gap:16px}.sidebar{min-width:0}.step{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:8px;background:#205267;color:#80e2ed;margin-right:5px}.drop{border:2px dashed #4b8495;border-radius:12px;text-align:center;padding:22px 10px;background:#102e40;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center}.drop:hover,.drop.drag{border-color:#69e4f4;background:#1b4b5a}.drop:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #80e2ed;outline-offset:2px}.drop-icon{font-size:34px;color:#63d5e5}.drop small,.help{font-size:12px;color:#afcad5}.drop #filename{font-size:12px;max-width:100%;overflow-wrap:anywhere;color:#86dce9;margin-top:6px}input[type=file]{position:absolute;width:1px;height:1px;opacity:0}.status{margin-top:12px;padding:11px;border-radius:9px;background:#102e40;color:#bdd5de;font-size:13px;overflow-wrap:anywhere}.status.error{border-left:3px solid #f3a19b}.status.ok{border-left:3px solid #7cd8c4}fieldset{padding:0;border:0;margin:0}fieldset:disabled{opacity:.5}label:not(.drop){display:block;font-weight:650;margin:14px 0 7px;font-size:13px}select,button{font:inherit;border-radius:9px;padding:11px 12px}select{width:100%;background:#102b3d;color:#fff;border:1px solid #527386}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.check{display:flex!important;align-items:center;gap:9px;font-weight:450!important;margin:12px 0!important}.check input{accent-color:#63d5e5;width:17px;height:17px}button{border:0;background:#007c97;color:white;font-weight:700;cursor:pointer}button:disabled{background:#416473;color:#b4cad3;cursor:not-allowed}.preview-card{min-height:650px}.preview-head{display:flex;justify-content:space-between;align-items:start;gap:15px;border-bottom:1px solid #35596b;padding-bottom:12px}.preview-head p{font-size:12px}.preview-head button{white-space:nowrap}.preview{background:#102e40;border-radius:10px;min-height:520px;padding:24px;overflow:auto}.empty{min-height:460px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#bdd5de}.empty h3{margin:16px 0 0;color:#e8f5fa}.empty p{max-width:380px}.report{font-size:13px}.report p{font-size:13px}.report ul{padding-left:19px}.report li{margin:6px 0}.report .error{color:#ffc1b8}.report .warn{color:#ffdb91}.report .good{color:#92e5d5}.paper{width:min(100%,794px);margin:0 auto 20px;background:#fff;color:#182c35;box-shadow:0 6px 24px #061a28;padding:55px 58px;min-height:1000px;font:15px/1.55 Arial,sans-serif;overflow-wrap:anywhere}.paper h1{font-size:30px}.paper h2{font-size:23px;margin:24px 0 12px}.paper h3{font-size:18px;margin:18px 0 9px}.paper p{color:#182c35}.paper .cover{min-height:600px;display:flex;flex-direction:column;justify-content:center;text-align:center}.paper .cover h1{font-size:38px;color:#12617b}.paper .question,.paper .example,.paper .note{border-left:4px solid #2b8199;padding:10px 15px;background:#edf5f7;margin:15px 0}.paper .answer{background:#eaf7ee;border-left:3px solid #37945d;padding:8px 12px;margin:10px 0}.paper .figure{margin:16px 0;text-align:center}.paper .figure img{max-width:100%;max-height:430px;object-fit:contain}.paper figcaption{font-size:12px;color:#51636b}.paper table{width:100%;border-collapse:collapse;font-size:13px}.paper th,.paper td{border:1px solid #a9b9c1;padding:6px;text-align:left}.paper .chapter{break-before:page}.paper .chapter.first{break-before:auto}.paper .question,.paper .example,.paper figure,.paper table{break-inside:avoid}.paper .compact p{margin:5px 0}.paper .placeholder{color:#a24b35;font-style:italic}.paper .rule{border-bottom:1px solid #b2bec3;height:25px}.paper .toc-list{padding-left:24px}footer{text-align:center;font-size:12px;color:#92b6c5;margin:18px 0}@media(max-width:950px){.workspace{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}.sidebar .card{margin:0}.preview-card{min-height:500px}}@media(max-width:620px){.tagline{display:none}.intro{display:block}.stage{display:inline-block;margin-top:8px}.preview-head{flex-direction:column}.paper{padding:22px 18px;min-height:650px}.preview{padding:10px}.card{padding:16px}.local-tag{font-size:10px}}@page{size:A4 portrait;margin:15mm}@media print{body{background:white;color:black}header,.intro,.sidebar,.preview-head,footer{display:none!important}main,.workspace,.preview-card,.preview{display:block!important;margin:0;padding:0;border:0;background:white;max-width:none;min-height:0;overflow:visible;box-shadow:none}.paper{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;break-after:auto}.paper .cover{min-height:230mm;break-after:page}.paper .chapter{break-before:page}.paper .chapter.first{break-before:auto}}
+
+/* THOSPAGES: formats a la capçalera, sense ocupar espai al llenç */
+header.top{gap:22px;flex-wrap:wrap}
+.format-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.format-tag{display:inline-flex;align-items:center;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.format-tag.available{color:#b5f4ff;background:#105367;border:1px solid #35b6ce}
+.format-tag.upcoming{color:#b5c9d2;background:#254554;border:1px solid #547382}
+.intro{padding:14px 20px;margin-bottom:14px}
+.intro h2{margin:0;font-size:22px}
+/* Configuració i comprovació amb blau pissarra diferenciat */
+.sidebar .card{background:#244657;border-color:#537788}
+.sidebar .drop,.sidebar .status{background:#173748}
+.sidebar select{background:#132f40}
+.sidebar .step{background:#143646}
+@media(max-width:620px){header.top{gap:9px;padding:9px 12px}.format-tags{margin-left:0;gap:5px}.format-tag{padding:5px 8px;font-size:10px}.intro{padding:13px 16px}.intro h2{font-size:19px}}
+
+/* Capçalera compacta amb descripció i formats */
+.header-description{font-size:14px;font-weight:500;color:#bdd5de;white-space:nowrap}
+@media(max-width:900px){.header-description{white-space:normal}.format-tags{margin-left:0}}
+/* Avís obligatori abans de cada impressió */
+#pdf-notice{width:min(460px,calc(100vw - 32px));padding:25px;border:1px solid #537788;border-radius:15px;background:#173748;color:#e8f5fa;box-shadow:0 20px 65px #0008}
+#pdf-notice::backdrop{background:#061824b8}
+#pdf-notice h2{font-size:21px;margin:0 0 12px}
+#pdf-notice p{color:#d0e2e9;line-height:1.6}
+#pdf-notice strong{color:#a2eef7}
+.notice-actions{display:flex;justify-content:flex-end;margin-top:20px}
+@media print{#pdf-notice{display:none!important}}
+
+/* Document imprimible: paleta independent de la interfície. */
+.paper h1,.paper h2,.paper h3,.paper h4,.paper h5{color:#781e2d;break-after:avoid-page}
+.paper h4{font-size:15px;margin:8px 0}.paper h5{font-size:14px;margin:6px 0}
+.paper .cover h1{color:#781e2d}
+.paper .note,.paper .variant{border-left:3px solid #a12c40;background:#fff3f3;padding:10px 14px;margin:14px 0}
+.paper .question{background:#faf7f7;border-color:#781e2d}
+.paper .example{background:#fff8e7;border-color:#ac761b}
+.paper .answer{background:#f5f7f5;border-color:#536e58}
+.paper .formula{font-weight:bold;background:#f5eeee;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.paper .question-meta,.paper .question-stage{font-size:12px;color:#555;margin:5px 0}
+.paper .options{list-style:none;padding-left:0}.paper .options li{margin:6px 0}
+.paper .response-space{height:65px;background:repeating-linear-gradient(transparent 0,transparent 21px,#c5c5c5 22px);margin-top:12px}
+.paper .table-wrap{max-width:100%;margin:14px 0}
+.paper table{table-layout:fixed}.paper th{background:#a12c40;color:white}.paper tbody tr:nth-child(even){background:#f8eeee}
+.paper th,.paper td{overflow-wrap:anywhere;vertical-align:top}
+.paper caption{text-align:left;font-weight:bold;margin-bottom:7px}
+.paper a{color:#781e2d}.paper.compact p{margin:5px 0}.paper.compact{font-size:13px}
+.paper .toc{margin-bottom:24px}.paper img{height:auto}
+.secondary{background:#31586b;border:1px solid #7894a2}.notice-actions{gap:10px}.reset{font-size:12px;width:100%;margin-top:10px}
+.format-tag.upcoming{opacity:.6}
+.paper .content-issue{outline:2px solid #a12c40}.paper .issue-message{display:block;color:#9b182b;font:13px/1.5 Arial,sans-serif;margin:10px 0}
+@media print{
+  body>*:not(main){display:none!important}
+  .paper thead{display:table-header-group}
+  .paper table,.paper .question,.paper .example,.paper .variant{break-inside:auto}
+  .paper tr,.paper figure{break-inside:avoid-page}
+  .paper p{orphans:3;widows:3}
+  .paper *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .paper img{max-height:220mm}
+  .paper .toc{break-after:page}
+}
