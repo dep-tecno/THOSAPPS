@@ -323,3 +323,7 @@ La previsualització s’ajusta inicialment a l’amplada i a l’alçada del vi
 ### 17.5 Visor horitzontal sense retall lateral
 
 L’escala de pantalla s’aplica al llenç de pàgines dins d’un contenidor amb amplada i alçada escalades explícites. Es conserven intactes les relacions internes de Paged.js. El càlcul considera l’amplada útil real del document del visor, inclosa la barra de desplaçament, i l’alçada del full. En imprimir s’elimina aquesta transformació i el contenidor de pantalla no participa en la maquetació. La comprovació visual continua a càrrec de l’usuari.
+
+### 17.6 Una única definició d’orientació abans de paginar
+
+El motor rep un sol full d’estils amb la mida de pàgina ja resolta: 210 × 297 mm en vertical o 297 × 210 mm en horitzontal. Ja no es passa un full vertical i una segona regla horitzontal superposada. Així la forma del full es defineix abans de calcular els salts i l’escala del visor. Cal revisar visualment el canvi al navegador; les proves locals comproven la regla que rep el motor, no la geometria renderitzada.

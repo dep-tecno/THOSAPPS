@@ -1,8 +1,9 @@
-import {prepareColumns} from './columns.mjs?v=20261120-6';
+import {prepareColumns} from './columns.mjs?v=20261120-7';
 // Trusted, local Paged.js runs in a separate document so its CSS cannot alter the UI.
 const engineURL=new URL('../vendor/pagedjs/paged-0.4.3.min.js',import.meta.url).href;
-const stylesheetURL=new URL('../print.css?v=20261120-6',import.meta.url).href;
+const stylesheetURL=new URL('../print.css?v=20261120-7',import.meta.url).href;
 export function pageFit(width,height,viewportWidth,viewportHeight){return Math.max(.05,Math.min(1,(viewportWidth-28)/width,(viewportHeight-42)/height));}
+export function orientedStyles(css,landscape){return css.replace(/(@page[^{}]*\{[^{}]*?\bsize\s*:)[^;{}]+;/i,`$1 ${landscape?'297mm 210mm':'210mm 297mm'};`).replace(/height\s*:\s*230mm\s*;/i,`height: ${landscape?143:230}mm;`);}
 function aborted(){return new DOMException('Paginació cancel·lada.','AbortError');}
 function waitFor(promise,signal){
   if(signal.aborted)return Promise.reject(aborted());
@@ -30,7 +31,7 @@ export function createFrame(container){
   const script=doc.createElement('script');script.src=engineURL;
   const ready=new Promise((resolve,reject)=>{script.onload=()=>resolve();script.onerror=()=>reject(Error('No es pot carregar el motor local de paginació.'));});
   doc.head.append(script);
-  const loadStyles=url=>new Promise((resolve,reject)=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=url;link.onload=resolve;link.onerror=()=>reject(Error('No es poden carregar els estils d’impressió.'));doc.head.append(link);});
+  const loadStyles=url=>new Promise((resolve,reject)=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=url;link.onload=()=>resolve([...link.sheet.cssRules].map(rule=>rule.cssText).join('\n'));link.onerror=()=>reject(Error('No es poden carregar els estils d’impressió.'));doc.head.append(link);});
   const installStage=pages=>{const root=pages[0].parentElement,stage=doc.createElement('div');stage.className='preview-scaled-stage';root.parentNode.insertBefore(stage,root);stage.append(root);return root;};
   return {frame,doc,win,ready,loadStyles,installStage,screenStyle:style,dispose:()=>frame.remove()};
 }
@@ -62,15 +63,15 @@ export class PagedPreview{
       const engine=view.win.PagedModule;
       if(!engine?.Previewer)throw Error('Motor de paginació local no disponible.');
       const content=view.doc.createDocumentFragment(),copy=view.doc.importNode(source,true);content.append(copy);
-      if(view.loadStyles)await waitFor(view.loadStyles(stylesheetURL),signal);
+      const rawStyles=view.loadStyles?await waitFor(view.loadStyles(stylesheetURL),signal):'@page { size:A4 portrait; margin:15mm; } .paper .cover {height:230mm;}';
       await waitFor(Promise.all([...copy.querySelectorAll('img')].map(img=>img.decode())),signal);
       if(view.doc.fonts)await waitFor(view.doc.fonts.ready,signal);
       await waitFor(prepareColumns(copy,view),signal);
       const previewer=new engine.Previewer();let count=0;
       previewer.on('page',()=>{onProgress(++count);});
       const landscape=source.dataset.orientation==='landscape';
-      const orientationCSS=`@page { size:A4 ${landscape?'landscape':'portrait'}; margin:15mm; } .paper .cover { height:${landscape?'143':'230'}mm; }`;
-      const flow=await waitFor(previewer.preview(content,[stylesheetURL,{[new URL('../orientation.css',import.meta.url).href]:orientationCSS}],view.doc.body),signal);
+      const css=orientedStyles(rawStyles,landscape);
+      const flow=await waitFor(previewer.preview(content,[{[stylesheetURL]:css}],view.doc.body),signal);
       const pages=[...view.doc.querySelectorAll('.pagedjs_page')];
       if(!pages.length||flow.pages.length!==pages.length)throw Error('El motor no ha paginat correctament el document.');
       verifyPaginatedContent(source,pages);
