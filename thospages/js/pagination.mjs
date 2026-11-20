@@ -1,7 +1,7 @@
-import {prepareColumns} from './columns.mjs?v=20261120-3';
+import {prepareColumns} from './columns.mjs?v=20261120-4';
 // Trusted, local Paged.js runs in a separate document so its CSS cannot alter the UI.
 const engineURL=new URL('../vendor/pagedjs/paged-0.4.3.min.js',import.meta.url).href;
-const stylesheetURL=new URL('../print.css?v=20261120-3',import.meta.url).href;
+const stylesheetURL=new URL('../print.css?v=20261120-4',import.meta.url).href;
 function aborted(){return new DOMException('Paginació cancel·lada.','AbortError');}
 function waitFor(promise,signal){
   if(signal.aborted)return Promise.reject(aborted());
@@ -63,7 +63,9 @@ export class PagedPreview{
       await waitFor(prepareColumns(copy,view),signal);
       const previewer=new engine.Previewer();let count=0;
       previewer.on('page',()=>{onProgress(++count);});
-      const flow=await waitFor(previewer.preview(content,[stylesheetURL],view.doc.body),signal);
+      const landscape=source.dataset.orientation==='landscape';
+      const orientationCSS=`@page { size:A4 ${landscape?'landscape':'portrait'}; margin:15mm; } .paper .cover { height:${landscape?'143':'230'}mm; }`;
+      const flow=await waitFor(previewer.preview(content,[stylesheetURL,{[new URL('../orientation.css',import.meta.url).href]:orientationCSS}],view.doc.body),signal);
       const pages=[...view.doc.querySelectorAll('.pagedjs_page')];
       if(!pages.length||flow.pages.length!==pages.length)throw Error('El motor no ha paginat correctament el document.');
       verifyPaginatedContent(source,pages);

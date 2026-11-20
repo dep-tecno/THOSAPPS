@@ -39,8 +39,9 @@ body{margin:0;color:#182c35;font:15px/1.55 Arial,sans-serif}
 .paper *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
 
 /* Opt-in layout: same reading order, no text or figure is removed. */
-.paper[data-layout="two"] .chapter,.paper[data-layout="two"] .solutions-annex{column-count:2;column-gap:7mm;column-fill:balance}
-.paper[data-layout="two"] .chapter>h2,.paper[data-layout="two"] .solutions-annex>h2,.paper[data-layout="two"] .wide-block{column-span:all}
+.paper .column-pair{display:table;table-layout:fixed;width:100%;border-spacing:0;break-inside:avoid;margin:7px 0}
+.paper .column-cell{display:table-cell;width:50%;vertical-align:top;padding-right:3.5mm}
+.paper .column-cell+.column-cell{padding-right:0;padding-left:3.5mm}
 .paper[data-layout="two"] figure{margin:8px 0}
 .paper[data-layout="two"] figure img{width:var(--figure-width,100%);max-width:100%;max-height:none}
 .paper[data-layout="two"] .question,.paper[data-layout="two"] .example,.paper[data-layout="two"] .note,.paper[data-layout="two"] .variant{padding:7px 9px;margin:9px 0}

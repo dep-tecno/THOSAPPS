@@ -1,13 +1,15 @@
 // General A4 layout decisions, independent of book IDs and asset names.
 export const COLUMN_PX=86.5*96/25.4, FULL_PX=180*96/25.4, MIN_LABEL_PX=11.33;
-export function figureWidth(viewWidth,minFont){
+export function figureWidth(viewWidth,minFont,fullWidth=FULL_PX){
+  const columnWidth=(fullWidth-7*96/25.4)/2;
   if(!Number.isFinite(viewWidth)||viewWidth<=0||!Number.isFinite(minFont)||minFont<=0)return {wide:true,width:FULL_PX};
   const readable=viewWidth*MIN_LABEL_PX/minFont;
   // Unknown/dense figures stay wide; never shrink below the readable estimate.
-  return {wide:readable>COLUMN_PX-40,width:Math.min(FULL_PX,Math.max(180,readable))};
+  return {wide:readable>columnWidth-40,width:Math.min(fullWidth,Math.max(180,readable))};
 }
 export async function prepareColumns(paper,view,{read=async url=>(await fetch(url)).text()}={}){
   if(paper.dataset.layout!=='two')return;
+  const fullWidth=(paper.dataset.orientation==='landscape'?267:180)*96/25.4;
   const doc=view.doc,host=doc.createElement('div');
   host.style.cssText='position:absolute;left:-100000px;top:0;visibility:hidden;width:180mm;font:16px Arial,sans-serif';doc.body.append(host);
   const cache=new Map();
@@ -35,7 +37,7 @@ export async function prepareColumns(paper,view,{read=async url=>(await fetch(ur
                   const scale=matrix?Math.hypot(matrix.a,matrix.b):1;
                   if(size>0&&scale>0)minimum=Math.min(minimum,size*scale);
                 }
-                plan=figureWidth(box[2],minimum);svg.remove();
+                plan=figureWidth(box[2],minimum,fullWidth);svg.remove();
               }
             }
           }
@@ -47,5 +49,25 @@ export async function prepareColumns(paper,view,{read=async url=>(await fetch(ur
     }
     for(const table of paper.querySelectorAll('table'))if(table.querySelectorAll('thead th').length>3)span(table.closest('.table-wrap'));
     for(const formula of paper.querySelectorAll('.formula'))if(formula.textContent.length>55)span(formula);
+    pairColumns(paper,doc);
   }finally{host.remove();}
+}
+// Bounded panels avoid nested multicol fragmentation inside Paged.js pages.
+export function pairColumns(paper,doc){
+  function arrange(parent){
+    const children=[...parent.children];if(!children.length)return;
+    parent.replaceChildren();let pending=null;
+    function flush(){if(pending){parent.append(pending);pending=null;}}
+    for(const node of children){
+      if(node.matches('h1,h2,h3,.wide-block,.cover,.toc')){flush();parent.append(node);continue;}
+      if(!node.dataset.blockId){flush();arrange(node);parent.append(node);continue;}
+      if(node.textContent.length>600||node.querySelectorAll('li').length>8||node.querySelectorAll('img').length){flush();parent.append(node);continue;}
+      if(!pending){pending=node;continue;}
+      const pair=doc.createElement('div');pair.className='column-pair';
+      for(const block of [pending,node]){const cell=doc.createElement('div');cell.className='column-cell';cell.append(block);pair.append(cell);}
+      parent.append(pair);pending=null;
+    }
+    flush();
+  }
+  for(const chapter of paper.querySelectorAll('.chapter,.solutions-annex'))arrange(chapter);
 }
