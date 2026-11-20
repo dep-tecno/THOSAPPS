@@ -331,3 +331,7 @@ El motor rep un sol full d’estils amb la mida de pàgina ja resolta: 210 × 29
 ### 17.7 Mida de les imatges independent de la resolució
 
 El selector «Mida de les imatges» ofereix Adaptada al contingut, Compactes i Grans, independent de l’edició, les columnes i l’orientació. En mode adaptat, les imatges raster i els SVG sense etiquetes visibles tenen un límit de 130 mm d’amplada i 70 mm d’alçada (55 mm d’alçada en horitzontal); no s’amplien automàticament a tota pàgina. Els SVG amb etiquetes mantenen el càlcul de llegibilitat. La classificació no identifica amb certesa el contingut d’una fotografia: pot incloure text i requereix revisió manual. Compactes aplica un màxim de 110 × 55 mm a totes les figures; l’usuari ha de comprovar les etiquetes dels esquemes. Grans permet tota l’amplada amb màxim 140 mm d’alçada. Es conserven proporcions i contingut, sense retalls ni modificacions del ZIP. No es promet cap recompte de pàgines sense revisar el PDF resultant.
+
+### 17.8 Estat a la portada — 20/11/2026
+
+Per indicació de l’usuari, THOSPAGES no és prioritari. La targeta de la portada de Tecno-Apps queda marcada «En desenvolupament», atenuada i sense enllaç per obrir l’aplicació. No tornar a activar aquest accés sense una nova indicació de l’usuari. Es conserven el codi i els fitxers de treball per reprendre el projecte.
