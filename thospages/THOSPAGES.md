@@ -319,3 +319,7 @@ El selector «Orientació» ofereix Vertical i Horitzontal, independent de l’e
 ### 17.4 Ajust de pàgina sencera i estalvi mesurat — 20/11/2026
 
 La previsualització s’ajusta inicialment a l’amplada i a l’alçada del visor, tant vertical com horitzontal, sense canviar l’escala d’impressió. L’ajust de figures llegibles s’aplica també en una columna. Abans de formar una parella de columnes, es carreguen els estils reals d’impressió i es compara l’alçada de la parella amb la del flux original; si no s’estalvia alçada o la parella és massa alta, es conserva el flux original. Això no garanteix un recompte final menor: els salts de pàgina s’han de revisar al PDF.
+
+### 17.5 Visor horitzontal sense retall lateral
+
+L’escala de pantalla s’aplica al llenç de pàgines dins d’un contenidor amb amplada i alçada escalades explícites. Es conserven intactes les relacions internes de Paged.js. El càlcul considera l’amplada útil real del document del visor, inclosa la barra de desplaçament, i l’alçada del full. En imprimir s’elimina aquesta transformació i el contenidor de pantalla no participa en la maquetació. La comprovació visual continua a càrrec de l’usuari.

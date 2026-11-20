@@ -1,7 +1,7 @@
-import {prepareColumns} from './columns.mjs?v=20261120-5';
+import {prepareColumns} from './columns.mjs?v=20261120-6';
 // Trusted, local Paged.js runs in a separate document so its CSS cannot alter the UI.
 const engineURL=new URL('../vendor/pagedjs/paged-0.4.3.min.js',import.meta.url).href;
-const stylesheetURL=new URL('../print.css?v=20261120-5',import.meta.url).href;
+const stylesheetURL=new URL('../print.css?v=20261120-6',import.meta.url).href;
 export function pageFit(width,height,viewportWidth,viewportHeight){return Math.max(.05,Math.min(1,(viewportWidth-28)/width,(viewportHeight-42)/height));}
 function aborted(){return new DOMException('Paginació cancel·lada.','AbortError');}
 function waitFor(promise,signal){
@@ -20,17 +20,19 @@ export function createFrame(container){
   const style=doc.createElement('style');
   style.textContent=`@media screen {
     html,body{margin:0;background:#102e40}
-    body{padding:14px 0 30px}
-    .pagedjs_pages{width:max-content;margin:auto;zoom:var(--page-scale,1)}
+    body{padding:14px;box-sizing:border-box}
+    .preview-scaled-stage{position:relative;width:var(--stage-width);height:var(--stage-height);margin:0 auto}
+    .preview-scaled-stage>.pagedjs_pages{position:absolute;left:0;top:0;width:var(--page-width);margin:0!important;transform:scale(var(--page-scale,1));transform-origin:top left}
     .pagedjs_page{background:white;margin:0 auto 28px;box-shadow:0 4px 18px #061a2870}
   }
-  @media print{.pagedjs_pages{zoom:1!important}.pagedjs_page{box-shadow:none!important;margin:0!important}}`;
+  @media print{.preview-scaled-stage{display:contents!important}.pagedjs_pages{transform:none!important;position:static!important}.pagedjs_page{box-shadow:none!important;margin:0!important}}`;
   doc.head.append(style);
   const script=doc.createElement('script');script.src=engineURL;
   const ready=new Promise((resolve,reject)=>{script.onload=()=>resolve();script.onerror=()=>reject(Error('No es pot carregar el motor local de paginació.'));});
   doc.head.append(script);
   const loadStyles=url=>new Promise((resolve,reject)=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=url;link.onload=resolve;link.onerror=()=>reject(Error('No es poden carregar els estils d’impressió.'));doc.head.append(link);});
-  return {frame,doc,win,ready,loadStyles,screenStyle:style,dispose:()=>frame.remove()};
+  const installStage=pages=>{const root=pages[0].parentElement,stage=doc.createElement('div');stage.className='preview-scaled-stage';root.parentNode.insertBefore(stage,root);stage.append(root);return root;};
+  return {frame,doc,win,ready,loadStyles,installStage,screenStyle:style,dispose:()=>frame.remove()};
 }
 export function verifyPaginatedContent(source,pages){
   const rendered=new Map(),expectedBlocks=new Map();
@@ -73,10 +75,15 @@ export class PagedPreview{
       if(!pages.length||flow.pages.length!==pages.length)throw Error('El motor no ha paginat correctament el document.');
       verifyPaginatedContent(source,pages);
       this.pages=pages;
+      const dimensions=pages.map(page=>{const r=page.getBoundingClientRect();return {width:r.width,height:r.height};});
+      const pageRoot=view.installStage?.(pages);
       if(view.screenStyle)view.doc.head.append(view.screenStyle);
       const fit=()=>{
-        const bounds=pages[0].getBoundingClientRect(),scale=Number(view.doc.documentElement.style.getPropertyValue('--page-scale')||1);
-        view.doc.documentElement.style.setProperty('--page-scale',pageFit(bounds.width/scale,bounds.height/scale,view.frame.clientWidth,view.frame.clientHeight||view.win.innerHeight||800));
+        const width=Math.max(...dimensions.map(d=>d.width)),height=Math.max(...dimensions.map(d=>d.height));
+        const viewportWidth=view.doc.documentElement.clientWidth||view.frame.clientWidth;
+        const scale=pageFit(width,height,viewportWidth,view.frame.clientHeight||view.win.innerHeight||800),style=view.doc.documentElement.style;
+        style.setProperty('--page-scale',scale);style.setProperty('--page-width',width+'px');style.setProperty('--stage-width',width*scale+'px');
+        style.setProperty('--stage-height',(pageRoot?.scrollHeight||dimensions.reduce((n,d)=>n+d.height+28,0))*scale+'px');
       };
       fit();view.win.addEventListener('resize',fit);
       return {count:pages.length};
