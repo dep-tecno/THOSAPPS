@@ -63,6 +63,7 @@ export function renderDocument(book,report,resources,options){
   const paper=el('article','paper'+(options.compact?' compact':''));
   paper.dataset.layout=options.layout==='two'?'two':'one';
   paper.dataset.orientation=options.orientation==='landscape'?'landscape':'portrait';
+  paper.dataset.images=['compact','large'].includes(options.images)?options.images:'auto';
   const context={mode:options.mode,space:options.space,report,resources};
   const chapters=book.content.chapters;
   const title=options.mode==='student'?'Llibre sense solucions':options.mode==='end'?'Llibre amb solucions en fulls al final':'Llibre amb solucions al costat de cada exercici';

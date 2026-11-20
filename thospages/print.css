@@ -51,3 +51,9 @@ body{margin:0;color:#182c35;font:15px/1.55 Arial,sans-serif}
 .paper[data-layout="two"] .figure figcaption{font-size:11px}
 .paper[data-layout="two"] h3{margin-top:12px}
 .paper[data-layout="two"] .response-space{height:45px}
+
+/* Resolution never implies a full-page illustration. Preserve aspect ratio. */
+.paper figure img[data-image-kind="illustration"]{width:auto;max-width:min(100%,130mm);max-height:70mm;height:auto;object-fit:contain}
+.paper[data-orientation="landscape"] figure img[data-image-kind="illustration"]{max-height:55mm}
+.paper[data-images="compact"] figure img{width:auto;max-width:min(100%,110mm);max-height:55mm;height:auto;object-fit:contain}
+.paper[data-images="large"] figure img{width:auto;max-width:100%;max-height:140mm;height:auto;object-fit:contain}

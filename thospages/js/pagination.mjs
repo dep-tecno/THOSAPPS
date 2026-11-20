@@ -1,7 +1,7 @@
-import {prepareColumns} from './columns.mjs?v=20261120-7';
+import {prepareColumns} from './columns.mjs?v=20261120-8';
 // Trusted, local Paged.js runs in a separate document so its CSS cannot alter the UI.
 const engineURL=new URL('../vendor/pagedjs/paged-0.4.3.min.js',import.meta.url).href;
-const stylesheetURL=new URL('../print.css?v=20261120-7',import.meta.url).href;
+const stylesheetURL=new URL('../print.css?v=20261120-8',import.meta.url).href;
 export function pageFit(width,height,viewportWidth,viewportHeight){return Math.max(.05,Math.min(1,(viewportWidth-28)/width,(viewportHeight-42)/height));}
 export function orientedStyles(css,landscape){return css.replace(/(@page[^{}]*\{[^{}]*?\bsize\s*:)[^;{}]+;/i,`$1 ${landscape?'297mm 210mm':'210mm 297mm'};`).replace(/height\s*:\s*230mm\s*;/i,`height: ${landscape?143:230}mm;`);}
 function aborted(){return new DOMException('Paginació cancel·lada.','AbortError');}

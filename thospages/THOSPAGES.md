@@ -327,3 +327,7 @@ L’escala de pantalla s’aplica al llenç de pàgines dins d’un contenidor a
 ### 17.6 Una única definició d’orientació abans de paginar
 
 El motor rep un sol full d’estils amb la mida de pàgina ja resolta: 210 × 297 mm en vertical o 297 × 210 mm en horitzontal. Ja no es passa un full vertical i una segona regla horitzontal superposada. Així la forma del full es defineix abans de calcular els salts i l’escala del visor. Cal revisar visualment el canvi al navegador; les proves locals comproven la regla que rep el motor, no la geometria renderitzada.
+
+### 17.7 Mida de les imatges independent de la resolució
+
+El selector «Mida de les imatges» ofereix Adaptada al contingut, Compactes i Grans, independent de l’edició, les columnes i l’orientació. En mode adaptat, les imatges raster i els SVG sense etiquetes visibles tenen un límit de 130 mm d’amplada i 70 mm d’alçada (55 mm d’alçada en horitzontal); no s’amplien automàticament a tota pàgina. Els SVG amb etiquetes mantenen el càlcul de llegibilitat. La classificació no identifica amb certesa el contingut d’una fotografia: pot incloure text i requereix revisió manual. Compactes aplica un màxim de 110 × 55 mm a totes les figures; l’usuari ha de comprovar les etiquetes dels esquemes. Grans permet tota l’amplada amb màxim 140 mm d’alçada. Es conserven proporcions i contingut, sense retalls ni modificacions del ZIP. No es promet cap recompte de pàgines sense revisar el PDF resultant.

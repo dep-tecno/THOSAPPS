@@ -21,7 +21,7 @@ export async function prepareColumns(paper,view,{read=async url=>(await fetch(ur
     for(const image of paper.querySelectorAll('img')){
       let plan=cache.get(image.src);
       if(!plan){
-        plan={wide:true,width:FULL_PX};
+        plan={wide:true,width:FULL_PX,kind:'illustration'};
         if(image.src.startsWith('blob:')){
           const text=await read(image.src);
           // The resource URL was created only after SVG validation. Raster stays wide.
@@ -31,13 +31,14 @@ export async function prepareColumns(paper,view,{read=async url=>(await fetch(ur
               const svg=doc.importNode(root,true),box=(svg.getAttribute('viewBox')||'').trim().split(/[\s,]+/).map(Number);
               if(box.length===4&&box[2]>0&&box[3]>0){
                 svg.setAttribute('width',String(box[2]));svg.setAttribute('height',String(box[3]));host.append(svg);
-                let minimum=Infinity;
+                let minimum=Infinity,labels=0;
                 for(const label of svg.querySelectorAll('text,tspan'))if(label.textContent.trim()){
+                  labels++;
                   const size=parseFloat(view.win.getComputedStyle(label).fontSize),matrix=label.getCTM();
                   const scale=matrix?Math.hypot(matrix.a,matrix.b):1;
                   if(size>0&&scale>0)minimum=Math.min(minimum,size*scale);
                 }
-                plan=figureWidth(box[2],minimum,fullWidth);svg.remove();
+                plan={...figureWidth(box[2],minimum,fullWidth),kind:labels?'labelled':'illustration'};svg.remove();
               }
             }
           }
@@ -45,6 +46,7 @@ export async function prepareColumns(paper,view,{read=async url=>(await fetch(ur
         cache.set(image.src,plan);
       }
       image.style.setProperty('--figure-width',plan.width+'px');
+      image.dataset.imageKind=plan.kind;
       if(plan.wide)span(image.closest('figure'));
     }
     for(const table of paper.querySelectorAll('table'))if(table.querySelectorAll('thead th').length>3)span(table.closest('.table-wrap'));
