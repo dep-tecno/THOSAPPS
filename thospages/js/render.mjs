@@ -10,7 +10,8 @@ function formulaText(node,text){
   node.append(text.slice(cursor));
 }
 export function renderBlock(b,parent,context){
-  const {mode,report,resources,space}=context;
+  const {report,resources,space}=context;
+  const mode=context.mode==='end'?'student':context.mode;
   let node;
   switch(b.type){
     case 'paragraph':node=el('p','',b.text);break;
@@ -61,10 +62,27 @@ export function renderBlock(b,parent,context){
 export function renderDocument(book,report,resources,options){
   const paper=el('article','paper'+(options.compact?' compact':''));
   const context={mode:options.mode,space:options.space,report,resources};
-  const chapters=book.content.chapters.map(ch=>({...ch,sections:ch.sections.map(sec=>({...sec,blocks:options.mode==='solutions'?solutionBlocks(sec.blocks):sec.blocks})).filter(sec=>sec.blocks.length)})).filter(ch=>ch.sections.length);
-  if(options.cover){const cover=el('section','cover');add(cover,'h1',book.manifest.title);add(cover,'p',options.mode==='student'?'Llibre de l’alumnat':options.mode==='solutions'?'Solucionari independent':'Llibre amb solucions');paper.append(cover);}
+  const chapters=book.content.chapters;
+  const title=options.mode==='student'?'Llibre sense solucions':options.mode==='end'?'Llibre amb solucions en fulls al final':'Llibre amb solucions al costat de cada exercici';
+  if(options.cover){const cover=el('section','cover');add(cover,'h1',book.manifest.title);add(cover,'p',title);paper.append(cover);}
   if(options.toc){const toc=el('nav','toc');add(toc,'h2','Índex');const list=el('ol');chapters.forEach((ch,i)=>{const item=el('li'),link=add(item,'a',ch.title);link.href='#chapter-'+i;list.append(item);});toc.append(list);paper.append(toc);}
   chapters.forEach((ch,i)=>{const chapter=el('section','chapter'+(!options.breaks||i===0?' first':''));chapter.id='chapter-'+i;add(chapter,'h2',ch.title);
     for(const sec of ch.sections){const section=el('section');add(section,'h3',sec.title);for(const b of sec.blocks)renderBlock(b,section,context);chapter.append(section);}paper.append(chapter);});
+  if(options.mode==='end'){
+    const annex=el('section','solutions-annex');annex.id='exercise-solutions';add(annex,'h2','Solucions dels exercicis');
+    let count=0;
+    for(const ch of book.content.chapters){
+      const chapter=el('section'),sections=[];
+      for(const sec of ch.sections){
+        const blocks=solutionBlocks(sec.blocks);
+        if(!blocks.length)continue;
+        const section=el('section');add(section,'h3',sec.title);
+        for(const b of blocks)renderBlock(b,section,{...context,mode:'solutions'});
+        sections.push(section);count++;
+      }
+      if(sections.length){add(chapter,'h3',ch.title);chapter.append(...sections);annex.append(chapter);}
+    }
+    if(count){paper.append(annex);if(options.toc){const tocList=paper.querySelectorAll('ol')[0];const item=el('li'),link=add(item,'a','Solucions dels exercicis');link.href='#exercise-solutions';tocList.append(item);}}
+  }
   return paper;
 }

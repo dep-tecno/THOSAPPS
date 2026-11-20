@@ -48,6 +48,15 @@ header.top{gap:22px;flex-wrap:wrap}
 .secondary{background:#31586b;border:1px solid #7894a2}.notice-actions{gap:10px}.reset{font-size:12px;width:100%;margin-top:10px}
 .format-tag.upcoming{opacity:.6}
 .paper .content-issue{outline:2px solid #a12c40}.paper .issue-message{display:block;color:#9b182b;font:13px/1.5 Arial,sans-serif;margin:10px 0}
+.paper .solutions-annex{break-before:page;margin-top:35px}
+@media print{.paper .solutions-annex{break-before:page;margin-top:0}}
+.page-tools{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0;font-size:13px}
+.page-tools label{margin:0!important;font-weight:400!important}
+.page-tools input{width:70px;padding:7px;border:1px solid #527386;border-radius:7px;background:#102b3d;color:white;font:inherit}
+.page-tools button{padding:7px 12px;font-size:13px}
+.pages-frame{width:100%;height:78vh;min-height:520px;border:0;display:block}
+.preview:has(.pages-frame){padding:0}
+@media print{.page-tools{display:none!important}}
 @media print{
   body>*:not(main){display:none!important}
   .paper thead{display:table-header-group}

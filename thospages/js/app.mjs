@@ -2,12 +2,15 @@ import {readZip} from './zip.mjs';
 import {importBook} from './model.mjs';
 import {validateScorm,prepareResources} from './resources.mjs';
 import {el,renderDocument} from './render.mjs';
+import {PagedPreview} from './pagination.mjs';
 
 const $=id=>document.getElementById(id);
 const state={book:null,report:null,resources:new Map(),urls:[],generation:0,ready:false};
+const pagination=new PagedPreview($('preview'));
 function status(message,kind=''){$('status').className='status '+kind;$('status').textContent=message;}
 function clear(){
   state.generation++;state.ready=false;
+  pagination.clear();$('page-count').textContent='';$('page-go').disabled=true;$('page-jump').disabled=true;
   for(const url of state.urls)URL.revokeObjectURL(url);
   Object.assign(state,{book:null,report:null,resources:new Map(),urls:[]});
   $('print').disabled=true;$('settings').disabled=true;
@@ -45,16 +48,23 @@ let renderGeneration=0;
 async function update(){
   if(!state.book)return;
   const revision=++renderGeneration,generation=state.generation;
-  state.ready=false;$('print').disabled=true;showReport();
+  pagination.clear();state.ready=false;$('print').disabled=true;$('page-go').disabled=true;$('page-jump').disabled=true;$('page-count').textContent='Preparant pàgines A4…';showReport();
   if(state.report.errors.some(issue=>!issue.previewSafe)){const panel=el('div','empty');panel.append(el('h3','','Conversió bloquejada'),el('p','','L’informe identifica els elements que cal corregir abans de construir una versió imprimible fidel.'));$('preview').replaceChildren(panel);return;}
   const paper=renderDocument(state.book,state.report,state.resources,{mode:$('edition').value,compact:$('density').value==='compact',cover:$('cover').checked,toc:$('toc').checked,breaks:$('breaks').checked,space:$('space').checked});
-  $('preview').replaceChildren(paper);
+  $('preview').replaceChildren(el('p','','Calculant els salts de pàgina…'));
   try{
     await Promise.all([...paper.querySelectorAll('img')].map(img=>img.decode()));
-    if(generation===state.generation&&revision===renderGeneration){state.ready=!state.report.errors.length;$('print').disabled=!state.ready;}
-  }catch{
     if(generation!==state.generation||revision!==renderGeneration)return;
-    state.report.errors.push({id:'figures',message:'Una imatge no es pot descodificar. La impressió queda bloquejada.'});showReport();
+    const result=await pagination.render(paper,{onProgress:count=>{if(generation===state.generation&&revision===renderGeneration)$('page-count').textContent=`Maquetant pàgina ${count}…`;}});
+    if(generation===state.generation&&revision===renderGeneration){
+      $('page-count').textContent=`${result.count} pàgines A4`;$('page-go').max=result.count;$('page-go').value=1;$('page-go').disabled=false;$('page-jump').disabled=false;
+      state.ready=!state.report.errors.length;$('print').disabled=!state.ready;
+    }
+  }catch(error){
+    if(generation!==state.generation||revision!==renderGeneration)return;
+    pagination.clear();$('page-count').textContent='No s’ha pogut completar la paginació.';
+    state.report.errors.push({id:'paginació',message:`No es pot preparar una impressió fidel: ${error.message}`});showReport();
+    $('preview').replaceChildren(el('p','','La previsualització està bloquejada. Revisa l’informe d’integritat.'));
   }
 }
 $('file').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)load(file);});
@@ -67,6 +77,7 @@ for(const id of ['edition','density','cover','toc','breaks','space'])$(id).addEv
 $('reset').addEventListener('click',()=>{clear();$('filename').textContent='Cap fitxer seleccionat';status('Selecciona un paquet per començar.');});
 $('print').addEventListener('click',()=>{if(state.ready)$('pdf-notice').showModal();});
 $('pdf-cancel').addEventListener('click',()=>$('pdf-notice').close());
-$('pdf-continue').addEventListener('click',()=>{$('pdf-notice').close();if(state.ready)window.print();});
+$('pdf-continue').addEventListener('click',()=>{$('pdf-notice').close();if(state.ready)pagination.print();});
+$('page-jump').addEventListener('click',()=>{const number=Number($('page-go').value);if(Number.isFinite(number))pagination.goTo(Math.round(number));});
 window.addEventListener('pagehide',event=>{if(!event.persisted)state.urls.forEach(url=>URL.revokeObjectURL(url));});
 clear();

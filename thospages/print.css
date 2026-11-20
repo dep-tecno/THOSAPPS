@@ -1,0 +1,39 @@
+/* Only trusted document styles are processed by Paged.js, never package CSS. */
+@page {
+  size:A4 portrait;
+  margin:15mm;
+  @bottom-center { content: counter(page) " / " counter(pages); font:10px Arial,sans-serif; color:#59616b; }
+}
+*{box-sizing:border-box}
+body{margin:0;color:#182c35;font:15px/1.55 Arial,sans-serif}
+.paper{width:auto;margin:0;padding:0;min-height:0;background:white;overflow-wrap:anywhere}
+.paper.compact{font-size:13px}
+.paper p{margin:8px 0;orphans:3;widows:3}
+.paper.compact p{margin:5px 0}
+.paper h1,.paper h2,.paper h3,.paper h4,.paper h5{color:#781e2d;break-after:avoid}
+.paper h1{font-size:30px}.paper h2{font-size:23px;margin:24px 0 12px}.paper h3{font-size:18px;margin:18px 0 9px}
+.paper h4{font-size:15px;margin:8px 0}.paper h5{font-size:14px;margin:6px 0}
+.paper .cover{height:230mm;display:flex;flex-direction:column;justify-content:center;text-align:center;break-after:page}
+.paper .cover h1{font-size:38px}
+.paper .toc{break-after:page}.paper .toc a{color:#781e2d;text-decoration:none}
+.paper .chapter{break-before:page}.paper .chapter.first{break-before:auto}
+.paper .solutions-annex{break-before:page}
+.paper .question,.paper .example,.paper .note,.paper .variant{padding:10px 14px;margin:14px 0;border-left:3px solid #781e2d;background:#faf7f7}
+.paper .example{background:#fff8e7;border-color:#ac761b}
+.paper .note,.paper .variant{border-color:#a12c40;background:#fff3f3}
+.paper .answer{padding:8px 12px;margin:10px 0;background:#f5f7f5;border-left:3px solid #536e58}
+.paper .formula{font-weight:bold;background:#f5eeee;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere;break-inside:avoid}
+.paper .question-meta,.paper .question-stage{font-size:12px;color:#555;margin:5px 0}
+.paper .options{list-style:none;padding-left:0}.paper .options li{margin:6px 0}
+.paper .response-space{height:65px;background:repeating-linear-gradient(transparent 0,transparent 21px,#c5c5c5 22px);margin-top:12px}
+.paper figure{margin:16px 0;text-align:center;break-inside:avoid}
+.paper figure img{max-width:100%;max-height:205mm;height:auto;object-fit:contain}
+.paper figcaption{font-size:12px;color:#51636b}
+.paper .table-wrap{max-width:100%;margin:14px 0}
+.paper table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px}
+.paper caption{text-align:left;font-weight:bold;margin-bottom:7px}
+.paper th,.paper td{border:1px solid #a9b9c1;padding:6px;text-align:left;overflow-wrap:anywhere;vertical-align:top}
+.paper th{background:#a12c40;color:white}.paper tbody tr:nth-child(even){background:#f8eeee}
+.paper thead{display:table-header-group}.paper tr{break-inside:avoid}
+.paper .content-issue{outline:2px solid #a12c40}.paper .issue-message{display:block;color:#9b182b;font:13px/1.5 Arial,sans-serif;margin:10px 0}
+.paper *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
