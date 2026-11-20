@@ -2,7 +2,7 @@
 
 **Projecte:** Tecno-Apps (`dep-tecno/THOSAPPS`)  
 **Estat:** implementació publicada a GitHub; validacions locals documentades i revisió visual de la paginació/PDF pendent de l’usuari.  
-**Versió del document:** 1.2 consolidada · 20/11/2026  
+**Versió del document:** 1.3 · dues columnes adaptatives · 20/11/2026  
 **Llengua de la interfície:** català; castellà previst, encara pendent.  
 **Propòsit:** transformar materials educatius digitals en documents PDF imprimibles sense ometre silenciosament contingut didàctic.
 
@@ -93,6 +93,7 @@ THOSPAGES/
 │   ├── model.mjs
 │   ├── resources.mjs
 │   ├── render.mjs
+│   ├── columns.mjs
 │   └── pagination.mjs
 ├── vendor/pagedjs/          # Paged.js 0.4.3 i llicència MIT
 ├── assets/                 # icones i logotip propis
@@ -143,6 +144,18 @@ La previsualització ha de mostrar fulls A4 separats i numerats, amb recompte to
 La impressió del botó utilitza el mateix document paginat del marc (`window.print()` d’aquell document), després de l’avís obligatori. L’avís recorda seleccionar «Desa com a PDF», A4 vertical, escala 100 %, marges «Cap» i capçaleres/peus del navegador desactivats. Si l’usuari altera aquesta configuració, el resultat pot variar. No prometre identitat exacta fins que l’usuari hagi revisat visualment el PDF.
 
 Esperar les imatges i les fonts abans de paginar. Una nova importació o canvi d’edició cancel·la la previsualització anterior. Comprovar que tots els blocs, textos i recursos gràfics han passat al resultat paginat; si falta contingut o falla el motor, bloquejar la impressió i informar de la incidència. Aquesta comprovació estructural no certifica la geometria ni la llegibilitat.
+
+### 5.5 Una columna o dues columnes adaptatives
+
+El selector «Maquetació» és independent de les tres edicions: **«Una columna»** conserva la distribució anterior i **«Dues columnes adaptatives»** permet provar una distribució més eficient del paper. No canviar automàticament l’edició ni ometre contingut per reduir el recompte de pàgines.
+
+- El text i els blocs habituals flueixen en dues columnes de 86,5 mm separades per 7 mm, dins de l’amplada útil A4 de 180 mm. L’ordre és de dalt a baix a l’esquerra i després a la dreta. Portada i índex romanen a tota amplada.
+- Els SVG validats es mesuren temporalment dins del document aïllat de previsualització. L’amplada es calcula a partir del `viewBox`, la mida de les etiquetes i les seves transformacions, amb una referència aproximada de 8,5 punts per a les etiquetes. Reservar espai per al padding dels blocs; si no hi cap, utilitzar tota l’amplada.
+- Les figures que no es poden mesurar amb confiança, incloses les raster, conserven tota l’amplada. Les taules de més de tres columnes i les fórmules llargues també passen a tota amplada. Si una figura detallada és dins d’una pregunta, exemple o variant, ampliar el bloc que la conté per mantenir-ne el context.
+- No retallar els SVG ni eliminar figures repetides en aquesta primera prova. Les proporcions, etiquetes i colors tècnics es conserven. L’ajust és una regla general: no depèn del nom del llibre, del capítol ni del fitxer gràfic.
+- Les estimacions de llegibilitat són heurístiques, no una garantia de mida tipogràfica exacta en qualsevol SVG. La lectura, els salts i l’ordre efectiu de les columnes s’han de revisar al navegador i al PDF. Les comprovacions de conservació de blocs i figures continuen actives i bloquegen omissions detectades.
+
+Objectiu: aprofitar millor el paper mantenint la llegibilitat. No fixar ni prometre un nombre final de pàgines abans de revisar el resultat imprès. L’usuari compara la mateixa edició i les mateixes opcions d’espai i salts entre les dues maquetacions.
 
 ## 6. Regles de maquetació i fidelitat
 
@@ -291,7 +304,7 @@ El pilot proporciona 12 capítols (incloses portada, avaluació i fonts), 87 sec
 
 **Incidència històrica corregida al pilot regenerat:** el 19/11 el bloc `joule-teoria-1-formules-4` contenia `[[0]]` sense resoldre. El ZIP rellegit el 20/11 ja representa `Q = V² · t / R`, sense aquest marcador, i supera la validació de dades i recursos del lector. El seu SHA-256 és `464C51F0F5638C59A788D897DAB2F8FDC573594F29F7BCA151913F6DFD30C6A2`. Les còpies antigues defectuoses continuen bloquejades. THOSPAGES no modifica ni repara el ZIP importat.
 
-Les 14 proves locals passen amb el pilot regenerat. Inclouen errors de ZIP/JSON/XML, rutes insegures, recursos actius, referències i claus inconsistents, les tres edicions, conservació del context, cancel·lació/confirmació d’impressió i neteja de recursos. Una còpia defectuosa creada només en memòria comprova la regressió del marcador `[[0]]`. Les proves de paginació utilitzen un motor simulat per verificar els fluxos, la detecció d’omissions i el document que rep la crida d’impressió; **no executen la maquetació real de Paged.js en un navegador**. Vegeu `VERIFICACIO-LOCAL.md` per reproduir-les i conèixer-ne els límits.
+Les 17 proves locals passen amb el pilot regenerat. Inclouen errors de ZIP/JSON/XML, rutes insegures, recursos actius, referències i claus inconsistents, les tres edicions, conservació del context, cancel·lació/confirmació d’impressió i neteja de recursos. Una còpia defectuosa creada només en memòria comprova la regressió del marcador `[[0]]`. Les proves de paginació utilitzen un motor simulat per verificar els fluxos, la detecció d’omissions i el document que rep la crida d’impressió; **no executen la maquetació real de Paged.js en un navegador**. Vegeu `VERIFICACIO-LOCAL.md` per reproduir-les i conèixer-ne els límits.
 
 El codi s’ha publicat a `dep-tecno/THOSAPPS`, branca `main`, ruta `thospages/`. El commit `930175cd62c8126d29c3ef555f5cebd72e4e17a2` incorpora la previsualització paginada i les tres edicions actuals. L’usuari ha informat que la versió anterior funcionava; la nova geometria de pàgina i el PDF encara necessiten la seva revisió. Continuen pendents també la cobertura completa respecte de les fonts i la prova real a Moodle. No s’ha obert cap navegador ni comprovat el domini o el desplegament públic per validar aquests canvis.
 

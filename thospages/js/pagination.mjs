@@ -1,6 +1,7 @@
+import {prepareColumns} from './columns.mjs?v=20261120-3';
 // Trusted, local Paged.js runs in a separate document so its CSS cannot alter the UI.
 const engineURL=new URL('../vendor/pagedjs/paged-0.4.3.min.js',import.meta.url).href;
-const stylesheetURL=new URL('../print.css',import.meta.url).href;
+const stylesheetURL=new URL('../print.css?v=20261120-3',import.meta.url).href;
 function aborted(){return new DOMException('Paginació cancel·lada.','AbortError');}
 function waitFor(promise,signal){
   if(signal.aborted)return Promise.reject(aborted());
@@ -59,6 +60,7 @@ export class PagedPreview{
       const content=view.doc.createDocumentFragment(),copy=view.doc.importNode(source,true);content.append(copy);
       await waitFor(Promise.all([...copy.querySelectorAll('img')].map(img=>img.decode())),signal);
       if(view.doc.fonts)await waitFor(view.doc.fonts.ready,signal);
+      await waitFor(prepareColumns(copy,view),signal);
       const previewer=new engine.Previewer();let count=0;
       previewer.on('page',()=>{onProgress(++count);});
       const flow=await waitFor(previewer.preview(content,[stylesheetURL],view.doc.body),signal);

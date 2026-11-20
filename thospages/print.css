@@ -37,3 +37,15 @@ body{margin:0;color:#182c35;font:15px/1.55 Arial,sans-serif}
 .paper thead{display:table-header-group}.paper tr{break-inside:avoid}
 .paper .content-issue{outline:2px solid #a12c40}.paper .issue-message{display:block;color:#9b182b;font:13px/1.5 Arial,sans-serif;margin:10px 0}
 .paper *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+
+/* Opt-in layout: same reading order, no text or figure is removed. */
+.paper[data-layout="two"] .chapter,.paper[data-layout="two"] .solutions-annex{column-count:2;column-gap:7mm;column-fill:balance}
+.paper[data-layout="two"] .chapter>h2,.paper[data-layout="two"] .solutions-annex>h2,.paper[data-layout="two"] .wide-block{column-span:all}
+.paper[data-layout="two"] figure{margin:8px 0}
+.paper[data-layout="two"] figure img{width:var(--figure-width,100%);max-width:100%;max-height:none}
+.paper[data-layout="two"] .question,.paper[data-layout="two"] .example,.paper[data-layout="two"] .note,.paper[data-layout="two"] .variant{padding:7px 9px;margin:9px 0}
+.paper[data-layout="two"] .answer{padding:6px 8px;margin:7px 0}
+.paper[data-layout="two"] .question,.paper[data-layout="two"] .example{break-inside:avoid}
+.paper[data-layout="two"] .figure figcaption{font-size:11px}
+.paper[data-layout="two"] h3{margin-top:12px}
+.paper[data-layout="two"] .response-space{height:45px}
