@@ -132,6 +132,12 @@
             .position-card { padding: 4px 7px; gap: 4px; }
             .position-card strong { font-size: 21px; }
         }
+        #speedBtn { min-width: 112px; transition: background-color .2s, box-shadow .2s, transform .2s; }
+        #speedBtn[data-speed="2"] { background: #164e63; box-shadow: 0 0 12px #22d3ee55; }
+        #speedBtn[data-speed="3"] { background: #581c87; border-color: #c084fc; color: #e9d5ff; box-shadow: 0 0 16px #c084fc66; }
+        #speedBtn.speed-pulse { animation: speed-pulse .35s ease-out; }
+        @keyframes speed-pulse { 50% { transform: scale(1.08); } }
+        @media (prefers-reduced-motion: reduce) { #speedBtn.speed-pulse { animation: none; } }
     </style>
 <link rel="icon" href="../favicon.svg?v=20261117" type="image/svg+xml" sizes="any" />
 </head>
@@ -153,6 +159,7 @@
                 <span class="position-angle">ANGLE <span id="dispAng">0</span>°</span>
             </div>
             
+            <button id="speedBtn" data-speed="1" type="button" class="btn-neon flex items-center justify-center gap-2 bg-slate-800 text-cyan-400 border border-cyan-800 px-3 py-1.5 rounded-full text-sm font-bold" title="Canvia la velocitat: ×1, ×2, ×3" aria-label="Velocitat ×1. Prem per canviar a ×2.">⚡ <span id="speedLabel">×1</span></button>
             <!-- Download Button -->
             <button id="downloadBtn" class="btn-neon flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-pink-400 border border-pink-900 px-3 py-1.5 rounded-full text-sm font-bold" title="Descarregar imatge amb el codi i el dibuix">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -241,6 +248,7 @@ REPETEIX 36 [
                 <button id="closeHelpBtn" class="text-slate-400 hover:text-white transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
             <div class="p-6 overflow-y-auto text-sm leading-relaxed">
+                <p class="mb-6 text-slate-300"><strong class="font-bold text-white">⚡ Velocitat</strong>: prem el botó per alternar ×1 → ×2 → ×3. Pots canviar-la mentre s’executa el programa. Accelera els moviments, els girs i les instruccions repetides. ESPERA conserva els segons indicats.</p>
                 <h3 class="text-lg font-bold text-purple-400 mb-3 border-b border-purple-900/50 pb-1">🐢 Moviment</h3>
                 <table class="w-full mb-6 help-table">
                     <tr><th>Comanda</th><th>Sintaxi</th><th>Descripció</th></tr>
@@ -316,6 +324,18 @@ REPETEIX 36 [
         const saveIndicator = document.getElementById('saveIndicator');
         const downloadBtn = document.getElementById('downloadBtn');
         
+        let executionSpeed = 1;
+        const speedBtn = document.getElementById('speedBtn');
+        speedBtn.addEventListener('click', () => {
+            executionSpeed = executionSpeed % 3 + 1;
+            document.getElementById('speedLabel').textContent = '×' + executionSpeed;
+            speedBtn.dataset.speed = String(executionSpeed);
+            speedBtn.setAttribute('aria-label', 'Velocitat ×' + executionSpeed + '. Prem per canviar a ×' + (executionSpeed % 3 + 1) + '.');
+            speedBtn.classList.remove('speed-pulse');
+            void speedBtn.offsetWidth;
+            speedBtn.classList.add('speed-pulse');
+        });
+
         // --- HELP SYSTEM ---
         const helpBtn = document.getElementById('helpBtn');
         const helpModal = document.getElementById('helpModal');
@@ -484,6 +504,8 @@ REPETEIX 36 [
         let drawnLines = [];
         const inkCanvas = document.createElement('canvas');
         const inkCtx = inkCanvas.getContext('2d');
+        let renderedMarks = 0;
+        let renderedSource = null;
         let executionStack = [];
         let commandQueue = [];
         let currentAction = null;
@@ -552,10 +574,15 @@ REPETEIX 36 [
             ctx.restore();
 
             // Replay ink on a separate layer so the eraser preserves the grid.
-            inkCanvas.width = width;
-            inkCanvas.height = height;
+            if (inkCanvas.width !== width || inkCanvas.height !== height || renderedSource !== drawnLines) {
+                inkCanvas.width = width;
+                inkCanvas.height = height;
+                renderedMarks = 0;
+                renderedSource = drawnLines;
+            }
             inkCtx.lineCap = 'round';
-            for (const mark of drawnLines) {
+            for (; renderedMarks < drawnLines.length; renderedMarks++) {
+                const mark = drawnLines[renderedMarks];
                 inkCtx.globalCompositeOperation = mark.erasing ? 'destination-out' : 'source-over';
                 inkCtx.shadowBlur = mark.erasing ? 0 : 10;
                 inkCtx.shadowColor = mark.color;
@@ -600,7 +627,7 @@ REPETEIX 36 [
         }
 
         function loop() {
-            if (isRunning) processQueue();
+            for (let step = 0; step < executionSpeed && isRunning; step++) processQueue();
             drawFrame();
             updateStatus(isRunning ? "EXECUTING..." : "IDLE");
             animationId = requestAnimationFrame(loop);
