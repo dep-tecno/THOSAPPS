@@ -2,7 +2,7 @@ import {readZip} from './zip.mjs';
 import {importBook} from './model.mjs';
 import {validateScorm,prepareResources} from './resources.mjs';
 import {el,renderDocument} from './render.mjs';
-import {PagedPreview} from './pagination.mjs';
+import {PagedPreview} from './pagination.mjs?v=20261120-2';
 
 const $=id=>document.getElementById(id);
 const state={book:null,report:null,resources:new Map(),urls:[],generation:0,ready:false};

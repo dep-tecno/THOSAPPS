@@ -54,11 +54,12 @@ export class PagedPreview{
     const {signal}=controller,view=this.factory(this.container);this.view=view;
     try{
       await waitFor(view.ready,signal);
-      if(!view.win.Paged?.Previewer)throw Error('Motor de paginació local no disponible.');
+      const engine=view.win.PagedModule;
+      if(!engine?.Previewer)throw Error('Motor de paginació local no disponible.');
       const content=view.doc.createDocumentFragment(),copy=view.doc.importNode(source,true);content.append(copy);
       await waitFor(Promise.all([...copy.querySelectorAll('img')].map(img=>img.decode())),signal);
       if(view.doc.fonts)await waitFor(view.doc.fonts.ready,signal);
-      const previewer=new view.win.Paged.Previewer();let count=0;
+      const previewer=new engine.Previewer();let count=0;
       previewer.on('page',()=>{onProgress(++count);});
       const flow=await waitFor(previewer.preview(content,[stylesheetURL],view.doc.body),signal);
       const pages=[...view.doc.querySelectorAll('.pagedjs_page')];
