@@ -1,7 +1,8 @@
-import {prepareColumns} from './columns.mjs?v=20261120-4';
+import {prepareColumns} from './columns.mjs?v=20261120-5';
 // Trusted, local Paged.js runs in a separate document so its CSS cannot alter the UI.
 const engineURL=new URL('../vendor/pagedjs/paged-0.4.3.min.js',import.meta.url).href;
-const stylesheetURL=new URL('../print.css?v=20261120-4',import.meta.url).href;
+const stylesheetURL=new URL('../print.css?v=20261120-5',import.meta.url).href;
+export function pageFit(width,height,viewportWidth,viewportHeight){return Math.max(.05,Math.min(1,(viewportWidth-28)/width,(viewportHeight-42)/height));}
 function aborted(){return new DOMException('Paginació cancel·lada.','AbortError');}
 function waitFor(promise,signal){
   if(signal.aborted)return Promise.reject(aborted());
@@ -28,7 +29,8 @@ export function createFrame(container){
   const script=doc.createElement('script');script.src=engineURL;
   const ready=new Promise((resolve,reject)=>{script.onload=()=>resolve();script.onerror=()=>reject(Error('No es pot carregar el motor local de paginació.'));});
   doc.head.append(script);
-  return {frame,doc,win,ready,screenStyle:style,dispose:()=>frame.remove()};
+  const loadStyles=url=>new Promise((resolve,reject)=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=url;link.onload=resolve;link.onerror=()=>reject(Error('No es poden carregar els estils d’impressió.'));doc.head.append(link);});
+  return {frame,doc,win,ready,loadStyles,screenStyle:style,dispose:()=>frame.remove()};
 }
 export function verifyPaginatedContent(source,pages){
   const rendered=new Map(),expectedBlocks=new Map();
@@ -58,6 +60,7 @@ export class PagedPreview{
       const engine=view.win.PagedModule;
       if(!engine?.Previewer)throw Error('Motor de paginació local no disponible.');
       const content=view.doc.createDocumentFragment(),copy=view.doc.importNode(source,true);content.append(copy);
+      if(view.loadStyles)await waitFor(view.loadStyles(stylesheetURL),signal);
       await waitFor(Promise.all([...copy.querySelectorAll('img')].map(img=>img.decode())),signal);
       if(view.doc.fonts)await waitFor(view.doc.fonts.ready,signal);
       await waitFor(prepareColumns(copy,view),signal);
@@ -72,8 +75,8 @@ export class PagedPreview{
       this.pages=pages;
       if(view.screenStyle)view.doc.head.append(view.screenStyle);
       const fit=()=>{
-        const width=pages[0].getBoundingClientRect().width/Number(view.doc.documentElement.style.getPropertyValue('--page-scale')||1);
-        view.doc.documentElement.style.setProperty('--page-scale',Math.min(1,Math.max(.2,(view.frame.clientWidth-28)/width)));
+        const bounds=pages[0].getBoundingClientRect(),scale=Number(view.doc.documentElement.style.getPropertyValue('--page-scale')||1);
+        view.doc.documentElement.style.setProperty('--page-scale',pageFit(bounds.width/scale,bounds.height/scale,view.frame.clientWidth,view.frame.clientHeight||view.win.innerHeight||800));
       };
       fit();view.win.addEventListener('resize',fit);
       return {count:pages.length};

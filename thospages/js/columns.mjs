@@ -8,10 +8,10 @@ export function figureWidth(viewWidth,minFont,fullWidth=FULL_PX){
   return {wide:readable>columnWidth-40,width:Math.min(fullWidth,Math.max(180,readable))};
 }
 export async function prepareColumns(paper,view,{read=async url=>(await fetch(url)).text()}={}){
-  if(paper.dataset.layout!=='two')return;
   const fullWidth=(paper.dataset.orientation==='landscape'?267:180)*96/25.4;
   const doc=view.doc,host=doc.createElement('div');
-  host.style.cssText='position:absolute;left:-100000px;top:0;visibility:hidden;width:180mm;font:16px Arial,sans-serif';doc.body.append(host);
+  host.className=paper.className;host.dataset.layout=paper.dataset.layout;
+  host.style.cssText=`position:absolute;left:-100000px;top:0;visibility:hidden;width:${fullWidth}px`;doc.body.append(host);
   const cache=new Map();
   function span(node){
     const owner=node.closest('.question, .example, .variant')||node;
@@ -49,11 +49,16 @@ export async function prepareColumns(paper,view,{read=async url=>(await fetch(ur
     }
     for(const table of paper.querySelectorAll('table'))if(table.querySelectorAll('thead th').length>3)span(table.closest('.table-wrap'));
     for(const formula of paper.querySelectorAll('.formula'))if(formula.textContent.length>55)span(formula);
-    pairColumns(paper,doc);
+    if(paper.dataset.layout==='two')pairColumns(paper,doc,{accept:(pair,left,right)=>{
+      const measure=node=>{const wrapper=doc.createElement('div');wrapper.style.display='flow-root';wrapper.append(node);host.append(wrapper);const h=wrapper.getBoundingClientRect().height;wrapper.remove();return h;};
+      const baseline=doc.createElement('div');baseline.append(left.cloneNode(true),right.cloneNode(true));
+      const original=measure(baseline),paired=measure(pair.cloneNode(true))+14;
+      return paired+2<original&&paired<(paper.dataset.orientation==='landscape'?140:200)*96/25.4;
+    }});
   }finally{host.remove();}
 }
 // Bounded panels avoid nested multicol fragmentation inside Paged.js pages.
-export function pairColumns(paper,doc){
+export function pairColumns(paper,doc,{accept=()=>true}={}){
   function arrange(parent){
     const children=[...parent.children];if(!children.length)return;
     parent.replaceChildren();let pending=null;
@@ -64,8 +69,9 @@ export function pairColumns(paper,doc){
       if(node.textContent.length>600||node.querySelectorAll('li').length>8||node.querySelectorAll('img').length){flush();parent.append(node);continue;}
       if(!pending){pending=node;continue;}
       const pair=doc.createElement('div');pair.className='column-pair';
+      const left=pending;
       for(const block of [pending,node]){const cell=doc.createElement('div');cell.className='column-cell';cell.append(block);pair.append(cell);}
-      parent.append(pair);pending=null;
+      if(accept(pair,left,node))parent.append(pair);else parent.append(left,node);pending=null;
     }
     flush();
   }

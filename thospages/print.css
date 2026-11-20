@@ -28,6 +28,7 @@ body{margin:0;color:#182c35;font:15px/1.55 Arial,sans-serif}
 .paper .response-space{height:65px;background:repeating-linear-gradient(transparent 0,transparent 21px,#c5c5c5 22px);margin-top:12px}
 .paper figure{margin:16px 0;text-align:center;break-inside:avoid}
 .paper figure img{max-width:100%;max-height:205mm;height:auto;object-fit:contain}
+.paper figure img{width:var(--figure-width,100%);max-height:none}
 .paper figcaption{font-size:12px;color:#51636b}
 .paper .table-wrap{max-width:100%;margin:14px 0}
 .paper table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px}

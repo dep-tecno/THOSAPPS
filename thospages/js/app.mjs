@@ -1,8 +1,8 @@
 import {readZip} from './zip.mjs';
 import {importBook} from './model.mjs';
 import {validateScorm,prepareResources} from './resources.mjs';
-import {el,renderDocument} from './render.mjs?v=20261120-4';
-import {PagedPreview} from './pagination.mjs?v=20261120-4';
+import {el,renderDocument} from './render.mjs?v=20261120-5';
+import {PagedPreview} from './pagination.mjs?v=20261120-5';
 
 const $=id=>document.getElementById(id);
 const state={book:null,report:null,resources:new Map(),urls:[],generation:0,ready:false};
