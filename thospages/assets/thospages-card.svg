@@ -1,15 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <title>SCORM amb TAPP a PDF i Word</title>
   <rect width="640" height="360" fill="#102c3e"/>
-  <circle cx="184" cy="160" r="116" fill="#163d50"/>
+  <circle cx="154" cy="156" r="114" fill="#163d50"/>
+  <circle cx="482" cy="179" r="149" fill="#132f43"/>
   <g fill="none" stroke="#63d5e5" stroke-width="5" stroke-linejoin="round">
-    <path d="M65 95Q120 77 183 107Q242 77 302 95V234Q242 216 183 246Q124 216 65 234Z" fill="#163547"/>
-    <path d="M183 107V246M91 130l65 8m-65 24 65 8m-65 24 65 8m55-64 65-8m-65 40 65-8m-65 40 65-8"/>
+    <path d="M58 99Q107 83 154 108Q201 83 250 99V204Q201 189 154 215Q107 189 58 204Z" fill="#163547"/>
+    <path d="M154 108v107M79 127l54 7m-54 21 54 7m-54 21 54 7m43-56 53-7m-53 35 53-7m-53 35 53-7" stroke-linecap="round"/>
   </g>
-  <path d="M325 169h49m-12-12 12 12-12 12" fill="none" stroke="#8be8ca" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M412 64h110l50 50v173H412Z" fill="#fff"/>
-  <path d="M522 64v50h50" fill="#dbe8ed"/>
-  <path d="M438 143h103m-103 20h103m-103 20h69" fill="none" stroke="#9fb1bb" stroke-width="5"/>
-  <rect x="438" y="210" width="108" height="43" rx="7" fill="#781e2d"/>
-  <text x="492" y="240" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="700" fill="#fff">PDF</text>
-  <text x="320" y="330" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="700" fill="#e8f5fa">THOSPAGES</text>
+  <path d="M271 154h39m-12-12 12 12-12 12" fill="none" stroke="#8be8ca" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(333 83)">
+    <path d="M0 0h89l39 39v139H0Z" fill="#fff"/>
+    <path d="M89 0v39h39" fill="#eddadc"/>
+    <path d="M20 64h88m-88 17h88m-88 17h55" fill="none" stroke="#9caeb8" stroke-width="4" stroke-linecap="round"/>
+    <rect x="13" y="119" width="102" height="42" rx="7" fill="#a12c40"/>
+    <text x="64" y="148" fill="#fff" font-size="28" font-weight="700" text-anchor="middle" font-family="Arial,sans-serif">PDF</text>
+  </g>
+  <g transform="translate(478 83)">
+    <path d="M0 0h89l39 39v139H0Z" fill="#fff"/>
+    <path d="M89 0v39h39" fill="#d5e8ff"/>
+    <path d="M20 64h88m-88 17h88m-88 17h55" fill="none" stroke="#9caeb8" stroke-width="4" stroke-linecap="round"/>
+    <rect x="13" y="119" width="102" height="42" rx="7" fill="#22579a"/>
+    <text x="64" y="148" fill="#fff" font-size="26" font-weight="700" text-anchor="middle" font-family="Arial,sans-serif">Word</text>
+  </g>
+  <g fill="#e8f5fa" font-family="Arial,sans-serif" font-weight="700" text-anchor="middle">
+    <text x="154" y="254" font-size="22">SCORM + TAPP</text>
+    <text x="320" y="327" font-size="27" letter-spacing="1">THOSPAGES</text>
+  </g>
 </svg>
+
