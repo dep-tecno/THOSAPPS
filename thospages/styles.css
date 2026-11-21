@@ -69,3 +69,4 @@ header.top{gap:22px;flex-wrap:wrap}
 }
 
 .export-actions{display:flex;flex-wrap:wrap;gap:8px}.export-controls{flex-shrink:0;max-width:100%}#word-status{font-size:12px;margin-top:5px;max-width:290px}#word-status:empty{display:none}
+.export-controls .word-style-label{margin-top:8px}.export-controls #word-style{font-size:13px;padding:7px 9px}

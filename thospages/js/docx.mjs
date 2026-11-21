@@ -8,6 +8,23 @@ const encode=new TextEncoder();
 const entities={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'};
 const xml=value=>String(value).toWellFormed().replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/g,'\ufffd').replace(/[&<>"]/g,char=>entities[char]);
 
+// Palette from print.css, applied as editable Word formatting.
+const blockColors={
+  question:['781E2D','FAF7F7'],
+  example:['AC761B','FFF8E7'],
+  note:['A12C40','FFF3F3'],
+  variant:['A12C40','FFF3F3'],
+  answer:['536E58','F5F7F5'],
+  formula:['781E2D','F5EEEE']
+};
+const shading=fill=>`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`;
+function blockFormat(colors,numbering=''){
+  if(!colors)return numbering;
+  const [border,fill]=colors;
+  return numbering+`<w:pBdr><w:left w:val="single" w:sz="18" w:space="7" w:color="${border}"/></w:pBdr>`+
+    shading(fill)+'<w:ind w:left="180" w:right="100"/>';
+}
+
 function packageDocx(files){
   const chunks=[],directory=[];
   let offset=0,directorySize=0;
@@ -84,7 +101,7 @@ function drawing(image,id,relationship,alt){
   return paragraph(`<w:r><w:drawing><wp:inline><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Figura ${id}" descr="${description}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Figura ${id}" descr="${description}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${relationship}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`,'Figure');
 }
 
-function table(node,width){
+function table(node,width,styled){
   const rows=[...node.querySelectorAll('tr')];
   const columns=rows[0].children.length;
   const cellWidth=Math.floor(width/columns);
@@ -95,26 +112,28 @@ function table(node,width){
     `<w:tbl><w:tblPr><w:tblW w:w="${width}" w:type="dxa"/><w:tblBorders>${borders}</w:tblBorders>`+
     `<w:tblLayout w:type="fixed"/></w:tblPr>${grid}`+rows.map((row,index)=>
       '<w:tr>'+(index===0?'<w:trPr><w:tblHeader/></w:trPr>':'')+[...row.children].map(cell=>
-        `<w:tc><w:tcPr><w:tcW w:w="${cellWidth}" w:type="dxa"/></w:tcPr>`+
+        `<w:tc><w:tcPr><w:tcW w:w="${cellWidth}" w:type="dxa"/>${styled?(index===0?shading('A12C40'):index%2===0?shading('F8EEEE'):''):''}</w:tcPr>`+
         paragraph(run(cell.textContent),index===0?'TableHeading':'TableText')+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>';
 }
 
-function styles(compact,language){
+function styles(compact,language,styled){
+  const headingColor=styled?'<w:color w:val="781E2D"/>':'';
   const definitions=[
-    ['Title',52,'<w:keepNext/>','<w:b/>'],
+    ['Title',52,'<w:keepNext/>','<w:b/>'+headingColor],
     ...[32,26,23,22,21].map((size,index)=>[`Heading${index+1}`,size,
-      `<w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="90"/><w:outlineLvl w:val="${index}"/>`,'<w:b/>']),
+      `<w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="90"/><w:outlineLvl w:val="${index}"/>`,'<w:b/>'+headingColor]),
     ['Caption',19,'<w:jc w:val="center"/>','<w:i/>'],
     ['Figure',22,'<w:keepNext/><w:jc w:val="center"/>',''],
-    ['TableHeading',21,'','<w:b/>'],
+    ['TableHeading',21,'',styled?'<w:b/><w:color w:val="FFFFFF"/>':'<w:b/>'],
     ['TableText',21,'',''],
+    ['Formula',22,'<w:keepLines/>','<w:b/>'],
     ['Response',22,'<w:pBdr><w:bottom w:val="single" w:sz="4" w:color="A9B9C1"/><w:between w:val="single" w:sz="4" w:color="A9B9C1"/></w:pBdr><w:spacing w:after="95" w:line="360" w:lineRule="atLeast"/>','']
   ];
   return `<w:styles xmlns:w="${word}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="${compact?20:22}"/><w:lang w:val="${xml(language)}"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="${compact?65:120}"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>`+
     definitions.map(([id,size,pPr,rPr])=>`<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${id.replace(/^Heading(\d)$/, 'heading $1')}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr>${pPr}</w:pPr><w:rPr>${rPr}<w:sz w:val="${size}"/></w:rPr></w:style>`).join('')+'</w:styles>';
 }
 
-export async function createDocx(paper,{language='ca',compact=false,fetchImage=async url=>(await fetch(url)).blob()}={}){
+export async function createDocx(paper,{language='ca',compact=false,styled=true,fetchImage=async url=>(await fetch(url)).blob()}={}){
   const landscape=paper.dataset.orientation==='landscape';
   const [width,height]=landscape?[16838,11906]:[11906,16838];
   const margin=850,bodyWidth=width-2*margin;
@@ -125,9 +144,10 @@ export async function createDocx(paper,{language='ca',compact=false,fetchImage=a
   const contents=[];
   let imageId=0;
 
-  async function write(node){
+  async function write(node,parentColors){
     const tag=node.localName,classes=node.className.split(/\s+/);
     const has=name=>classes.includes(name);
+    const colors=styled?(blockColors[classes.find(name=>Object.hasOwn(blockColors,name))]||parentColors):undefined;
     if(tag==='img'){
       const id=++imageId;
       if(!media.has(node.src)){
@@ -140,7 +160,7 @@ export async function createDocx(paper,{language='ca',compact=false,fetchImage=a
       const image=media.get(node.src);
       contents.push(drawing(image,id,image.relationship,node.alt));
     }else if(tag==='table'){
-      contents.push(table(node,bodyWidth));
+      contents.push(table(node,bodyWidth,styled));
     }else if(tag==='ol'||tag==='ul'){
       const id=numbering.length+1;
       const options=has('options');
@@ -150,7 +170,8 @@ export async function createDocx(paper,{language='ca',compact=false,fetchImage=a
         const anchor=item.children[0];
         const bookmark=anchor?.localName==='a'&&bookmarks.get(anchor.href.split('#').at(-1));
         const content=bookmark?`<w:hyperlink w:anchor="section${bookmark}">${run(item.textContent)}</w:hyperlink>`:run(item.textContent);
-        const format=options?'<w:ind w:left="360"/>':`<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${id}"/></w:numPr>`;
+        const numberingFormat=options?'':`<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${id}"/></w:numPr>`;
+        const format=options&&!colors?'<w:ind w:left="360"/>':blockFormat(colors,numberingFormat);
         contents.push(paragraph(content,'',format));
       }
     }else if(has('response-space')){
@@ -159,13 +180,13 @@ export async function createDocx(paper,{language='ca',compact=false,fetchImage=a
       const parent=node.parentElement;
       const startsSection=tag==='h2'&&parent?.id;
       const bookmark=startsSection&&bookmarks.get(parent.id);
-      const style=tag==='h1'?'Title':/^h[2-6]$/.test(tag)?'Heading'+(Number(tag[1])-1):tag==='figcaption'?'Caption':'';
+      const style=tag==='h1'?'Title':/^h[2-6]$/.test(tag)?'Heading'+(Number(tag[1])-1):tag==='figcaption'?'Caption':has('formula')?'Formula':'';
       const pageBreak=startsSection&&!parent.className.split(/\s+/).includes('first');
       const content=inline(node);
       contents.push(paragraph(bookmark?`<w:bookmarkStart w:id="${bookmark}" w:name="section${bookmark}"/>${content}<w:bookmarkEnd w:id="${bookmark}"/>`:content,
-        style,pageBreak?'<w:pageBreakBefore/>':''));
+        style,(pageBreak?'<w:pageBreakBefore/>':'')+blockFormat(colors)));
     }else{
-      for(const child of node.children)await write(child);
+      for(const child of node.children)await write(child,colors);
       if(has('cover')||has('toc'))contents.push(paragraph('<w:r><w:br w:type="page"/></w:r>'));
     }
   }
@@ -177,7 +198,7 @@ export async function createDocx(paper,{language='ca',compact=false,fetchImage=a
     ['[Content_Types].xml',`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpg" ContentType="image/jpeg"/>${['document','styles','numbering'].map(name=>`<Override PartName="/word/${name}.xml" ContentType="${mime.replace('.document','') }.${name}${name==='document'?'.main':''}+xml"/>`).join('')}</Types>`],
     ['_rels/.rels',relationships([['document','officeDocument','word/document.xml']])],
     ['word/_rels/document.xml.rels',relationships(links)],
-    ['word/styles.xml',styles(compact,language)],
+    ['word/styles.xml',styles(compact,language,styled)],
     ['word/numbering.xml',`<w:numbering xmlns:w="${word}">${abstract(0,'decimal','%1.')}${abstract(1,'bullet','•')}${numbering.join('')}</w:numbering>`],
     ['word/document.xml',`<w:document xmlns:w="${word}" xmlns:r="${office}" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${contents.join('')}${section}</w:body></w:document>`],
     ...files

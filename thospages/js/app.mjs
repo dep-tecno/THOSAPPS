@@ -3,7 +3,7 @@ import {importBook} from './model.mjs';
 import {validateScorm,prepareResources} from './resources.mjs';
 import {el,renderDocument} from './render.mjs?v=20261120-8';
 import {PagedPreview} from './pagination.mjs?v=20261120-8';
-import {createDocx} from './docx.mjs';
+import {createDocx} from './docx.mjs?v=20261121-2';
 
 const $=id=>document.getElementById(id);
 const state={book:null,report:null,resources:new Map(),urls:[],generation:0,ready:false,paper:null};
@@ -14,7 +14,7 @@ function clear(){
   pagination.clear();$('page-count').textContent='';$('page-go').disabled=true;$('page-jump').disabled=true;
   for(const url of state.urls)URL.revokeObjectURL(url);
   Object.assign(state,{book:null,report:null,resources:new Map(),urls:[],paper:null});
-  $('word').disabled=true;$('word-status').textContent='';
+  $('word').disabled=true;$('word-style').disabled=true;$('word-status').textContent='';
   $('print').disabled=true;$('settings').disabled=true;
   if($('pdf-notice').open)$('pdf-notice').close();
   $('report').replaceChildren(el('p','','Encara no hi ha cap document analitzat.'));
@@ -50,10 +50,10 @@ let renderGeneration=0;
 async function update(){
   if(!state.book)return;
   const revision=++renderGeneration,generation=state.generation;
-  pagination.clear();state.ready=false;state.paper=null;$('print').disabled=true;$('word').disabled=true;$('word-status').textContent='';$('page-go').disabled=true;$('page-jump').disabled=true;$('page-count').textContent='Preparant pàgines A4…';showReport();
+  pagination.clear();state.ready=false;state.paper=null;$('print').disabled=true;$('word').disabled=true;$('word-style').disabled=true;$('word-status').textContent='';$('page-go').disabled=true;$('page-jump').disabled=true;$('page-count').textContent='Preparant pàgines A4…';showReport();
   if(state.report.errors.some(issue=>!issue.previewSafe)){const panel=el('div','empty');panel.append(el('h3','','Conversió bloquejada'),el('p','','L’informe identifica els elements que cal corregir abans de construir una versió imprimible fidel.'));$('preview').replaceChildren(panel);return;}
   const paper=renderDocument(state.book,state.report,state.resources,{mode:$('edition').value,layout:$('layout').value,images:$('image-size').value,orientation:$('orientation').value,compact:$('density').value==='compact',cover:$('cover').checked,toc:$('toc').checked,breaks:$('breaks').checked,space:$('space').checked});
-  if(!state.report.errors.length){state.paper=paper;$('word').disabled=false;}
+  if(!state.report.errors.length){state.paper=paper;$('word').disabled=false;$('word-style').disabled=false;}
   $('preview').replaceChildren(el('p','','Calculant els salts de pàgina…'));
   try{
     await Promise.all([...paper.querySelectorAll('img')].map(img=>img.decode()));
@@ -84,9 +84,10 @@ $('word').addEventListener('click',async()=>{
   const edition=$('edition').value;
   const suffix={student:'sense-solucions',full:'amb-solucions',end:'solucions-al-final'}[edition];
   const title=book.manifest.title.replace(/[<>:"/\\|?*]/g,'-').replace(/\s+/g,' ').trim().slice(0,120)||'THOSPAGES';
-  $('word').disabled=true;$('word-status').textContent='Preparant el Word…';
+  const styled=$('word-style').value==='styled';
+  $('word').disabled=true;$('word-style').disabled=true;$('word-status').textContent='Preparant el Word…';
   try{
-    const file=await createDocx(paper,{language:book.manifest.language,compact:$('density').value==='compact'});
+    const file=await createDocx(paper,{language:book.manifest.language,compact:$('density').value==='compact',styled});
     if(state.paper!==paper)return;
     const url=URL.createObjectURL(file),link=el('a');
     link.href=url;link.download=`${title} - ${suffix}.docx`;
@@ -96,7 +97,7 @@ $('word').addEventListener('click',async()=>{
   }catch(error){
     if(state.paper===paper)$('word-status').textContent=error.message||'No s’ha pogut generar el Word.';
   }finally{
-    if(state.paper===paper)$('word').disabled=false;
+    if(state.paper===paper){$('word').disabled=false;$('word-style').disabled=false;}
   }
 });
 $('pdf-cancel').addEventListener('click',()=>$('pdf-notice').close());
