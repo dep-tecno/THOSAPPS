@@ -29,6 +29,20 @@ function richCell(words) {
 }
 const normalizeRow=row=>row.map(cell=>cell.text.replace(/\s+/g,' ').trim().toLowerCase()).join('\u001f');
 
+function excelRowHeight(row) {
+  let height = 15;
+  for (const cell of row) {
+    if (!cell.text) continue;
+    const fontSize = cell.runs.reduce((largest, run) => {
+      const size = run.style.size ? Math.min(36, Math.max(6, run.style.size * 72 / 300)) : 11;
+      return Math.max(largest, size);
+    }, 11);
+    const lines = cell.text.split('\n').length;
+    height = Math.max(height, 2 + Math.ceil(fontSize * 1.25 * lines));
+  }
+  return Math.min(409, height);
+}
+
 function gridRowBounds(table, shapes) {
   if (table.detectionMethod !== 'grid-strong' || !shapes?.paths?.length) return table.rowBounds;
   const {left, top} = table.boxes[0].coords;
@@ -87,5 +101,5 @@ export async function exportExcelTables(doc,scribe,{signal,onProgress}={}) {
   onProgress?.({stage:'packaging',total:sheets.length});
   signal?.throwIfAborted();
   const bytes=await scribe.utils.writeXlsxFromSheets(sheets);
-  return fixXlsxDimensions(bytes, { signal });
+  return fixXlsxDimensions(bytes, { signal, rowHeights: sheets.map(sheet => sheet.rows.map(excelRowHeight)) });
 }

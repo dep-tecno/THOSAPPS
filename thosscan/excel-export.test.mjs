@@ -100,6 +100,8 @@ test('full-width PDF rules keep wrapped headers and data in their physical rows'
   assert.equal(value('B2'),'Cognom\nNom\nDOC-01');
   assert.equal(value('C2'),'OC11\n8\nFI');
   assert.equal(value('B3'),'Una altra persona');
+  assert.match(xml,/<row r="2" ht="44" customHeight="1">/);
+  assert.match(files['xl/styles.xml'],/<alignment wrapText="1"\/>/);
 });
 test('no detected tables gives an actionable error instead of an empty workbook',async()=>{
   await assert.rejects(()=>exportExcelTables(fixture([[]]),scribe),/No s’ha detectat cap taula/);
