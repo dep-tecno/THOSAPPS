@@ -80,6 +80,27 @@ test('multiline and empty cells retain their order and positions',async()=>{
   assert.ok(xml.indexOf('Primera')<xml.indexOf('Segona'));assert.ok(xml.includes('r="B2"'));
   assert.ok(xml.includes('r="B3"'));
 });
+test('full-width PDF rules keep wrapped headers and data in their physical rows',async()=>{
+  const doc=fixture([[{rows:[
+    ['N.','Cognoms i nom de\nl’alumne/a\nDocument','Opt. 1'],
+    ['10','Cognom\nNom\nDOC-01','OC11\n8\nFI'],
+    ['11','Una altra persona','OC21'],
+  ]}]]);
+  const table=doc.layoutDataTables.pages[0].tables[0];
+  table.detectionMethod='grid-strong';
+  table.rowBounds=[150,195,240,300,345,390,450,550];
+  const rule=(y,right=1600)=>({sites:[{left:100,right,top:y-1,bottom:y+1}]});
+  doc.fillShapes={pages:[{paths:[rule(100),rule(250),rule(251),rule(325,1100),rule(400),rule(550)]}]};
+  const files=await unzip(await exportExcelTables(doc,scribe));
+  const xml=files['xl/worksheets/sheet1.xml'];
+  const cell=ref=>xml.match(new RegExp(`<c r="${ref}"[^>]*>([\\s\\S]*?)</c>`))?.[1];
+  const value=ref=>[...cell(ref).matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(match=>match[1]).join('');
+  assert.match(xml,/<dimension ref="A1:C3"\/>/);
+  assert.equal(value('B1'),'Cognoms i nom de\nl’alumne/a\nDocument');
+  assert.equal(value('B2'),'Cognom\nNom\nDOC-01');
+  assert.equal(value('C2'),'OC11\n8\nFI');
+  assert.equal(value('B3'),'Una altra persona');
+});
 test('no detected tables gives an actionable error instead of an empty workbook',async()=>{
   await assert.rejects(()=>exportExcelTables(fixture([[]]),scribe),/No s’ha detectat cap taula/);
 });

@@ -29,6 +29,31 @@ function richCell(words) {
 }
 const normalizeRow=row=>row.map(cell=>cell.text.replace(/\s+/g,' ').trim().toLowerCase()).join('\u001f');
 
+function gridRowBounds(table, shapes) {
+  if (table.detectionMethod !== 'grid-strong' || !shapes?.paths?.length) return table.rowBounds;
+  const {left, top} = table.boxes[0].coords;
+  const {right, bottom} = table.boxes.at(-1).coords;
+  const width = right - left;
+  const edgeTolerance = Math.max(2, width * 0.005);
+  const rules = [];
+  for (const path of shapes.paths) {
+    for (const site of path.sites ?? []) {
+      const thickness = site.bottom - site.top;
+      const center = (site.bottom + site.top) / 2;
+      // Accept only rules spanning the whole table, including both outer edges.
+      if (Math.abs(site.left - left) > edgeTolerance || Math.abs(site.right - right) > edgeTolerance ||
+          thickness > edgeTolerance || center < top - edgeTolerance || center > bottom + edgeTolerance) continue;
+      rules.push(center);
+    }
+  }
+  rules.sort((a, b) => a - b);
+  // PDF generators can paint the same rule more than once.
+  const edges = rules.filter((rule, index) => index === 0 || rule - rules[index - 1] > 2);
+  if (edges.length < 3 || Math.abs(edges[0] - top) > edgeTolerance ||
+      Math.abs(edges.at(-1) - bottom) > edgeTolerance) return table.rowBounds;
+  return edges.slice(1);
+}
+
 export async function exportExcelTables(doc,scribe,{signal,onProgress}={}) {
   await checkpoint(signal);
   const chains=scribe.tableChains(doc.layoutDataTables.pages);
@@ -41,7 +66,8 @@ export async function exportExcelTables(doc,scribe,{signal,onProgress}={}) {
       await checkpoint(signal);
       const page=doc.ocr.active[n];
       if(!page||!table.boxes.length)continue;
-      const extracted=scribe.utils.extractSingleTableContent(page,table.boxes,table.rowBounds);
+      const rowBounds=gridRowBounds(table,doc.fillShapes?.pages[n]);
+      const extracted=scribe.utils.extractSingleTableContent(page,table.boxes,rowBounds);
       let fragment=extracted.rowWordArr.map(row=>row.map(richCell));
       // Only Scribe-linked continuation fragments may share/deduplicate headers.
       if(rows.length&&headerRows&&fragment.length>=headerRows&&rows.length>=headerRows) {
