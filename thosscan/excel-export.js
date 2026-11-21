@@ -1,5 +1,6 @@
 // THOSsCAN — una pestanya per taula. Scribe.js 0.17.0 (AGPL-3.0).
 import ocr from 'scribe.js-ocr/js/objects/ocrObjects.js';
+import { fixXlsxDimensions } from './xlsx-dimensions.js';
 
 async function checkpoint(signal) {
   signal?.throwIfAborted();
@@ -60,6 +61,5 @@ export async function exportExcelTables(doc,scribe,{signal,onProgress}={}) {
   onProgress?.({stage:'packaging',total:sheets.length});
   signal?.throwIfAborted();
   const bytes=await scribe.utils.writeXlsxFromSheets(sheets);
-  signal?.throwIfAborted();
-  return bytes;
+  return fixXlsxDimensions(bytes, { signal });
 }

@@ -6,6 +6,7 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('./app.js', import.meta.url), 'utf8')
   .replace("import { exportWord } from './word-export.js';", 'const exportWord = exportWordStub;')
   .replace("import { exportExcelTables } from './excel-export.js';", 'const exportExcelTables = exportExcelTablesStub;')
+  .replace("import { fixXlsxDimensions } from './xlsx-dimensions.js';", 'const fixXlsxDimensions = fixXlsxDimensionsStub;')
   .replace("await import('scribe.js-ocr')", '({ default: engine })');
 const deferred = () => { let resolve, reject; const promise=new Promise((a,b)=>{resolve=a;reject=b;}); return {promise,resolve,reject}; };
 async function setup({ opening, recognize, word, excel, sheets, close } = {}) {
@@ -32,6 +33,7 @@ async function setup({ opening, recognize, word, excel, sheets, close } = {}) {
   const context=vm.createContext({document:{querySelector:get,baseURI:'https://tecno-apps.cat/thosscan/'},
     engine,exportWordStub:async(d,s,options)=>{calls.word++;return word ? word(options,d,get) : new Uint8Array([80,75]);},
     exportExcelTablesStub:async(d,s,options)=>{calls.sheets++;return sheets ? sheets(options,d,get) : new Uint8Array([80,75]);},
+    fixXlsxDimensionsStub:async(bytes,{signal})=>{signal.throwIfAborted();return bytes;},
     Blob,URL,AbortController,setTimeout,
     console:{info(){},warn(){},error(){calls.errors++;}},
   });

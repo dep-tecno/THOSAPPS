@@ -5,6 +5,8 @@ import {OcrPage,OcrPar,OcrLine,OcrWord} from 'scribe.js-ocr/js/objects/ocrObject
 import {LayoutDataTablePage} from 'scribe.js-ocr/js/objects/layoutObjects.js';
 import {ZipReader,Uint8ArrayReader,TextWriter} from 'scribe.js-ocr/lib/zip.js/index.js';
 import {exportExcelTables} from './excel-export.js';
+import {fixXlsxDimensions} from './xlsx-dimensions.js';
+import {writeXlsx} from 'scribe.js-ocr/js/export/writeTabular.js';
 let serial=0;
 function fixture(specs){
   const pages=[],layouts=[];
@@ -13,7 +15,10 @@ function fixture(specs){
     tables.forEach((spec,t)=>{
       const top=100+t*800;const table=new scribe.layout.LayoutDataTable(layout);
       table.continuesPrev=!!spec.continues;table.headerRows=1;
-      for(let c=0;c<2;c++)table.boxes.push(new scribe.layout.LayoutDataColumn({left:100+c*500,right:600+c*500,top,bottom:top+spec.rows.length*150},table));
+      const columns=Math.max(...spec.rows.map(row=>row.length));
+      page.dims.width=Math.max(page.dims.width,100+columns*500);
+      page.dims.height=Math.max(page.dims.height,top+spec.rows.length*150);
+      for(let c=0;c<columns;c++)table.boxes.push(new scribe.layout.LayoutDataColumn({left:100+c*500,right:600+c*500,top,bottom:top+spec.rows.length*150},table));
       table.rowBounds=spec.rows.map((_,r)=>top+(r+1)*150);
       spec.rows.forEach((row,r)=>row.forEach((text,c)=>String(text).split('\n').forEach((part,l)=>{
         if(!part)return;
@@ -31,6 +36,22 @@ async function unzip(bytes){
   for(const entry of await reader.getEntries())if(entry.filename.endsWith('.xml'))files[entry.filename]=await entry.getData(new TextWriter());
   await reader.close();return files;
 }
+test('standard Excel export declares the full 82-by-20 range without changing cell XML',async()=>{
+  const rows=Array.from({length:82},(_,row)=>Array.from({length:20},(_,column)=>`R${row+1}C${column+1}`));
+  rows[40][8]='';
+  const doc=fixture([[{rows}]]);
+  const raw=await writeXlsx({
+    ocrPageArr:doc.ocr.active,layoutPageArr:doc.layoutDataTables.pages,
+    xlsxFilenameColumn:false,xlsxPageNumberColumn:false,
+  });
+  const original=await unzip(raw);
+  const corrected=await unzip(await fixXlsxDimensions(raw));
+  const sheet='xl/worksheets/sheet1.xml';
+  assert.match(corrected[sheet],/<dimension ref="A1:T82"\/>/);
+  assert.match(corrected[sheet],/<c r="T82"[^>]*>.*?R82C20/);
+  original[sheet]=original[sheet].replace('ref="A1:B2"','ref="A1:T82"');
+  assert.deepEqual(corrected,original);
+});
 test('two independent tables on one page produce two valid named worksheets',async()=>{
   const doc=fixture([[{rows:[['Nom','Valor'],['A','0012']]},{rows:[['Nom','Valor'],['B','=1+1']]}]]);
   const files=await unzip(await exportExcelTables(doc,scribe));
@@ -55,6 +76,7 @@ test('matching tables on different pages are not merged without a continuation l
 test('multiline and empty cells retain their order and positions',async()=>{
   const doc=fixture([[{rows:[['Concepte','Valor'],['Primera\nSegona',''],['Final','3']]}]]);
   const files=await unzip(await exportExcelTables(doc,scribe));const xml=files['xl/worksheets/sheet1.xml'];
+  assert.match(xml,/<dimension ref="A1:B3"\/>/);
   assert.ok(xml.indexOf('Primera')<xml.indexOf('Segona'));assert.ok(xml.includes('r="B2"'));
   assert.ok(xml.includes('r="B3"'));
 });

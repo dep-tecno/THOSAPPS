@@ -2,6 +2,7 @@
 // Vegeu docs/guide.md de scribeocr/scribe.js. No s'utilitzen CDNs.
 import { exportWord } from './word-export.js';
 import { exportExcelTables } from './excel-export.js';
+import { fixXlsxDimensions } from './xlsx-dimensions.js';
 const fileInput = document.querySelector('#file');
 const convert = document.querySelector('#convert');
 const download = document.querySelector('#download');
@@ -161,7 +162,7 @@ convert.addEventListener('click', async () => {
           showProgress(`Empaquetant Excel · ${total} ${total === 1 ? 'pestanya' : 'pestanyes'}…`);
         } else showProgress(`Separant taules · revisades: ${completed} de ${total}.`, completed, total);
       },
-    }) : await doc.exportData(ext);
+    }) : await fixXlsxDimensions(await doc.exportData(ext), { signal: run.controller.signal });
     run.controller.signal.throwIfAborted();
     candidate = {
       blob: new Blob([bytes], { type: ext === 'docx'
