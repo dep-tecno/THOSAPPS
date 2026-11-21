@@ -67,3 +67,5 @@ header.top{gap:22px;flex-wrap:wrap}
   .paper img{max-height:220mm}
   .paper .toc{break-after:page}
 }
+
+.export-actions{display:flex;flex-wrap:wrap;gap:8px}.export-controls{flex-shrink:0;max-width:100%}#word-status{font-size:12px;margin-top:5px;max-width:290px}#word-status:empty{display:none}

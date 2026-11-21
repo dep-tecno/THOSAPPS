@@ -3,16 +3,18 @@ import {importBook} from './model.mjs';
 import {validateScorm,prepareResources} from './resources.mjs';
 import {el,renderDocument} from './render.mjs?v=20261120-8';
 import {PagedPreview} from './pagination.mjs?v=20261120-8';
+import {createDocx} from './docx.mjs';
 
 const $=id=>document.getElementById(id);
-const state={book:null,report:null,resources:new Map(),urls:[],generation:0,ready:false};
+const state={book:null,report:null,resources:new Map(),urls:[],generation:0,ready:false,paper:null};
 const pagination=new PagedPreview($('preview'));
 function status(message,kind=''){$('status').className='status '+kind;$('status').textContent=message;}
 function clear(){
   state.generation++;state.ready=false;
   pagination.clear();$('page-count').textContent='';$('page-go').disabled=true;$('page-jump').disabled=true;
   for(const url of state.urls)URL.revokeObjectURL(url);
-  Object.assign(state,{book:null,report:null,resources:new Map(),urls:[]});
+  Object.assign(state,{book:null,report:null,resources:new Map(),urls:[],paper:null});
+  $('word').disabled=true;$('word-status').textContent='';
   $('print').disabled=true;$('settings').disabled=true;
   if($('pdf-notice').open)$('pdf-notice').close();
   $('report').replaceChildren(el('p','','Encara no hi ha cap document analitzat.'));
@@ -48,9 +50,10 @@ let renderGeneration=0;
 async function update(){
   if(!state.book)return;
   const revision=++renderGeneration,generation=state.generation;
-  pagination.clear();state.ready=false;$('print').disabled=true;$('page-go').disabled=true;$('page-jump').disabled=true;$('page-count').textContent='Preparant pàgines A4…';showReport();
+  pagination.clear();state.ready=false;state.paper=null;$('print').disabled=true;$('word').disabled=true;$('word-status').textContent='';$('page-go').disabled=true;$('page-jump').disabled=true;$('page-count').textContent='Preparant pàgines A4…';showReport();
   if(state.report.errors.some(issue=>!issue.previewSafe)){const panel=el('div','empty');panel.append(el('h3','','Conversió bloquejada'),el('p','','L’informe identifica els elements que cal corregir abans de construir una versió imprimible fidel.'));$('preview').replaceChildren(panel);return;}
   const paper=renderDocument(state.book,state.report,state.resources,{mode:$('edition').value,layout:$('layout').value,images:$('image-size').value,orientation:$('orientation').value,compact:$('density').value==='compact',cover:$('cover').checked,toc:$('toc').checked,breaks:$('breaks').checked,space:$('space').checked});
+  if(!state.report.errors.length){state.paper=paper;$('word').disabled=false;}
   $('preview').replaceChildren(el('p','','Calculant els salts de pàgina…'));
   try{
     await Promise.all([...paper.querySelectorAll('img')].map(img=>img.decode()));
@@ -63,8 +66,7 @@ async function update(){
   }catch(error){
     if(generation!==state.generation||revision!==renderGeneration)return;
     pagination.clear();$('page-count').textContent='No s’ha pogut completar la paginació.';
-    state.report.errors.push({id:'paginació',message:`No es pot preparar una impressió fidel: ${error.message}`});showReport();
-    $('preview').replaceChildren(el('p','','La previsualització està bloquejada. Revisa l’informe d’integritat.'));
+    $('preview').replaceChildren(el('p','',`No es pot preparar la previsualització del PDF: ${error.message}`));
   }
 }
 $('file').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)load(file);});
@@ -76,6 +78,27 @@ drop.addEventListener('drop',event=>{const file=event.dataTransfer?.files?.[0];i
 for(const id of ['edition','layout','image-size','orientation','density','cover','toc','breaks','space'])$(id).addEventListener('change',update);
 $('reset').addEventListener('click',()=>{clear();$('filename').textContent='Cap fitxer seleccionat';status('Selecciona un paquet per començar.');});
 $('print').addEventListener('click',()=>{if(state.ready)$('pdf-notice').showModal();});
+$('word').addEventListener('click',async()=>{
+  const {paper,book}=state;
+  if(!paper||$('word').disabled)return;
+  const edition=$('edition').value;
+  const suffix={student:'sense-solucions',full:'amb-solucions',end:'solucions-al-final'}[edition];
+  const title=book.manifest.title.replace(/[<>:"/\\|?*]/g,'-').replace(/\s+/g,' ').trim().slice(0,120)||'THOSPAGES';
+  $('word').disabled=true;$('word-status').textContent='Preparant el Word…';
+  try{
+    const file=await createDocx(paper,{language:book.manifest.language,compact:$('density').value==='compact'});
+    if(state.paper!==paper)return;
+    const url=URL.createObjectURL(file),link=el('a');
+    link.href=url;link.download=`${title} - ${suffix}.docx`;
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    $('word-status').textContent='Word generat.';
+  }catch(error){
+    if(state.paper===paper)$('word-status').textContent=error.message||'No s’ha pogut generar el Word.';
+  }finally{
+    if(state.paper===paper)$('word').disabled=false;
+  }
+});
 $('pdf-cancel').addEventListener('click',()=>$('pdf-notice').close());
 $('pdf-continue').addEventListener('click',()=>{$('pdf-notice').close();if(state.ready)pagination.print();});
 $('page-jump').addEventListener('click',()=>{const number=Number($('page-go').value);if(Number.isFinite(number))pagination.goTo(Math.round(number));});

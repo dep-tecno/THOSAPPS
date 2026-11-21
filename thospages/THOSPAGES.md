@@ -4,7 +4,7 @@
 **Estat:** implementació publicada a GitHub; validacions locals documentades i revisió visual de la paginació/PDF pendent de l’usuari.  
 **Versió del document:** 1.3 · dues columnes adaptatives · 20/11/2026  
 **Llengua de la interfície:** català; castellà previst, encara pendent.  
-**Propòsit:** transformar materials educatius digitals en documents PDF imprimibles sense ometre silenciosament contingut didàctic.
+**Propòsit:** transformar materials educatius digitals en PDF imprimibles i Word editables sense ometre silenciosament contingut didàctic.
 
 ## Lectura conjunta i prioritat dels documents
 
@@ -335,3 +335,9 @@ El selector «Mida de les imatges» ofereix Adaptada al contingut, Compactes i G
 ### 17.8 Estat a la portada — 20/11/2026
 
 Per indicació de l’usuari, THOSPAGES no és prioritari. La targeta de la portada de Tecno-Apps queda marcada «En desenvolupament», atenuada i sense enllaç per obrir l’aplicació. No tornar a activar aquest accés sense una nova indicació de l’usuari. Es conserven el codi i els fitxers de treball per reprendre el projecte.
+
+## Exportació Word editable
+
+El botó «Descarrega el Word» genera localment un fitxer `.docx` a partir de l’edició seleccionada. Conserva l’ordre de lectura, els títols, les llistes, les taules, les figures i la distribució de les solucions. El document incorpora l’orientació, la portada, l’índex enllaçat, els salts de capítol i l’espai per respondre segons la configuració seleccionada.
+
+Word compon les seves pròpies pàgines en una columna. Les imatges queden incrustades al fitxer i els SVG es converteixen a PNG per facilitar-ne la importació a Google Docs. Una incidència d’integritat del paquet bloqueja l’exportació. Una errada exclusiva de la paginació PDF permet continuar amb el Word. El botó «Desa el PDF» obre l’avís i el diàleg d’impressió habituals.
