@@ -1,6 +1,6 @@
 import { readWorkbook } from './xlsx.mjs';
 import { assignSubject, balanceCategory, balanceLabels, failedBoth, failureConcentration, gradeLabel, hasUnnamedOptative,
-  headers, importAct, metrics, optativeMappings, optionalSubjects, states, subjectDistribution, subjectPairs,
+  importAct, metrics, optativeMappings, optionalSubjects, states, subjectDistribution, subjectPairs,
   summarize, totals } from './grades.mjs';
 
 const root = document.querySelector('#main');
@@ -51,7 +51,7 @@ function table(labels, rows, act = false, regionLabel = act ? 'Acta interactiva'
 }
 
 function nameOf(student, index) { return ui.hidden ? `Alumne ${index + 1}` : student.name; }
-const slotLabel = grade => grade.slot ? `Optativa de la franja ${grade.slot}` : headers[grade.column];
+const slotLabel = grade => grade.slot ? `Optativa de la franja ${grade.slot}` : grade.label;
 const subjectLabel = grade => grade.subject || (grade.subjectCode ? `${slotLabel(grade)} · ${grade.subjectCode}` : slotLabel(grade));
 function badge(grade) {
   const kind = grade.state === 'review' ? 'review' :
@@ -91,6 +91,7 @@ function upload() {
       const data = importAct(await readWorkbook(await file.arrayBuffer()));
       if (current !== importSequence) return;
       session = data;
+      ui.context = { ...data.context };
       openView('review');
     } catch (error) {
       if (current !== importSequence) return;
@@ -108,7 +109,7 @@ function upload() {
 }
 
 function contextFields() {
-  const inputs = [['year', 'Curs acadèmic', '2025–26'], ['group', 'Grup', '1r A'],
+  const inputs = [['year', 'Curs acadèmic', '2025–26'], ['group', 'Grup', session.level === 2 ? '2n B' : '1r A'],
     ['period', 'Avaluació', '1a avaluació'], ['date', 'Data de la sessió', '']];
   return e('div', { class: 'fields' }, inputs.map(([key, title, placeholder]) => {
     const input = e('input', { type: key === 'date' ? 'date' : 'text', maxlength: '80',
@@ -135,7 +136,7 @@ function review() {
       stat('Optatives sense nom', unnamed.length), stat('Notes per revisar', issues.length),
       stat('Caselles sense nota', missing.length), stat('Registres exclosos', rejected.length)),
     panel(e('h2', {}, 'Dades de l’acta'),
-      hint('Omple els camps que vulguis mostrar a la junta. Els Excel de mostra contenen la taula de notes.'),
+      hint('Revisa el curs, el grup i l’avaluació que es mostraran a la junta.'),
       contextFields()),
   ];
   if (unnamedBands || mappings.length) {
@@ -181,7 +182,7 @@ function modalityLabel(code) {
 function groupContext(students) {
   const mode = new Set(students.map(student => student.modality));
   const date = ui.context.date;
-  const parts = ['1r de batxillerat', ui.context.year, ui.context.group, ui.context.period,
+  const parts = [`${session.level === 2 ? '2n' : '1r'} de batxillerat`, ui.context.year, ui.context.group, ui.context.period,
     date ? new Intl.DateTimeFormat('ca', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(date)) : '',
     mode.size === 1 ? modalityLabel([...mode][0]) : 'Diverses modalitats'];
   return parts.filter(Boolean).join(' · ');
@@ -276,6 +277,7 @@ function subjectInsight(report) {
 }
 
 function act(students, report) {
+  const headers = session.headers;
   const filter = e('input', { type: 'search', placeholder: ui.hidden ? 'Número d’alumne' : 'Nom o número d’acta' });
   filter.value = ui.query;
   const wrap = e('div');
@@ -300,8 +302,9 @@ function act(students, report) {
       }, { class: 'link' }),
       ui.hidden ? String(index + 1) : student.ordinal,
       ui.hidden ? '—' : student.registration || '—',
-      ...student.grades.map(grade => [grade.slot || [7, 10, 11, 12, 17].includes(grade.column) ?
-        e('small', { class: 'cell-label' }, grade.state === 'empty' ? '' : subjectLabel(grade)) : null, badge(grade)]),
+      ...headers.slice(5).map((_, i) => student.grades.filter(grade => grade.column === i + 5).map(grade =>
+        e('div', {}, grade.state !== 'empty' && (grade.slot || grade.subjectCode) ?
+          e('small', { class: 'cell-label' }, subjectLabel(grade)) : null, badge(grade)))),
       String(total.count), // provisional status accompanies the count below
     ].map((cell, i, arr) => i === arr.length - 1 && total.provisional ?
       [cell, e('small', {}, 'Provisional')] : cell)), true);
@@ -467,7 +470,7 @@ function bands(report) {
   return panel(e('h2', {}, 'Optatives per franja'),
     hint('Cada nota compta una vegada dins la seva franja. La vista de matèries només inclou les optatives identificades.'),
     table(['Franja', 'Notes numèriques', 'Aprovades', 'No superades', 'Mitjana', 'Amb matèria', 'Amb nota i sense matèria',
-      'Estats', 'Sense nota', 'Pendents de revisió'], [1, 2, 3].map(slot => {
+      'Estats', 'Sense nota', 'Pendents de revisió'], (session.level === 2 ? [1] : [1, 2, 3]).map(slot => {
       const grades = report.grades.filter(grade => grade.slot === slot);
       const m = metrics(grades);
       const count = predicate => String(grades.filter(predicate).length);

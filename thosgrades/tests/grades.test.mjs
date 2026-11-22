@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { assignSubject, balanceCategory, failedBoth, failureConcentration, hasUnnamedOptative, headers,
-  importAct, metrics, optativeMappings, subjectDistribution, subjectPairs, summarize, totals } from '../grades.mjs';
+  importAct, metrics, optativeMappings, secondHeaders, subjectDistribution, subjectPairs, summarize, totals } from '../grades.mjs';
 
 function workbook(optatives, options = {}) {
   const row = ['1', 'ID-SINTETIC', 'Alumne de prova', '3000', '1', options.catalan ?? '6', '8',
@@ -117,4 +117,27 @@ test('attributes numeric failures to complete or provisional balances exactly on
     return sheet;
   });
   assert.deepEqual(failureConcentration(importAct(sheets).students), { some: 2, many: 3, provisional: 1 });
+});
+
+test('imports a second-year workbook with a cover and a split additional-subject region', () => {
+  const heading = [...secondHeaders.slice(0, -1), '', '', 'Altres', 'matèries', '', ''];
+  heading[13] = 'Opt.1';
+  const row = ['1', 'ID-SINTETIC', 'Alumne de prova', '3000', '1', '6', '8', 'IA2\n7', '6', '8',
+    'LL2\n7', 'EDN\n9', 'GEO\n5', 'OS12\n4', '8', '', 'LC1', 'LS1', '', '', ''];
+  const act = importAct([
+    { name: 'Portada', rows: [
+      { number: 1, cells: ["Acta de qualificacions de l’avaluació parcial 1", 'Curs acadèmic 2024/2025'] },
+      { number: 2, cells: ['BATXLOEM3000201', '26/11/2024'] },
+    ] },
+    { name: 'Taula 2', rows: [{ number: 1, cells: heading }, { number: 2, cells: row }] },
+  ]);
+  assert.equal(act.level, 2);
+  assert.deepEqual(act.context, { year: '2024/2025', group: 'BATXLOEM3000201', period: 'Avaluació parcial 1', date: '2024-11-26' });
+  assert.equal(act.rejected.length, 0);
+  const grades = act.students[0].grades;
+  assert.equal(grades.find(grade => grade.slot).value, 4);
+  assert.equal(grades.find(grade => grade.subjectCode === 'IA2').subject, 'Llengua Estrangera II: Anglès');
+  assert.equal(grades.find(grade => grade.subject === 'Treball de Recerca').value, 8);
+  assert.deepEqual(grades.filter(grade => grade.column === 15).map(grade => [grade.subjectCode, grade.state]),
+    [['LC1', 'missing'], ['LS1', 'missing']]);
 });
