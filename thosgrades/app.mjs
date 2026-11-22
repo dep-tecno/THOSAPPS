@@ -1,6 +1,6 @@
 import { readWorkbook } from './xlsx.mjs';
-import { assignSubject, canAssign, gradeLabel, headers, importAct, metrics,
-  optionalSubjects, states, summarize, totals } from './grades.mjs';
+import { assignSubject, gradeLabel, hasUnnamedOptative, headers, importAct, metrics,
+  optativeMappings, optionalSubjects, states, summarize, totals } from './grades.mjs';
 
 const root = document.querySelector('#main');
 const actions = document.querySelector('#session-actions');
@@ -11,7 +11,7 @@ const ratio = (a, b) => b ? `${a} de ${b} (${num(100 * a / b)} %)` : '—';
 const ui = { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '', subject: '',
   incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} };
 let session;
-let selection = new Set();
+let mappingDraft = new Map();
 let importSequence = 0;
 
 function e(tag, attrs = {}, ...content) {
@@ -70,7 +70,7 @@ function openView(view) { ui.view = view; render(true); }
 function reset() {
   importSequence++;
   session = undefined;
-  selection = new Set();
+  mappingDraft = new Map();
   Object.assign(ui, { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '',
     subject: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} });
   render(true);
@@ -120,52 +120,48 @@ function contextFields() {
 function review() {
   const { students, rejected } = session;
   const grades = allGrades();
-  const pending = students.flatMap((student, index) => student.grades.filter(canAssign)
-    .map(grade => ({ student, index, grade })));
+  const unnamed = grades.filter(hasUnnamedOptative);
+  const unnamedBands = unnamed.filter(grade => !grade.subjectCode).length;
+  const mappings = optativeMappings(students);
+  const names = [...new Set([...Object.values(optionalSubjects),
+    ...grades.map(grade => grade.subject).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'ca'));
   const issues = grades.filter(grade => grade.state === 'review');
   const missing = grades.filter(grade => grade.state === 'missing');
   const content = [
     e('h1', {}, 'Revisa la importació'),
     e('div', { class: 'stats' },
       stat('Alumnes llegits', students.length), stat('Notes numèriques', metrics(grades).n),
-      stat('Optatives sense nom', pending.length), stat('Notes per revisar', issues.length),
+      stat('Optatives sense nom', unnamed.length), stat('Notes per revisar', issues.length),
       stat('Caselles sense nota', missing.length), stat('Registres exclosos', rejected.length)),
     panel(e('h2', {}, 'Dades de l’acta'),
       hint('Omple els camps que vulguis mostrar a la junta. Els Excel de mostra contenen la taula de notes.'),
       contextFields()),
-    e('div', { class: 'bar' },
-      button(pending.length ? 'Mostra les optatives per franja' : 'Mostra el resum del grup', () => {
-        selection.clear();
-        openView('summary');
-      }, { class: 'primary' })),
   ];
-  if (pending.length) {
-    const optNames = [...new Set(Object.values(optionalSubjects))].sort((a, b) => a.localeCompare(b, 'ca'));
-    const input = e('input', { list: 'subject-catalogue', maxlength: '120', placeholder: 'Tria o escriu una matèria' });
-    const apply = button('Assigna a la selecció', () => {
-      if (!input.value.trim()) return input.focus();
-      const known = optNames.find(name => name.toLocaleLowerCase('ca') === input.value.trim().toLocaleLowerCase('ca'));
-      assignSubject([...selection], known ?? input.value);
-      selection.clear();
-      render(true);
-    });
-    apply.disabled = !selection.size;
-    const rows = pending.map(({ student, index, grade }) => {
-      const label = `${nameOf(student, index)}, franja ${grade.slot}`;
-      const box = e('input', { type: 'checkbox', 'aria-label': label, onchange: event => {
-        if (event.target.checked) selection.add(grade);
-        else selection.delete(grade);
-        apply.disabled = !selection.size;
-      } });
-      box.checked = selection.has(grade);
-      return [box, nameOf(student, index), String(grade.slot), grade.subjectCode || grade.band || '—', badge(grade)];
-    });
-    content.push(panel(e('h2', {}, 'Assigna el nom de les optatives'),
-      hint('Opcional. Selecciona els registres que corresponen a la mateixa matèria i assigna’ls en bloc.'),
-      e('div', { class: 'bar' }, field('Matèria', input), apply),
-      e('datalist', { id: 'subject-catalogue' }, optNames.map(value => e('option', { value }))),
-      table(['Tria', 'Alumne', 'Franja', 'Codi', 'Nota o estat'], rows)));
+  if (unnamedBands || mappings.length) {
+    content.push(panel(e('h2', {}, 'Revisa les optatives'),
+      unnamedBands ? hint(`${unnamedBands} qualificacions sense codi de matèria es mostraran per franja.`) : null,
+      mappings.length ? hint('Tria o escriu un nom per a cada codi que coneguis. Els codis que deixis en blanc es mostraran amb la franja.') : null,
+      mappings.length ? e('datalist', { id: 'subject-catalogue' }, names.map(value => e('option', { value }))) : null,
+      mappings.length ? table(['Optativa sense nom', 'Nom de la matèria'], mappings.map(mapping => {
+        const modality = modalityLabel(mapping.modality);
+        const label = [mapping.code, modality].filter(Boolean).join(' · ');
+        const input = e('input', { class: 'mapping-name', list: 'subject-catalogue', maxlength: '120',
+          'aria-label': `Nom de la matèria ${label}`, placeholder: 'Tria o escriu el nom',
+          oninput: event => mappingDraft.set(mapping.key, event.target.value) });
+        input.value = mappingDraft.get(mapping.key) ?? mapping.grades[0].subject;
+        return [e('div', {}, e('strong', {}, label), ' ', e('small', {}, `(${mapping.grades.length} registres)`)), input];
+      })) : null));
   }
+  content.push(button('Continua al resum', () => {
+    for (const mapping of mappings) {
+      if (!mappingDraft.has(mapping.key)) continue;
+      const value = mappingDraft.get(mapping.key).trim();
+      const known = names.find(name => name.toLocaleLowerCase('ca') === value.toLocaleLowerCase('ca'));
+      assignSubject(mapping.grades, known ?? value);
+    }
+    mappingDraft.clear();
+    openView('summary');
+  }, { class: 'primary' }));
   if (issues.length || rejected.length) {
     content.push(panel(e('h2', {}, 'Incidències'),
       hint('Les notes pendents queden fora dels càlculs. Les referències indiquen on cal contrastar-les amb l’acta.'),
@@ -177,12 +173,16 @@ function review() {
   return e('section', {}, content);
 }
 
+function modalityLabel(code) {
+  return ({ 2000: 'Científic i Tecnològic', 3000: 'Humanístic i Social' })[code] ?? code;
+}
+
 function groupContext(students) {
   const mode = new Set(students.map(student => student.modality));
   const date = ui.context.date;
   const parts = ['1r de batxillerat', ui.context.year, ui.context.group, ui.context.period,
     date ? new Intl.DateTimeFormat('ca', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(date)) : '',
-    mode.size === 1 ? ({ 2000: 'Científic i Tecnològic', 3000: 'Humanístic i Social' })[[...mode][0]] : 'Diverses modalitats'];
+    mode.size === 1 ? modalityLabel([...mode][0]) : 'Diverses modalitats'];
   return parts.filter(Boolean).join(' · ');
 }
 
@@ -190,7 +190,7 @@ function summary() {
   const { students, rejected } = session;
   const report = summarize(students);
   const special = report.grades.filter(grade => grade.state === 'special');
-  const unknown = report.grades.filter(canAssign).length;
+  const unknown = report.grades.filter(hasUnnamedOptative).length;
   const reviewCount = report.grades.filter(grade => grade.state === 'review').length;
   const complete = students.length - report.provisional;
   function switchTab(tab) { ui.tab = tab; render(true); }

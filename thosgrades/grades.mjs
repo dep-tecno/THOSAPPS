@@ -119,14 +119,31 @@ export function totals(student) {
 
 export function assignSubject(grades, name) {
   const subject = normalized(name);
-  if (!subject) return;
   for (const grade of grades) {
-    if (canAssign(grade)) Object.assign(grade, { subject, origin: 'docent' });
+    if (canMapCode(grade)) Object.assign(grade, { subject, origin: subject ? 'docent' : 'acta' });
   }
 }
 
-export function canAssign(grade) {
+export function hasUnnamedOptative(grade) {
   return Boolean(grade.slot && !grade.subject && ['number', 'special'].includes(grade.state));
+}
+
+function canMapCode(grade) {
+  return Boolean(grade.subjectCode && (hasUnnamedOptative(grade) || grade.origin === 'docent'));
+}
+
+export function optativeMappings(students) {
+  const mappings = new Map();
+  for (const student of students) {
+    for (const grade of student.grades.filter(canMapCode)) {
+      const key = JSON.stringify([student.modality, grade.subjectCode]);
+      if (!mappings.has(key)) {
+        mappings.set(key, { key, code: grade.subjectCode, modality: student.modality, grades: [] });
+      }
+      mappings.get(key).grades.push(grade);
+    }
+  }
+  return [...mappings.values()].sort((a, b) => a.code.localeCompare(b.code, 'ca') || a.modality.localeCompare(b.modality));
 }
 
 export function gradeLabel(grade) {
