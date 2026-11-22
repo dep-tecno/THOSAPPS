@@ -103,7 +103,6 @@ function upload() {
   } });
   return e('section', { class: 'intro' },
     e('h1', {}, 'Junta d’avaluació'),
-    hint('Carrega l’Excel que has extret de l’acta de 1r de batxillerat amb THOSSCAN.'),
     panel(e('div', { class: 'upload' }, field('Acta en format XLSX', input), status)),
     hint('El fitxer es llegeix al dispositiu. Les dades s’esborren de l’aplicació quan finalitzes la sessió o recarregues la pàgina.'));
 }
