@@ -66,7 +66,11 @@ function render(focus = false) {
   privacy.textContent = ui.hidden ? 'Mostra les dades personals' : 'Oculta les dades personals';
   const views = { upload, review, summary, studentView };
   root.replaceChildren(views[ui.view]());
-  if (focus) root.focus();
+  if (focus && ui.view === 'studentView') {
+    const heading = root.querySelector('h1');
+    heading.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  } else if (focus) root.focus();
 }
 function openView(view) { ui.view = view; render(true); }
 function reset() {
@@ -530,24 +534,72 @@ function studentRing(bins, total) {
   const colors = ['#8aeba4', '#55cbb4', '#f1cf85', '#f17a70'];
   const canvas = e('canvas', { width: 260, height: 260, 'aria-hidden': 'true' });
   const context = canvas.getContext('2d');
-  if (context) {
-    let start = -Math.PI / 2;
-    bins.forEach(({ count }, i) => {
-      const end = start + 2 * Math.PI * count / total;
-      if (count) {
-        context.beginPath();
-        context.arc(130, 130, 94, start, end);
-        context.strokeStyle = colors[i];
-        context.lineWidth = 44;
-        context.stroke();
-      }
-      start = end;
+  const full = 2 * Math.PI;
+  const initial = -Math.PI / 2;
+  let running = 0;
+  const parts = bins.map(({ count }) => {
+    const from = full * running / total;
+    running += count;
+    return { from, to: full * running / total };
+  });
+  const center = e('strong', { 'aria-hidden': 'true' }, `${total} notes`);
+  const detail = e('p', { class: 'ring-detail muted', role: 'status' }, 'Assenyala un tram per veure’n el recompte.');
+  let pinned = -1;
+  let active = -2;
+  const buttons = bins.map(({ label, count }, i) => {
+    const option = button(`${label} · ${count}`, () => {
+      pinned = pinned === i ? -1 : i;
+      show(pinned);
+    }, { class: `ring-option grade-bin-${[4, 3, 2, 0][i]}`, 'aria-pressed': 'false',
+      onpointerenter: () => show(i), onpointerleave: () => show(pinned),
+      onfocus: () => show(i), onblur: () => show(pinned) });
+    return option;
+  });
+  function show(index) {
+    buttons.forEach((option, i) => option.setAttribute('aria-pressed', String(i === pinned)));
+    if (active === index) return;
+    active = index;
+    const selected = bins[index];
+    center.textContent = selected ? `${selected.count} de ${total}` : `${total} notes`;
+    detail.textContent = selected ? `${selected.label}: ${ratio(selected.count, total)}` :
+      'Assenyala un tram per veure’n el recompte.';
+    if (!context) return;
+    context.clearRect(0, 0, 260, 260);
+    parts.forEach(({ from, to }, i) => {
+      if (from === to) return;
+      context.beginPath();
+      context.arc(130, 130, 94, initial + from, initial + to);
+      context.strokeStyle = colors[i];
+      context.lineWidth = 44;
+      context.globalAlpha = index < 0 || i === index ? 1 : .35;
+      context.stroke();
     });
+    context.globalAlpha = 1;
   }
+  function atPointer(event) {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return -1;
+    const x = (event.clientX - rect.left) * 260 / rect.width - 130;
+    const y = (event.clientY - rect.top) * 260 / rect.height - 130;
+    const radius = Math.hypot(x, y);
+    if (radius < 72 || radius > 116) return -1;
+    const angle = (Math.atan2(y, x) - initial + full) % full;
+    return parts.findIndex(({ from, to }) => angle >= from && angle < to);
+  }
+  canvas.addEventListener('pointermove', event => {
+    const index = atPointer(event);
+    show(index < 0 ? pinned : index);
+  });
+  canvas.addEventListener('pointerleave', () => show(pinned));
+  canvas.addEventListener('click', event => {
+    const index = atPointer(event);
+    pinned = pinned === index ? -1 : index;
+    show(pinned);
+  });
+  show(-1);
   return e('div', { class: 'student-distribution' },
-    e('div', { class: 'student-ring' }, canvas, e('strong', {}, `${total} notes`)),
-    e('ul', { class: 'grade-legend student-legend' }, bins.map(({ label, count }, i) =>
-      e('li', { class: `grade-bin-${[4, 3, 2, 0][i]}` }, `${label} · ${count}`))));
+    e('div', { class: 'student-ring' }, canvas, center),
+    e('div', {}, e('ul', { class: 'grade-legend student-legend' }, buttons.map(option => e('li', {}, option))), detail));
 }
 
 function studentRadar(domains) {
@@ -639,7 +691,7 @@ function studentView() {
     ['NP', 'PQ'].includes(grade.special)).length;
   return e('section', { class: 'student-view' },
     e('div', { class: 'student-heading' },
-      e('div', {}, e('h1', {}, nameOf(student, ui.index)),
+      e('div', {}, e('h1', { tabindex: '-1' }, nameOf(student, ui.index)),
         hint(`Alumne ${ui.index + 1} de ${session.students.length}${total.provisional ? ' · Balanç provisional' : ''}`)),
       e('div', { class: 'bar' },
         button('Torna al grup', () => openView('summary')),

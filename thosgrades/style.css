@@ -173,8 +173,16 @@ meter::-moz-meter-bar { background: var(--meter-fill, var(--accent)); }
 .student-ring { display: grid; place-items: center; width: min(100%, 10rem); }
 .student-ring > * { grid-area: 1 / 1; }
 .student-ring canvas { width: 100%; height: auto; }
-.student-ring strong { font-variant-numeric: tabular-nums; }
+.student-ring strong { font-variant-numeric: tabular-nums; pointer-events: none; }
 .student-legend { display: grid; margin: 0; }
+.student-legend li::before { display: none; }
+button.ring-option {
+  display: flex; gap: .45rem; align-items: center; padding: .22rem .4rem;
+  background: transparent; border-color: transparent; text-align: left;
+}
+.ring-option::before { content: ''; width: .72rem; height: .72rem; flex: 0 0 .72rem; border-radius: .15rem; background: var(--bin); }
+button.ring-option:hover, button.ring-option[aria-pressed="true"] { background: var(--raised); border-color: var(--line); }
+.ring-detail { margin: .4rem 0 0; }
 .student-spread { padding: .85rem 0; }
 .student-spread > strong { display: block; font-size: 1.25rem; }
 .student-radar { display: block; margin-inline: auto; width: min(100%, 35rem); height: auto; }
