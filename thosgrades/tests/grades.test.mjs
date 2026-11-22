@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assignSubject, balanceCategory, hasUnnamedOptative, headers, importAct, metrics,
-  optativeMappings, subjectDistribution, summarize, totals } from '../grades.mjs';
+import { assignSubject, balanceCategory, failedBoth, failureConcentration, hasUnnamedOptative, headers,
+  importAct, metrics, optativeMappings, subjectDistribution, subjectPairs, summarize, totals } from '../grades.mjs';
 
 function workbook(optatives, options = {}) {
   const row = ['1', 'ID-SINTETIC', 'Alumne de prova', '3000', '1', options.catalan ?? '6', '8',
@@ -91,4 +91,30 @@ test('puts cutoffs in the higher interval and excludes special and missing grade
   const grades = [0, 3.99, 4, 4.99, 5, 6.99, 7, 8.99, 9, 10].map(value => ({ state: 'number', value }));
   grades.push({ state: 'special', value: null }, { state: 'review', value: null });
   assert.deepEqual(subjectDistribution(grades).map(bin => bin.count), [2, 2, 2, 2, 2]);
+});
+
+test('compares only students with one numeric grade in both subjects', () => {
+  const mark = (subject, value, state = 'number') => ({ subject, value, state });
+  const students = [
+    { grades: [mark('Física', 4), mark('Química', 2)] },
+    { grades: [mark('Física', 7), mark('Química', 4)] },
+    { grades: [mark('Física', null, 'special'), mark('Química', 4)] },
+    { grades: [mark('Física', 4), mark('Física', 2), mark('Química', 4)] },
+  ];
+  assert.deepEqual(subjectPairs(students, ['Física', 'Química'])[1][0], { n: 2, failed: 1 });
+  assert.deepEqual(students.map(student => failedBoth(student, ['Física', 'Química'])), [true, false, false, false]);
+});
+
+test('attributes numeric failures to complete or provisional balances exactly once', () => {
+  const patterns = [
+    ['OS11\n4', 'OS21\n6', 'OS31\n3'],
+    ['OS11\n4', 'OS21\n2', 'OS31\n3'],
+    ['OS11\n4', 'OS21\nPQ', 'OS31\n7'],
+  ];
+  const sheets = patterns.map((optatives, i) => {
+    const [sheet] = workbook(optatives);
+    sheet.rows[1].cells[1] += i;
+    return sheet;
+  });
+  assert.deepEqual(failureConcentration(importAct(sheets).students), { some: 2, many: 3, provisional: 1 });
 });

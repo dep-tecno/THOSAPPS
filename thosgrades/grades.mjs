@@ -27,7 +27,7 @@ const result = value => stateCode(value) || score(value);
 const normalized = value => String(value ?? '').normalize('NFC').replaceAll('’', "'").replace(/\s+/g, ' ').trim();
 const keys = headers.map(normalized);
 const split = value => String(value ?? '').split(/\r?\n/).map(normalized).filter(Boolean);
-const subjectKey = name => name.normalize('NFC').toLocaleLowerCase('ca');
+export const subjectKey = name => name.normalize('NFC').toLocaleLowerCase('ca');
 const sameResult = (a, b) => a === b || (score(a) && score(b) && Number(a.replace(',', '.')) === Number(b.replace(',', '.')));
 
 function readGrade(raw, column, source, modality) {
@@ -143,6 +143,47 @@ export function subjectDistribution(grades) {
     if (grade.state === 'number') bins.find(bin => grade.value < bin.limit).count++;
   }
   return bins;
+}
+
+export function subjectPairs(students, names) {
+  const keys = names.map(subjectKey);
+  const matrix = keys.map((_, i) => Array.from({ length: i }, () => ({ n: 0, failed: 0 })));
+  for (const student of students) {
+    const marks = new Map();
+    for (const grade of student.grades) {
+      if (!grade.subject || grade.state !== 'number') continue;
+      const key = subjectKey(grade.subject);
+      marks.set(key, marks.has(key) ? null : grade.value);
+    }
+    const values = keys.map(key => marks.get(key));
+    for (let i = 1; i < values.length; i++) {
+      if (values[i] == null) continue;
+      for (let j = 0; j < i; j++) {
+        if (values[j] == null) continue;
+        matrix[i][j].n++;
+        if (values[i] < 5 && values[j] < 5) matrix[i][j].failed++;
+      }
+    }
+  }
+  return matrix;
+}
+
+export function failedBoth(student, names) {
+  return names.every(name => {
+    const matches = student.grades.filter(grade => grade.state === 'number' &&
+      subjectKey(grade.subject) === subjectKey(name));
+    return matches.length === 1 && matches[0].value < 5;
+  });
+}
+
+export function failureConcentration(students) {
+  const counts = { some: 0, many: 0, provisional: 0 };
+  for (const student of students) {
+    const total = totals(student);
+    const category = balanceCategory(total);
+    if (category !== 'passed') counts[category] += total.count;
+  }
+  return counts;
 }
 
 export function assignSubject(grades, name) {

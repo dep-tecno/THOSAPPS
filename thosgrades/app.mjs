@@ -1,6 +1,7 @@
 import { readWorkbook } from './xlsx.mjs';
-import { assignSubject, balanceCategory, balanceLabels, gradeLabel, hasUnnamedOptative, headers, importAct, metrics,
-  optativeMappings, optionalSubjects, states, subjectDistribution, summarize, totals } from './grades.mjs';
+import { assignSubject, balanceCategory, balanceLabels, failedBoth, failureConcentration, gradeLabel, hasUnnamedOptative,
+  headers, importAct, metrics, optativeMappings, optionalSubjects, states, subjectDistribution, subjectPairs,
+  summarize, totals } from './grades.mjs';
 
 const root = document.querySelector('#main');
 const actions = document.querySelector('#session-actions');
@@ -9,7 +10,7 @@ const format = new Intl.NumberFormat('ca', { maximumFractionDigits: 2 });
 const num = value => value == null ? '—' : format.format(value);
 const ratio = (a, b) => b ? `${a} de ${b} (${num(100 * a / b)} %)` : '—';
 const ui = { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '', subject: '',
-  subjectResult: '', detailSubject: '', selectedMatter: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} };
+  subjectResult: '', pair: null, detailSubject: '', selectedMatter: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} };
 let session;
 let mappingDraft = new Map();
 let importSequence = 0;
@@ -38,8 +39,8 @@ function stat(label, value, click, pressed) {
   return click ? button(children, click, { class: 'stat', 'aria-pressed': String(pressed) }) :
     e('div', { class: 'stat' }, children);
 }
-function table(labels, rows, act = false) {
-  return e('div', { class: 'table-wrap', tabindex: '0', role: 'region', 'aria-label': act ? 'Acta interactiva' : 'Taula de resultats' },
+function table(labels, rows, act = false, regionLabel = act ? 'Acta interactiva' : 'Taula de resultats') {
+  return e('div', { class: 'table-wrap', tabindex: '0', role: 'region', 'aria-label': regionLabel },
     e('table', { class: act ? 'act' : '' },
       e('thead', {}, e('tr', {}, labels.map((label, i) => e('th', {
         scope: 'col', class: act && i === 0 ? 'sticky' : undefined,
@@ -72,7 +73,8 @@ function reset() {
   session = undefined;
   mappingDraft = new Map();
   Object.assign(ui, { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '',
-    subject: '', subjectResult: '', detailSubject: '', selectedMatter: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} });
+    subject: '', subjectResult: '', pair: null, detailSubject: '', selectedMatter: '', incidents: false,
+    sort: 'acta', type: '', scroll: [0, 0], context: {} });
   render(true);
 }
 
@@ -187,7 +189,7 @@ function groupContext(students) {
 }
 
 function openAct(filters = {}) {
-  Object.assign(ui, { tab: 'Acta', band: null, query: '', subject: '', subjectResult: '',
+  Object.assign(ui, { tab: 'Acta', band: null, query: '', subject: '', subjectResult: '', pair: null,
     incidents: false, sort: 'acta', scroll: [0, 0] }, filters);
   render();
   document.querySelector('#group-act-title').focus();
@@ -201,7 +203,8 @@ function summary() {
   const reviewCount = report.grades.filter(grade => grade.state === 'review').length;
   function switchTab(tab) { ui.tab = tab; render(true); }
   const bodies = { Acta: () => act(students, report), Matèries: () => subjects(report),
-    'Distribució de notes': () => distribution(report), Optatives: () => bands(report) };
+    'Distribució de notes': () => distribution(report), Optatives: () => bands(report),
+    'Anàlisi del grup': () => analysis(students, report) };
   return e('section', {},
     e('h1', {}, 'Resum del grup'), hint(groupContext(students)),
     button('Torna a la revisió', () => openView('review')),
@@ -282,6 +285,7 @@ function act(students, report) {
     const q = ui.query.toLocaleLowerCase('ca');
     const rows = students.map((student, index) => ({ student, index, total: totals(student) })).filter(({ student, index, total }) =>
       (ui.band === null || (typeof ui.band === 'number' ? !total.provisional && total.band === ui.band : balanceCategory(total) === ui.band)) &&
+      (!ui.pair || failedBoth(student, ui.pair)) &&
       (!ui.subject || student.grades.some(grade => grade.subject.toLocaleLowerCase('ca') === ui.subject.toLocaleLowerCase('ca') &&
         (!ui.subjectResult || (grade.state === 'number' && grade.value < 5)))) &&
       (!ui.incidents || total.provisional) &&
@@ -321,6 +325,7 @@ function act(students, report) {
       field('Registres', select([['', 'Tots'], ['pending', 'Amb balanç provisional']], ui.incidents ? 'pending' : '',
         value => update('incidents', Boolean(value))))),
     ui.band === null ? null : button(`Treu el filtre «${activeBand}»`, () => { ui.band = null; render(); }),
+    ui.pair ? button(`Treu el filtre «Suspesos a ${ui.pair.join(' i ')}»`, () => { ui.pair = null; render(); }) : null,
     ui.subjectResult ? button(`Mostra tots els resultats de ${ui.subject}`, () => {
       ui.subjectResult = '';
       render();
@@ -329,16 +334,19 @@ function act(students, report) {
     matches, wrap);
 }
 
+function openSubject(name) {
+  ui.selectedMatter = name;
+  ui.tab = 'Matèries';
+  render();
+  document.querySelector('#subject-profile-title').focus();
+}
+
 function subjects(report) {
   const current = report.subjectRows.find(group => group.name === ui.selectedMatter);
   if (current) return subjectProfile(current);
   const list = report.subjectRows.map(group => {
     const m = metrics(group.grades);
-    const title = button(group.name, () => {
-      ui.selectedMatter = group.name;
-      render();
-      document.querySelector('#subject-profile-title').focus();
-    }, { class: 'link' });
+    const title = button(group.name, () => openSubject(group.name), { class: 'link' });
     return [title, String(m.n), String(m.passed), String(m.failed), ratio(m.passed, m.n), num(m.average), num(m.median),
       num(m.min), num(m.max), String(group.grades.filter(grade => grade.state === 'special').length),
       String(group.grades.filter(grade => ['missing', 'review'].includes(grade.state)).length)];
@@ -347,6 +355,59 @@ function subjects(report) {
     hint('Tria una matèria per obrir-ne la fitxa estadística. Els percentatges es calculen sobre les notes numèriques.'), table([
       'Matèria', 'Notes', 'Aprovats', 'Suspesos', '% aprovats', 'Mitjana', 'Mediana', 'Mínim', 'Màxim', 'Estats', 'Pendents',
     ], list));
+}
+
+function analysis(students, report) {
+  const profiles = report.subjectRows.map(({ name, grades }) => ({
+    name, bins: subjectDistribution(grades), n: grades.filter(grade => grade.state === 'number').length,
+  })).filter(profile => profile.n > 0);
+  const names = profiles.map(profile => profile.name);
+  const failures = failureConcentration(students);
+  const labels = ['0–<4', '4–<5', '5–<7', '7–<9', '9–10'];
+  const profilesPanel = panel(e('h2', {}, 'Perfil de notes per matèria'),
+    profiles.length ? hint('Cada barra representa les notes numèriques de la matèria. Clica-la per obrir-ne la fitxa.') :
+      hint('No hi ha notes numèriques amb la matèria identificada.'),
+    profiles.length ? e('ul', { class: 'grade-legend', 'aria-label': 'Trams de notes' },
+      labels.map((label, i) => e('li', { class: `grade-bin-${i}` }, label))) : null,
+    e('ul', { class: 'profile-bars' }, profiles.map(({ name, bins, n }) => {
+      let cumulative = 0;
+      const layers = bins.map((bin, i) => {
+        cumulative += bin.count;
+        return e('meter', { min: 0, max: n, value: cumulative, class: `grade-bin-${i}` });
+      }).reverse();
+      const title = bins.map(bin => `${bin.label}: ${bin.count}`).join(' · ');
+      return e('li', {}, button([
+        e('strong', {}, name), e('span', { class: 'subject-ratio' }, `${n} notes`),
+        e('span', { class: 'stacked-grades', 'aria-hidden': 'true' }, layers),
+        e('small', { class: 'profile-counts' }, title),
+      ], () => openSubject(name), { class: 'subject-bar' }));
+    })));
+
+  const matrix = subjectPairs(students, names);
+  const pairsPanel = panel(e('h2', {}, 'Coincidència de suspensos'),
+    hint('Cada casella mostra els alumnes que suspenen totes dues matèries sobre els que tenen una única nota numèrica en cadascuna.'),
+    names.length < 2 ? hint('Calen dues matèries amb notes numèriques per comparar.') :
+      table(['Matèria', ...names], names.map((name, i) => [name, ...names.map((other, j) => {
+        if (j >= i) return '—';
+        const { n, failed } = matrix[i][j];
+        if (!n) return '—';
+        const label = ratio(failed, n);
+        if (!failed) return label;
+        return button(label, () => openAct({ pair: [name, other] }), {
+          class: 'pair-cell',
+          'aria-label': `${name} i ${other}: ${label} suspenen totes dues`,
+        });
+      })]), true, 'Matriu de coincidències de suspensos'));
+
+  const concentration = panel(e('h2', {}, 'Com es reparteixen els suspensos'),
+    report.failed ? hint(`${report.failed} qualificacions numèriques no superades. Les notes de franja també compten.`) :
+      hint('El grup no té qualificacions numèriques no superades.'),
+    report.failed ? e('ul', { class: 'subject-bars' }, Object.entries(failures).map(([key, count]) =>
+      e('li', {}, button([
+        e('strong', {}, balanceLabels[key]), e('span', { class: 'subject-ratio' }, ratio(count, report.failed)),
+        e('meter', { min: 0, max: report.failed, value: count, 'aria-hidden': 'true' }),
+      ], () => openAct({ band: key, sort: 'fail' }), { class: 'subject-bar', disabled: !count ? '' : undefined })))) : null);
+  return e('section', {}, profilesPanel, pairsPanel, concentration);
 }
 
 function subjectProfile({ name, grades }) {
