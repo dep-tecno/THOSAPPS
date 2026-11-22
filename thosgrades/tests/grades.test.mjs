@@ -23,7 +23,7 @@ test('keeps band grades and counts a repeated optative grade once', () => {
 });
 
 test('leaves optatives with conflicting codes or duplicate grades unresolved', () => {
-  const { students } = importAct(workbook(['OS11\n4\nFUEM\n5', 'OS21\n6\nCED\nCL\n6', 'OS31']));
+  const { students } = importAct(workbook(['OS11\n4\nFUEM\n5', 'OS21\n6\nCED\nCL\n5', 'OS31']));
   const optatives = students[0].grades.filter(grade => grade.slot);
   assert.deepEqual(optatives.map(grade => grade.state), ['review', 'review', 'missing']);
   assert.equal(optativeMappings(students).length, 0);
@@ -37,6 +37,16 @@ test('recognizes IPO 1 as the confirmed IPO optative and validates the repeated 
   assert.equal(valid.subjectCode, 'IPO 1');
   assert.equal(valid.value, 7);
   assert.equal(conflict.state, 'review');
+});
+
+test('keeps a matching band grade but does not choose between two optative codes', () => {
+  const { students } = importAct(workbook(['OS11\n8', 'OS21\n7\nCED\nCL\n7', 'OS31\n9']));
+  const grade = students[0].grades.find(grade => grade.slot === 2);
+  assert.equal(grade.value, 7);
+  assert.equal(grade.subject, '');
+  assert.equal(grade.subjectReview, true);
+  assert.equal(optativeMappings(students).length, 0);
+  assert.equal(summarize(students).subjectRows.some(group => ['Comerç Electrònic', 'Creació literària'].includes(group.name)), false);
 });
 
 test('maps unknown optative codes without changing grades or assigning names to bare bands', () => {

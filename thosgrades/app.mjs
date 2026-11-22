@@ -127,13 +127,13 @@ function review() {
   const mappings = optativeMappings(students);
   const names = [...new Set([...Object.values(optionalSubjects),
     ...grades.map(grade => grade.subject).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'ca'));
-  const issues = grades.filter(grade => grade.state === 'review');
+  const issues = grades.filter(grade => grade.state === 'review' || grade.subjectReview);
   const missing = grades.filter(grade => grade.state === 'missing');
   const content = [
     e('h1', {}, 'Revisa la importació'),
     e('div', { class: 'stats' },
       stat('Alumnes llegits', students.length), stat('Notes numèriques', metrics(grades).n),
-      stat('Optatives sense nom', unnamed.length), stat('Notes per revisar', issues.length),
+      stat('Optatives sense nom', unnamed.length), stat('Notes per revisar', issues.filter(grade => grade.state === 'review').length),
       stat('Caselles sense nota', missing.length), stat('Registres exclosos', rejected.length)),
     panel(e('h2', {}, 'Dades de l’acta'),
       hint('Revisa el curs, el grup i l’avaluació que es mostraran a la junta.'),
@@ -181,9 +181,10 @@ function review() {
   }, { class: 'primary' }));
   if (issues.length || rejected.length) {
     content.push(panel(e('h2', {}, 'Incidències'),
-      hint('Les notes pendents queden fora dels càlculs. Les referències indiquen on cal contrastar-les amb l’acta.'),
+      hint('Les notes pendents queden fora dels càlculs. Si només és dubtosa la matèria, la nota es manté a la franja.'),
       table(['Origen', 'Incidència', 'Contingut'], [
-        ...issues.map(grade => [grade.source, 'Nota pendent de revisió', ui.hidden ? '—' : grade.raw.replace(/\n/g, ' / ')]),
+        ...issues.map(grade => [grade.source, grade.subjectReview ? 'Matèria pendent · nota de franja vàlida' :
+          'Nota pendent de revisió', ui.hidden ? '—' : grade.raw.replace(/\n/g, ' / ')]),
         ...rejected.map(item => [item.source, item.reason, '—']),
       ])));
   }

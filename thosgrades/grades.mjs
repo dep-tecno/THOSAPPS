@@ -88,6 +88,10 @@ function readGrade(raw, column, source, modality, layout) {
     if (lines.length > 2) {
       const catalogueCode = name === 'IPO 1' ? 'IPO' : name;
       // A single code may accompany the band grade even when the PDF omits its repeated copy.
+      if (lines.length === 5 && code(catalogueCode) && code(repeat) && catalogueCode !== repeat &&
+          score(first) && sameResult(first, lines[4])) {
+        return { ...grade, state: 'number', value: Number(first.replace(',', '.')), subjectReview: true };
+      }
       if (!code(catalogueCode) || lines.length > 4 || (repeat !== undefined && !sameResult(first, repeat))) {
         return { ...grade, state: 'review' };
       }
