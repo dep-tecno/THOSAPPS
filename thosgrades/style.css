@@ -83,6 +83,7 @@ input[type="file"]::file-selector-button {
 .subject-bar meter { grid-column: 1 / -1; }
 .subject-bar[aria-pressed="true"] { background: var(--soft); border-color: var(--accent); }
 .subject-ratio { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.subject-title { margin-top: .9rem; }
 #subject-insight-detail:not(:empty) { border-top: 1px solid var(--line); padding-top: .85rem; }
 .tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
 .table-wrap { max-height: min(64vh, 40rem); overflow: auto; border: 1px solid var(--line); border-radius: .6rem; margin-top: .85rem; }
