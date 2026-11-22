@@ -142,6 +142,10 @@ meter::-moz-meter-bar { background: var(--meter-fill, var(--accent)); }
 .student-stats { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); margin-block: .75rem; }
 .student-stats .stat { padding: .48rem .7rem; }
 .student-stats .stat strong { font-size: 1.25rem; }
+.student-stats .stat:nth-child(1) { background: #183a30; border-color: #3e896c; }
+.student-stats .stat:nth-child(1) strong { color: #8aeba4; }
+.student-stats .stat:nth-child(2) { background: #3a2b21; border-color: #a56a3d; }
+.student-stats .stat:nth-child(2) strong { color: #ffbb86; }
 .student-panel { margin-block: .75rem 0; padding: clamp(.7rem, 1.5vw, 1.25rem); }
 .student-grade-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; align-items: start; }
 .student-grades { table-layout: fixed; border: 1px solid var(--line); border-radius: .55rem; }
