@@ -212,3 +212,12 @@ test('analyzes a student using one numeric grade per identified subject and comp
   assert.equal(report.notes.min, 4);
   assert.equal(report.notes.max, 9);
 });
+
+test('adds the artistic axis only when it has grades and keeps physical education outside the radar', () => {
+  const student = { grades: [{ subject: 'Educació Física', state: 'number', value: 8 }] };
+  assert.equal(studentAnalysis(student, [student]).domains.length, 0);
+  student.grades.push({ subject: 'Comunicació Audiovisual', state: 'number', value: 7 });
+  const report = studentAnalysis(student, [student]);
+  assert.deepEqual(report.domains.map(domain => domain.name), ['Artístic']);
+  assert.equal(report.notes.n, 2);
+});

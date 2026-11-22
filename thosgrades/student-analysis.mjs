@@ -27,7 +27,6 @@ const domainSubjects = {
     'Dibuix Tècnic II', 'Llenguatges de programació', 'Robòtica',
   ],
   'Artístic': ['Història de l’Art', 'Comunicació Audiovisual'],
-  'Activitat física': ['Educació Física'],
 };
 const domains = new Map(Object.entries(domainSubjects).flatMap(([domain, names]) =>
   names.map(name => [subjectKey(name), domain])));

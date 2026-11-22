@@ -621,7 +621,7 @@ function individualInsights({ notes, bins, domains, comparisons, percentile }) {
             e('strong', { class: Math.abs(delta) < .005 ? '' : delta < 0 ? 'fail' : 'ok' }, `${sign(delta)} p`)))),
       ] : hint('No hi ha matèries amb prou notes comparables.')),
     panel(e('h2', {}, 'Perfil per àmbits'),
-      hint('Cada àmbit mostra la mitjana de les matèries que s’hi han pogut classificar. El Treball de Recerca i les franges sense matèria queden a la taula de notes.'),
+      hint('Només es mostren els àmbits amb notes. Educació Física, Treball de Recerca i les franges sense matèria es poden consultar a la taula.'),
       domains.length >= 3 ? studentRadar(domains) : hint(domains.length ?
         'Calen tres àmbits amb notes per dibuixar la teranyina.' : 'No hi ha àmbits amb notes classificables.'),
       domains.length ? e('div', { class: 'stats' }, domains.map(({ name, average, n }) =>
