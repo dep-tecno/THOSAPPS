@@ -1,5 +1,5 @@
 import { readWorkbook } from './xlsx.mjs';
-import { assignSubject, balanceCategory, balanceLabels, failedBoth, failureConcentration, gradeLabel, hasUnnamedOptative,
+import { assignColumn, assignSubject, balanceCategory, balanceLabels, failedBoth, failureConcentration, gradeLabel, hasUnnamedOptative,
   importAct, metrics, optativeMappings, optionalSubjects, states, subjectDistribution, subjectPairs,
   summarize, totals } from './grades.mjs';
 
@@ -120,7 +120,7 @@ function contextFields() {
 }
 
 function review() {
-  const { students, rejected } = session;
+  const { students, rejected, unresolved } = session;
   const grades = allGrades();
   const unnamed = grades.filter(hasUnnamedOptative);
   const unnamedBands = unnamed.filter(grade => !grade.subjectCode).length;
@@ -139,6 +139,18 @@ function review() {
       hint('Revisa el curs, el grup i l’avaluació que es mostraran a la junta.'),
       contextFields()),
   ];
+  if (unresolved.length) {
+    content.push(panel(e('h2', {}, 'Revisa les columnes'),
+      hint('Indica el nom de les columnes de notes que reconeguis. Les caselles amb una lectura dubtosa quedaran pendents.'),
+      table(['Capçalera original', 'Nom de la matèria'], unresolved.map(column => {
+        const label = `${column.label} · ${column.grades.length} caselles`;
+        if (column.duplicate) return [label, 'Capçalera repetida · pendent de revisió'];
+        const input = e('input', { class: 'mapping-name', maxlength: '120', 'aria-label': `Matèria de ${column.label}`,
+          placeholder: 'Escriu el nom', oninput: event => mappingDraft.set(column.key, event.target.value) });
+        input.value = mappingDraft.get(column.key) ?? column.grades[0].subject;
+        return [label, input];
+      }))));
+  }
   if (unnamedBands || mappings.length) {
     content.push(panel(e('h2', {}, 'Revisa les optatives'),
       unnamedBands ? hint(`${unnamedBands} qualificacions sense codi de matèria es mostraran per franja.`) : null,
@@ -155,6 +167,9 @@ function review() {
       })) : null));
   }
   content.push(button('Continua al resum', () => {
+    for (const column of unresolved) {
+      if (mappingDraft.has(column.key)) assignColumn(column, mappingDraft.get(column.key));
+    }
     for (const mapping of mappings) {
       if (!mappingDraft.has(mapping.key)) continue;
       const value = mappingDraft.get(mapping.key).trim();
@@ -293,7 +308,7 @@ function act(students, report) {
       (!q || `${nameOf(student, index)} ${ui.hidden ? '' : student.ordinal}`.toLocaleLowerCase('ca').includes(q)));
     if (ui.sort === 'fail') rows.sort((a, b) => b.total.count - a.total.count || a.index - b.index);
     matches.textContent = `${rows.length} de ${students.length} alumnes`;
-    const grid = table(['Alumne', headers[0], ...headers.slice(4), 'No superades'], rows.map(({ student, index, total }) => [
+    const grid = table(['Alumne', headers[0], 'No superades', ...headers.slice(5)], rows.map(({ student, index, total }) => [
       button(nameOf(student, index), () => {
         const current = wrap.firstElementChild;
         ui.scroll = [current.scrollLeft, current.scrollTop];
@@ -301,13 +316,14 @@ function act(students, report) {
         openView('studentView');
       }, { class: 'link' }),
       ui.hidden ? String(index + 1) : student.ordinal,
-      ui.hidden ? '—' : student.registration || '—',
-      ...headers.slice(5).map((_, i) => student.grades.filter(grade => grade.column === i + 5).map(grade =>
-        e('div', {}, grade.state !== 'empty' && (grade.slot || grade.subjectCode) ?
-          e('small', { class: 'cell-label' }, subjectLabel(grade)) : null, badge(grade)))),
-      String(total.count), // provisional status accompanies the count below
-    ].map((cell, i, arr) => i === arr.length - 1 && total.provisional ?
-      [cell, e('small', {}, 'Provisional')] : cell)), true);
+      [String(total.count), total.provisional ? e('small', {}, 'Provisional') : null],
+      ...headers.slice(5).map((_, i) => {
+        const grades = student.grades.filter(grade => grade.column === i + 5);
+        return grades.length ? grades.map(grade => e('div', {},
+          grade.state !== 'empty' && (grade.slot || grade.subjectCode || grade.origin === 'docent') ?
+            e('small', { class: 'cell-label' }, subjectLabel(grade)) : null, badge(grade))) : '—';
+      }),
+    ]), true);
     wrap.replaceChildren(grid);
     grid.scrollTo(...ui.scroll);
   }

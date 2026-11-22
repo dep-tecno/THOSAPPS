@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assignSubject, balanceCategory, failedBoth, failureConcentration, hasUnnamedOptative, headers,
+import { assignColumn, assignSubject, balanceCategory, failedBoth, failureConcentration, hasUnnamedOptative, headers,
   importAct, metrics, optativeMappings, secondHeaders, subjectDistribution, subjectPairs, summarize, totals } from '../grades.mjs';
 
 function workbook(optatives, options = {}) {
@@ -140,4 +140,27 @@ test('imports a second-year workbook with a cover and a split additional-subject
   assert.equal(grades.find(grade => grade.subject === 'Treball de Recerca').value, 8);
   assert.deepEqual(grades.filter(grade => grade.column === 15).map(grade => [grade.subjectCode, grade.state]),
     [['LC1', 'missing'], ['LS1', 'missing']]);
+});
+
+test('finds reordered and optional columns by header and waits for unknown subject names', () => {
+  const list = ['Treball de Recerca', 'Nom i cognoms', 'Ll. Cat.', 'Identificador', 'Matèria de prova', 'Opt.1'];
+  const rows = [
+    { number: 5, cells: list },
+    { number: 6, cells: ['9', 'Alumne sintètic', '6', 'ID-1', '7', 'OS12\n8'] },
+    { number: 7, cells: ['8', 'Alumna sintètica', '7', 'ID-2', '2\n9', 'OS12\n5'] },
+  ];
+  const act = importAct([{ name: 'Taula', rows }]);
+  assert.equal(act.level, 2);
+  assert.equal(act.students[0].ordinal, '1');
+  assert.equal(act.students[0].grades.find(grade => grade.subject === 'Treball de Recerca').value, 9);
+  assert.equal(act.students[0].grades.find(grade => grade.subject === 'Llengua Catalana i Literatura II').source, 'Taula!C6');
+  assert.ok(!act.headers.includes('Ed. Fis.'));
+  assert.equal(act.unresolved.length, 1);
+  const [field] = act.unresolved;
+  assert.equal(summarize(act.students).n, 6);
+  assignColumn(field, 'Matèria confirmada');
+  assert.deepEqual(field.grades.map(grade => grade.state), ['number', 'review']);
+  assert.equal(summarize(act.students).n, 7);
+  assignColumn(field, '');
+  assert.equal(summarize(act.students).n, 6);
 });

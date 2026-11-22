@@ -39,7 +39,31 @@ const code = value => /^[A-Z][A-Z0-9]*$/.test(value ?? '') && !stateCode(value);
 const score = value => /^(?:[0-9]|10)(?:[.,]\d+)?$/.test(value ?? '') && Number(value.replace(',', '.')) <= 10;
 const result = value => stateCode(value) || score(value);
 const normalized = value => String(value ?? '').normalize('NFC').replaceAll('’', "'").replace(/\s+/g, ' ').trim();
-const headerKey = value => normalized(value).toLocaleLowerCase('ca').replace(/\.\s*/g, '.');
+const headerKey = value => normalized(value).toLocaleLowerCase('ca').normalize('NFD')
+  .replace(/\p{M}/gu, '').replace(/[.'’]/g, '').replace(/\s+/g, '');
+const aliases = {
+  'N.': ['Núm.', 'Número'],
+  [headers[1]]: ["Identificador de l'alumne", 'Identificador', 'ID alumne'],
+  [headers[2]]: ["Cognoms i nom de l'alumne/a", 'Cognoms i nom', 'Nom i cognoms', 'Alumne/a'],
+  'Nr. mat.': ['Núm. matrícula', 'Número de matrícula'],
+  'Ll. Cat.': ['Llengua catalana i literatura', 'Llengua catalana i literatura I', 'Llengua catalana i literatura II'],
+  'Ll. Cast.': ['Llengua castellana i literatura', 'Llengua castellana i literatura I', 'Llengua castellana i literatura II'],
+  'Ll. Estr.': ['Llengua estrangera', 'Llengua estrangera I', 'Llengua estrangera II'],
+  'Ed. Fis.': ['Educació Física'],
+  'Filo.': ['Filosofia'],
+  'Hist. Filo.': ['Història de la Filosofia'],
+  'Hist.': ['Història'],
+  'Mod. Ob.': ['Modalitat obligatòria', 'Matèria obligatòria de modalitat'],
+  'Mod. 1': ['Modalitat 1'],
+  'Mod. 2': ['Modalitat 2'],
+  'Opt. 1': ['Optativa 1', 'Optativa de la franja 1', 'Optativa'],
+  'Opt. 2': ['Optativa 2', 'Optativa de la franja 2'],
+  'Opt. 3': ['Optativa 3', 'Optativa de la franja 3'],
+  'Rel': ['Religió'],
+  'Treb. recer.': ['Treball de Recerca', 'Treb. Recerca', 'TRE'],
+};
+const headerNames = new Map([...new Set([...headers, ...secondHeaders])].flatMap(label =>
+  [label, ...(aliases[label] ?? [])].map(alias => [headerKey(alias), label])));
 const split = value => String(value ?? '').split(/\r?\n/).map(normalized).filter(Boolean);
 export const subjectKey = name => name.normalize('NFC').toLocaleLowerCase('ca');
 const sameResult = (a, b) => a === b || (score(a) && score(b) && Number(a.replace(',', '.')) === Number(b.replace(',', '.')));
@@ -84,12 +108,77 @@ function readGrade(raw, column, source, modality, layout) {
   return { ...grade, state: 'review' };
 }
 
-function findLayout(cells) {
-  return layouts.find(layout => {
-    const last = layout.headers.length - 1;
-    return layout.headers.slice(0, last).every((label, i) => headerKey(label) === headerKey(cells[i])) &&
-      headerKey(cells.slice(last).map(normalized).filter(Boolean).join(' ')) === headerKey(layout.headers[last]);
-  });
+function headerColumns(cells) {
+  const columns = Array.from(cells, value => headerNames.get(headerKey(value)) ?? null);
+  const counts = columns.filter(Boolean);
+  if ((!counts.includes(headers[1]) && !counts.includes(headers[0])) || !counts.includes(headers[2]) ||
+      !counts.some(label => !headers.slice(0, 5).includes(label))) return null;
+  for (let i = 0; i < columns.length - 1; i++) {
+    if (headerKey(cells[i]) === 'altres' && headerKey(cells[i + 1]) === 'materies') {
+      columns[i] = columns[i + 1] = 'Altres matèries';
+    }
+  }
+  return columns;
+}
+
+function detectLayout(tables, context) {
+  const signals = new Set();
+  const level = context.group?.at(-3);
+  if (level === '1' || level === '2') signals.add(Number(level));
+  for (const { cells, columns, rows } of tables) {
+    if (columns.some(label => ['Ed. Fis.', 'Filo.', 'Opt. 2', 'Opt. 3'].includes(label))) signals.add(1);
+    if (columns.some(label => ['Hist. Filo.', 'Hist.', 'Treb. recer.'].includes(label))) signals.add(2);
+    for (const [i, label] of columns.entries()) {
+      if (['Ll. Cat.', 'Ll. Cast.', 'Ll. Estr.'].includes(label)) {
+        const roman = /\b(II|I)$/i.exec(normalized(cells[i]))?.[1]?.toUpperCase();
+        if (roman) signals.add(roman === 'II' ? 2 : 1);
+      }
+      if (label !== 'Ll. Estr.' && !label?.startsWith('Opt. ')) continue;
+      for (const row of rows) {
+        const first = split(row.cells[i])[0] ?? '';
+        const match = /^(?:IA|O[CS][123])([12])$/.exec(first);
+        if (match) signals.add(Number(match[1]));
+      }
+    }
+  }
+  if (signals.size !== 1) throw Error(signals.size ?
+    'El llibre conté indicis de 1r i 2n. Revisa el nivell o importa cada acta per separat.' :
+    'No s’ha pogut determinar si l’acta és de 1r o de 2n de batxillerat.');
+  return layouts[[...signals][0] - 1];
+}
+
+function columnRef(index) {
+  let label = '';
+  for (let i = index + 1; i > 0; i = Math.floor((i - 1) / 26)) {
+    label = String.fromCharCode(65 + (i - 1) % 26) + label;
+  }
+  return label;
+}
+
+function describeColumns({ sheet, columns, cells, rows }, layout) {
+  const fields = [];
+  const width = rows.reduce((size, row) => Math.max(size, row.cells.length), cells.length);
+  for (let i = 0; i < width; i++) {
+    let label = columns[i];
+    const original = normalized(cells[i]);
+    if (!label && !original) {
+      let left = i - 1;
+      let right = i + 1;
+      while (left >= 0 && !normalized(cells[left])) left--;
+      while (right < cells.length && !normalized(cells[right])) right++;
+      if (columns[left] === 'Altres matèries' || columns[right] === 'Altres matèries') label = 'Altres matèries';
+      else if (!rows.some(row => normalized(row.cells[i]))) continue;
+    }
+    const canonical = layout.headers.indexOf(label);
+    const duplicate = label !== 'Altres matèries' && (label ? columns.filter(name => name === label).length > 1 :
+      !!original && cells.filter(value => headerKey(value) === headerKey(original)).length > 1);
+    if (duplicate && canonical >= 0 && canonical < 5) throw Error(`La capçalera «${label}» està repetida en un full.`);
+    if (canonical >= 0 && !duplicate) fields.push({ i, label, canonical, key: label });
+    else fields.push({ i, label: original || `Columna ${columnRef(i)}`, canonical: -1,
+      key: original && !duplicate ? `col:${headerKey(original)}` : `col:${sheet.name}:${columnRef(i)}`,
+      duplicate });
+  }
+  return fields;
 }
 
 function coverContext(sheet) {
@@ -107,54 +196,98 @@ export function importAct(book) {
   const students = [];
   const rejected = [];
   const ids = new Set();
-  let actLayout;
+  const identities = new Map();
+  const tables = [];
   let context = {};
   for (const sheet of book) {
-    let layout;
-    const first = sheet.rows.findIndex(row => (layout = findLayout(row.cells)));
-    if (first < 0) {
+    const sections = sheet.rows.flatMap((row, index) => {
+      const columns = headerColumns(row.cells);
+      return columns ? [{ index, columns, cells: row.cells }] : [];
+    });
+    if (!sections.length) {
       const cover = coverContext(sheet);
       if (cover) context = { ...context, ...Object.fromEntries(Object.entries(cover).filter(([, value]) => value)) };
       else rejected.push({ source: sheet.name, reason: 'Capçalera incompatible' });
       continue;
     }
-    if (actLayout && actLayout !== layout) throw Error('El llibre barreja actes de 1r i 2n. Importa cada nivell per separat.');
-    actLayout = layout;
-    for (const row of sheet.rows.slice(first + 1)) {
+    sections.forEach(({ index, columns, cells }, i) => {
+      tables.push({ sheet, columns, cells, rows: sheet.rows.slice(index + 1, sections[i + 1]?.index) });
+    });
+  }
+  if (!tables.length) throw Error('No s’ha trobat cap taula amb capçaleres d’alumnat i matèries reconeixibles.');
+  const layout = detectLayout(tables, context);
+  const described = tables.map(table => ({ ...table, fields: describeColumns(table, layout) }));
+  const known = new Set(described.flatMap(({ fields }) => fields.filter(field => field.canonical >= 5).map(field => field.label)));
+  const unknown = new Map(described.flatMap(({ fields }) => fields.filter(field => field.canonical < 0).map(field => [field.key, field])));
+  const displayHeaders = [...layout.headers.slice(0, 5), ...layout.headers.slice(5).filter(label => known.has(label)),
+    ...[...unknown.values()].map(field => field.label)];
+  const positions = new Map([...displayHeaders.slice(0, displayHeaders.length - unknown.size),
+    ...unknown.keys()].map((key, i) => [key, i]));
+  const unresolved = new Map();
+  for (const { sheet, rows, fields } of described) {
+    const identityColumns = layout.headers.slice(0, 5).map(label => fields.find(field => field.key === label)?.i);
+    for (const row of rows) {
       if (!row.cells.some(normalized)) continue;
       const source = `${sheet.name}, fila ${row.number}`;
-      const [ordinal, id, identity, modality, registration] = row.cells;
-      if (!/^\d+$/.test(normalized(ordinal)) || !normalized(id) || !normalized(identity) ||
-          (layout.level === 1 && row.cells.slice(headers.length).some(normalized))) {
+      const [ordinal, id, identity, modality, registration] = identityColumns.map(i => row.cells[i]);
+      const number = normalized(ordinal);
+      const identifier = normalized(id);
+      const record = normalized(identity);
+      if ((identityColumns[0] !== undefined && !/^\d+$/.test(number)) ||
+          (!identifier && !number) || !record) {
         rejected.push({ source, reason: 'Registre incomplet o estructura inesperada' });
         continue;
       }
-      if (ids.has(normalized(id))) {
-        rejected.push({ source, reason: 'Identificador repetit' });
+      const fallback = number ? JSON.stringify([number, record]) : '';
+      if ((identifier && ids.has(identifier)) ||
+          (fallback && identities.has(fallback) && (!identifier || !identities.get(fallback)))) {
+        rejected.push({ source, reason: 'Registre repetit' });
         continue;
       }
-      ids.add(normalized(id));
+      if (identifier) ids.add(identifier);
+      if (fallback) identities.set(fallback, Boolean(identifier));
       const identityLines = split(identity);
       const last = identityLines.at(-1);
       const document = /^[A-Z]?\d{7,9}[A-Z]$/i.test(last) ? identityLines.pop() : '';
-      const lastColumn = layout.headers.length - 1;
-      const grades = layout.headers.slice(5, lastColumn).map((_, i) =>
-        readGrade(row.cells[i + 5], i + 5, `${sheet.name}!${String.fromCharCode(70 + i)}${row.number}`, normalized(modality), layout));
-      // THOSSCAN can split the "Altres matèries" region into several physical XLSX cells.
-      const extras = row.cells.slice(lastColumn).flatMap((value, i) => normalized(value) ?
-        [readGrade(value, lastColumn, `${sheet.name}!${String.fromCharCode(65 + lastColumn + i)}${row.number}`,
-          normalized(modality), layout)] : []);
-      grades.push(...(extras.length ? extras : [readGrade('', lastColumn, source, normalized(modality), layout)]));
+      const grades = [];
+      for (const field of fields) {
+        if (field.canonical >= 0 && field.canonical < 5) continue;
+        const raw = row.cells[field.i];
+        if (!normalized(raw) && (field.canonical < 0 || field.label === 'Altres matèries')) continue;
+        const address = `${sheet.name}!${columnRef(field.i)}${row.number}`;
+        const position = positions.get(field.key);
+        if (field.canonical >= 5) {
+          grades.push({ ...readGrade(raw, field.canonical, address, normalized(modality), layout), column: position });
+        } else {
+          const grade = { column: position, label: field.label, source: address, raw, slot: null,
+            subject: '', subjectCode: '', type: 'altres', origin: 'acta', state: 'review', value: null, special: '' };
+          grades.push(grade);
+          if (!unresolved.has(field.key)) unresolved.set(field.key, { ...field, grades: [] });
+          unresolved.get(field.key).grades.push(grade);
+        }
+      }
+      grades.sort((a, b) => a.column - b.column);
       students.push({
-        ordinal: normalized(ordinal), id: normalized(id), name: identityLines.join(' '), document,
+        ordinal: number || String(students.length + 1), id: identifier, name: identityLines.join(' '), document,
         modality: normalized(modality), registration: normalized(registration),
         grades,
       });
     }
   }
-  if (!actLayout) throw Error('No s’ha trobat cap capçalera compatible amb les actes de batxillerat.');
   if (!students.length) throw Error('El llibre no conté cap registre d’alumne interpretable.');
-  return { students, rejected, context, level: actLayout.level, headers: actLayout.headers };
+  return { students, rejected, context, level: layout.level, headers: displayHeaders, unresolved: [...unresolved.values()] };
+}
+
+export function assignColumn(field, name) {
+  if (field.duplicate) return;
+  const subject = normalized(name);
+  for (const grade of field.grades) {
+    const lines = split(grade.raw);
+    const mark = subject && lines.length === 1 ? lines[0] : '';
+    const state = score(mark) ? 'number' : stateCode(mark) ? 'special' : 'review';
+    Object.assign(grade, { subject, origin: subject ? 'docent' : 'acta', state,
+      value: state === 'number' ? Number(mark.replace(',', '.')) : null, special: state === 'special' ? mark : '' });
+  }
 }
 
 export function totals(student) {
