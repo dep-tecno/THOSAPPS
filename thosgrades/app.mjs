@@ -288,7 +288,7 @@ function act(students, report) {
       (!q || `${nameOf(student, index)} ${ui.hidden ? '' : student.ordinal}`.toLocaleLowerCase('ca').includes(q)));
     if (ui.sort === 'fail') rows.sort((a, b) => b.total.count - a.total.count || a.index - b.index);
     matches.textContent = `${rows.length} de ${students.length} alumnes`;
-    const grid = table(['Alumne', ...headers.slice(0, 2), ...headers.slice(3), 'No superades'], rows.map(({ student, index, total }) => [
+    const grid = table(['Alumne', headers[0], ...headers.slice(4), 'No superades'], rows.map(({ student, index, total }) => [
       button(nameOf(student, index), () => {
         const current = wrap.firstElementChild;
         ui.scroll = [current.scrollLeft, current.scrollTop];
@@ -296,8 +296,7 @@ function act(students, report) {
         openView('studentView');
       }, { class: 'link' }),
       ui.hidden ? String(index + 1) : student.ordinal,
-      ui.hidden ? '—' : student.id,
-      student.modality || '—', ui.hidden ? '—' : student.registration || '—',
+      ui.hidden ? '—' : student.registration || '—',
       ...student.grades.map(grade => [grade.slot || [7, 10, 11, 12, 17].includes(grade.column) ?
         e('small', { class: 'cell-label' }, grade.state === 'empty' ? '' : subjectLabel(grade)) : null, badge(grade)]),
       String(total.count), // provisional status accompanies the count below
