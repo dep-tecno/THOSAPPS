@@ -30,6 +30,15 @@ test('leaves optatives with conflicting codes or duplicate grades unresolved', (
   assert.equal(metrics(optatives).n, 0);
 });
 
+test('recognizes IPO 1 as the confirmed IPO optative and validates the repeated grade', () => {
+  const { students } = importAct(workbook(['OS11\n7\nIPO 1\n7', 'OS21\n8\nIPO 1\n9', 'OS31']));
+  const [valid, conflict] = students[0].grades.filter(grade => grade.slot);
+  assert.equal(valid.subject, 'Itinerari personal per a l’ocupabilitat');
+  assert.equal(valid.subjectCode, 'IPO 1');
+  assert.equal(valid.value, 7);
+  assert.equal(conflict.state, 'review');
+});
+
 test('maps unknown optative codes without changing grades or assigning names to bare bands', () => {
   const book = workbook(['OS11\n4\nXYZ\n4', 'OS21\n6', 'OS31\n8'], { catalan: '0' });
   const hs = book[0].rows[1].cells;

@@ -86,12 +86,13 @@ function readGrade(raw, column, source, modality, layout) {
     if (!result(first)) return { ...grade, state: 'review' };
     value = first;
     if (lines.length > 2) {
+      const catalogueCode = name === 'IPO 1' ? 'IPO' : name;
       // A single code may accompany the band grade even when the PDF omits its repeated copy.
-      if (!code(name) || lines.length > 4 || (repeat !== undefined && !sameResult(first, repeat))) {
+      if (!code(catalogueCode) || lines.length > 4 || (repeat !== undefined && !sameResult(first, repeat))) {
         return { ...grade, state: 'review' };
       }
       grade.subjectCode = name;
-      grade.subject = Object.hasOwn(optionalSubjects, name) ? optionalSubjects[name] : '';
+      grade.subject = Object.hasOwn(optionalSubjects, catalogueCode) ? optionalSubjects[catalogueCode] : '';
       grade.origin = grade.subject ? 'catàleg' : 'acta';
     }
   } else if (layout.fixed[column] && lines.length === 1 && result(lines[0])) {
