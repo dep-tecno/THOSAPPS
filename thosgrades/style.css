@@ -84,6 +84,34 @@ button.link { padding: 0; border: 0; background: transparent; color: var(--accen
 .plot { display: grid; gap: .42rem; padding: 0; list-style: none; }
 .plot li { display: grid; grid-template-columns: 8rem minmax(5rem, 1fr) 3rem; align-items: center; gap: .6rem; }
 meter { width: 100%; height: 1.12rem; accent-color: var(--accent); }
+.student-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .55rem 1rem; }
+.student-heading h1 { font-size: clamp(1.55rem, 3vw, 2.35rem); }
+.student-heading p { margin: 0; }
+.student-stats { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); margin-block: .75rem; }
+.student-stats .stat { padding: .48rem .7rem; }
+.student-stats .stat strong { font-size: 1.25rem; }
+.student-panel { margin-block: .75rem 0; padding: clamp(.7rem, 1.5vw, 1.25rem); }
+.student-grade-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; align-items: start; }
+.student-grades { table-layout: fixed; border: 1px solid var(--line); border-radius: .55rem; }
+.student-grades th, .student-grades td { position: static; padding: .35rem .45rem; vertical-align: middle; }
+.student-grades th:first-child { width: 43%; }
+.student-grades th:last-child { width: 24%; }
+.student-grades thead th { white-space: normal; }
+.student-grades tbody th { background: white; white-space: normal; overflow-wrap: anywhere; font-weight: 600; }
+.student-grades tr:last-child th { border-bottom: 0; }
+.student-scale span { display: inline-block; width: 33.333%; text-align: center; color: var(--muted); }
+.student-scale span:first-child { text-align: left; }
+.student-scale span:last-child { text-align: right; }
+.student-band { display: block; font-size: .72rem; font-weight: 400; }
+.student-result { overflow-wrap: anywhere; }
+.student-meter { display: block; position: relative; }
+.student-meter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 1px solid #304944; pointer-events: none; }
+.student-meter meter { display: block; height: .8rem; }
+.student-meter meter::-webkit-meter-bar { background: #e8f0ec; border: 0; }
+.student-meter .below-pass::-webkit-meter-optimum-value { background: #b65334; }
+.student-meter .at-pass::-webkit-meter-optimum-value { background: #267f65; }
+.student-meter .below-pass::-moz-meter-bar { background: #b65334; }
+.student-meter .at-pass::-moz-meter-bar { background: #267f65; }
 details summary { cursor: pointer; font-weight: 650; }
 @media (max-width: 650px) {
   .top-actions { margin-left: 0; }
@@ -92,4 +120,7 @@ details summary { cursor: pointer; font-weight: 650; }
 }
 @media (max-width: 860px) {
   .group-insights { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (max-width: 680px) {
+  .student-grade-grid { grid-template-columns: minmax(0, 1fr); gap: .6rem; }
 }

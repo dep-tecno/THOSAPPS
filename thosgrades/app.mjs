@@ -382,23 +382,45 @@ function move(delta) {
   ui.index = next;
   render(true);
 }
+
+function studentGrades(grades) {
+  const middle = Math.ceil(grades.length / 2);
+  const blocks = [grades.slice(0, middle), grades.slice(middle)].filter(block => block.length);
+  return e('div', { class: 'student-grade-grid' }, blocks.map((block, i) =>
+    e('table', { class: 'student-grades', 'aria-label': `Qualificacions · bloc ${i + 1}` },
+      e('thead', {}, e('tr', {},
+        e('th', { scope: 'col' }, 'Matèria'),
+        e('th', { scope: 'col', class: 'student-scale' },
+          e('span', {}, '0'), e('span', {}, '5'), e('span', {}, '10')),
+        e('th', { scope: 'col' }, 'Nota o estat'))),
+      e('tbody', {}, block.map(grade => e('tr', {},
+        e('th', { scope: 'row' }, subjectLabel(grade),
+          grade.slot && grade.subject ? e('small', { class: 'student-band' }, `Franja ${grade.slot}`) : null),
+        e('td', {}, grade.state === 'number' ? e('span', { class: 'student-meter', 'aria-hidden': 'true' },
+          e('meter', { min: 0, max: 10, value: grade.value, class: grade.value < 5 ? 'below-pass' : 'at-pass' })) : null),
+        e('td', { class: 'student-result' }, badge(grade))))))));
+}
+
 function studentView() {
   const student = session.students[ui.index];
   const total = totals(student);
   const notes = metrics(student.grades);
   const grades = student.grades.filter(grade => grade.state !== 'empty');
-  return e('section', {},
-    e('h1', {}, nameOf(student, ui.index)), hint(`Alumne ${ui.index + 1} de ${session.students.length}`),
-    e('div', { class: 'bar' },
-      button('Torna al grup', () => openView('summary')),
-      button('← Anterior', () => move(-1), { disabled: ui.index === 0 ? '' : undefined }),
-      button('Següent →', () => move(1), { disabled: ui.index + 1 === session.students.length ? '' : undefined })),
-    e('div', { class: 'stats' }, stat('Notes numèriques', notes.n),
-      stat(total.provisional ? 'No superades · provisional' : 'No superades', total.count),
-      stat('Mitjana de les notes disponibles', num(notes.average)), stat('Mediana', num(notes.median))),
-    panel(e('h2', {}, 'Qualificacions'),
-      table(['Matèria', 'Franja', 'Nota o estat'], grades.map(grade =>
-        [subjectLabel(grade), grade.slot ? String(grade.slot) : '—', badge(grade)]))));
+  const pending = grades.filter(grade => ['missing', 'review'].includes(grade.state) ||
+    ['NP', 'PQ'].includes(grade.special)).length;
+  return e('section', { class: 'student-view' },
+    e('div', { class: 'student-heading' },
+      e('div', {}, e('h1', {}, nameOf(student, ui.index)),
+        hint(`Alumne ${ui.index + 1} de ${session.students.length}${total.provisional ? ' · Balanç provisional' : ''}`)),
+      e('div', { class: 'bar' },
+        button('Torna al grup', () => openView('summary')),
+        button('← Anterior', () => move(-1), { disabled: ui.index === 0 ? '' : undefined }),
+        button('Següent →', () => move(1), { disabled: ui.index + 1 === session.students.length ? '' : undefined }))),
+    e('div', { class: 'stats student-stats' }, stat('Superades', notes.passed),
+      stat('No superades', total.count), stat('Pendents', pending),
+      stat('Mitjana · notes disponibles', num(notes.average)), stat('Mediana', num(notes.median))),
+    e('section', { class: 'panel student-panel' }, e('h2', {}, 'Qualificacions'),
+      studentGrades(grades)));
 }
 
 privacy.addEventListener('click', () => {
