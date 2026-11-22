@@ -164,6 +164,33 @@ meter::-moz-meter-bar { background: var(--meter-fill, var(--accent)); }
 }
 .student-meter meter { display: block; height: .8rem; }
 .student-meter .below-pass { --meter-fill: var(--warn); }
+.grade-extreme {
+  display: inline-block; margin-inline-start: .25rem; padding: .04rem .25rem;
+  border-radius: .25rem; background: var(--soft); color: #8aeba4; font-size: .7rem; font-weight: 750;
+}
+.grade-extreme.minimum { background: var(--warn-bg); color: var(--warn); }
+.student-distribution { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1.2rem; }
+.student-ring { display: grid; place-items: center; width: min(100%, 10rem); }
+.student-ring > * { grid-area: 1 / 1; }
+.student-ring canvas { width: 100%; height: auto; }
+.student-ring strong { font-variant-numeric: tabular-nums; }
+.student-legend { display: grid; margin: 0; }
+.student-spread { padding: .85rem 0; }
+.student-spread > strong { display: block; font-size: 1.25rem; }
+.student-radar { display: block; margin-inline: auto; width: min(100%, 35rem); height: auto; }
+.student-comparisons { display: grid; gap: .5rem; list-style: none; margin: .35rem 0 0; padding: 0; }
+.student-comparisons li, .comparison-scale {
+  display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(8rem, 2fr) 5rem; gap: .65rem; align-items: center;
+}
+.comparison-label small { display: block; }
+.comparison-scale { color: var(--muted); font-size: .8rem; }
+.comparison-scale span:first-child { grid-column: 2; grid-row: 1; justify-self: start; }
+.comparison-scale span:nth-child(2) { grid-column: 2; grid-row: 1; justify-self: center; }
+.comparison-scale span:last-child { grid-column: 2; grid-row: 1; justify-self: end; }
+.comparison-track { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.comparison-track meter { display: block; height: .8rem; }
+.comparison-track::after { content: ''; position: absolute; left: 50%; width: 1px; height: 100%; background: var(--ink); }
+.comparison-negative { transform: scaleX(-1); --meter-fill: var(--warn); }
 details summary { cursor: pointer; font-weight: 650; }
 @media (max-width: 650px) {
   .top-actions { margin-left: 0; }
@@ -175,4 +202,7 @@ details summary { cursor: pointer; font-weight: 650; }
 }
 @media (max-width: 680px) {
   .student-grade-grid { grid-template-columns: minmax(0, 1fr); gap: .6rem; }
+  .student-comparisons li { grid-template-columns: minmax(0, 1fr) 4rem; row-gap: .12rem; }
+  .comparison-track { grid-row: 2; grid-column: 1 / -1; }
+  .comparison-scale { display: none; }
 }

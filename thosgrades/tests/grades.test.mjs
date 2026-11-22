@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { studentAnalysis } from '../student-analysis.mjs';
 import { assignColumn, assignSubject, balanceCategory, failedBoth, failureConcentration, hasUnnamedOptative, headers,
   importAct, metrics, optativeMappings, secondHeaders, subjectDistribution, subjectPairs, summarize, totals } from '../grades.mjs';
 
@@ -182,4 +183,32 @@ test('finds reordered and optional columns by header and waits for unknown subje
   assert.equal(summarize(act.students).n, 7);
   assignColumn(field, '');
   assert.equal(summarize(act.students).n, 6);
+});
+
+test('analyzes a student using one numeric grade per identified subject and comparable peers', () => {
+  const grade = (subject, value, type = 'comuna', state = 'number') => ({ subject, value, type, state });
+  const catalan = 'Llengua Catalana i Literatura I';
+  const philosophy = 'Filosofia';
+  const student = { grades: [
+    grade(catalan, 8), grade(philosophy, 6), grade('Robòtica', 9, 'optativa'),
+    grade('', 4, 'optativa'), grade('Educació Física', null, 'comuna', 'special'),
+  ] };
+  const group = [student,
+    { grades: [grade(catalan, 6), grade(philosophy, 8), grade('Robòtica', 5, 'optativa')] },
+    { grades: [grade(catalan, 5), grade(philosophy, 5), grade('Robòtica', 10, 'optativa'), grade('Robòtica', 7, 'optativa')] },
+    { grades: [grade(catalan, 8)] },
+  ];
+  const report = studentAnalysis(student, group);
+  assert.deepEqual(report.bins.map(bin => bin.count), [1, 1, 1, 1]);
+  assert.deepEqual(report.domains.map(domain => [domain.name, domain.average]), [
+    ['Lingüístic', 8], ['Humanístic', 6], ['Tecnològic', 9],
+  ]);
+  assert.deepEqual(report.comparisons.find(item => item.name === 'Robòtica'),
+    { name: 'Robòtica', value: 9, average: 7, n: 2, delta: 2 });
+  assert.ok(report.comparisons.every(item => item.name));
+  assert.equal(report.percentile.n, 3);
+  assert.equal(report.percentile.subjects, 2);
+  assert.ok(Math.abs(report.percentile.percentile - 200 / 3) < 1e-9);
+  assert.equal(report.notes.min, 4);
+  assert.equal(report.notes.max, 9);
 });

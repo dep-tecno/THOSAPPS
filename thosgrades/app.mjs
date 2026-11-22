@@ -2,6 +2,7 @@ import { readWorkbook } from './xlsx.mjs';
 import { assignColumn, assignSubject, balanceCategory, balanceLabels, failedBoth, failureConcentration, gradeLabel, hasUnnamedOptative,
   importAct, metrics, optativeMappings, optionalSubjects, states, subjectDistribution, subjectPairs,
   summarize, totals } from './grades.mjs';
+import { studentAnalysis } from './student-analysis.mjs';
 
 const root = document.querySelector('#main');
 const actions = document.querySelector('#session-actions');
@@ -505,7 +506,7 @@ function move(delta) {
   render(true);
 }
 
-function studentGrades(grades) {
+function studentGrades(grades, notes) {
   const middle = Math.ceil(grades.length / 2);
   const blocks = [grades.slice(0, middle), grades.slice(middle)].filter(block => block.length);
   return e('div', { class: 'student-grade-grid' }, blocks.map((block, i) =>
@@ -520,13 +521,119 @@ function studentGrades(grades) {
           grade.slot && grade.subject ? e('small', { class: 'student-band' }, `Franja ${grade.slot}`) : null),
         e('td', {}, grade.state === 'number' ? e('span', { class: 'student-meter', 'aria-hidden': 'true' },
           e('meter', { min: 0, max: 10, value: grade.value, class: grade.value < 5 ? 'below-pass' : 'at-pass' })) : null),
-        e('td', { class: 'student-result' }, badge(grade))))))));
+        e('td', { class: 'student-result' }, badge(grade),
+          grade.state === 'number' && grade.value === notes.max ? e('small', { class: 'grade-extreme' }, 'MÀX') : null,
+          grade.state === 'number' && grade.value === notes.min ? e('small', { class: 'grade-extreme minimum' }, 'MÍN') : null)))))));
+}
+
+function studentRing(bins, total) {
+  const colors = ['#8aeba4', '#55cbb4', '#f1cf85', '#f17a70'];
+  const canvas = e('canvas', { width: 260, height: 260, 'aria-hidden': 'true' });
+  const context = canvas.getContext('2d');
+  if (context) {
+    let start = -Math.PI / 2;
+    bins.forEach(({ count }, i) => {
+      const end = start + 2 * Math.PI * count / total;
+      if (count) {
+        context.beginPath();
+        context.arc(130, 130, 94, start, end);
+        context.strokeStyle = colors[i];
+        context.lineWidth = 44;
+        context.stroke();
+      }
+      start = end;
+    });
+  }
+  return e('div', { class: 'student-distribution' },
+    e('div', { class: 'student-ring' }, canvas, e('strong', {}, `${total} notes`)),
+    e('ul', { class: 'grade-legend student-legend' }, bins.map(({ label, count }, i) =>
+      e('li', { class: `grade-bin-${[4, 3, 2, 0][i]}` }, `${label} · ${count}`))));
+}
+
+function studentRadar(domains) {
+  const canvas = e('canvas', { class: 'student-radar', width: 560, height: 330, 'aria-hidden': 'true' });
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+  const cx = 280, cy = 165, radius = 109;
+  const angles = domains.map((_, index) => 2 * Math.PI * index / domains.length - Math.PI / 2);
+  const point = (angle, ratio) => [cx + radius * ratio * Math.cos(angle), cy + radius * ratio * Math.sin(angle)];
+  function polygon(values) {
+    ctx.beginPath();
+    values.forEach((value, i) => i === 0 ? ctx.moveTo(...point(angles[i], value)) : ctx.lineTo(...point(angles[i], value)));
+    ctx.closePath();
+  }
+  ctx.strokeStyle = '#6b7c96';
+  ctx.lineWidth = 1.5;
+  for (const mark of [.2, .4, .6, .8, 1]) {
+    polygon(angles.map(() => mark));
+    ctx.stroke();
+  }
+  angles.forEach(angle => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(...point(angle, 1));
+    ctx.stroke();
+  });
+  polygon(domains.map(domain => domain.average / 10));
+  ctx.fillStyle = '#00e67635';
+  ctx.fill();
+  ctx.strokeStyle = '#00e676';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#e6edf7';
+  ctx.font = '15px system-ui';
+  ctx.textBaseline = 'middle';
+  domains.forEach(({ name }, i) => {
+    const angle = angles[i];
+    const side = Math.cos(angle);
+    ctx.textAlign = side > .18 ? 'left' : side < -.18 ? 'right' : 'center';
+    ctx.fillText(name, ...point(angle, 1.15));
+  });
+  return canvas;
+}
+
+function individualInsights({ notes, bins, domains, comparisons, percentile }) {
+  const spread = Math.max(2, Math.ceil(Math.max(0, ...comparisons.map(row => Math.abs(row.delta)))));
+  const sign = value => Math.abs(value) < .005 ? '0' : `${value > 0 ? '+' : '−'}${num(Math.abs(value))}`;
+  return [
+    panel(e('h2', {}, 'Distribució i dispersió'),
+      notes.n ? e('div', { class: 'group-insights' },
+        studentRing(bins, notes.n),
+        e('section', { class: 'student-spread' },
+          e('h3', {}, 'Desviació estàndard'),
+          e('strong', {}, `${num(notes.deviation)} punts`),
+          e('meter', { min: 0, max: 5, value: notes.deviation, 'aria-label': 'Desviació estàndard en punts' }),
+          hint('Escala de 0 a 5 punts. Com més baixa, més agrupades estan les notes d’aquesta acta.'))) :
+        hint('No hi ha notes numèriques per calcular la distribució.')),
+    panel(e('h2', {}, 'Comparació amb el grup'),
+      percentile ? hint(`Percentil ${Math.round(percentile.percentile)} · ${percentile.n} alumnes comparats en les mateixes ${percentile.subjects} matèries comunes. Els empats comparteixen posició.`) :
+        hint('El percentil requereix almenys dues matèries comunes amb nota i dos alumnes comparables.'),
+      comparisons.length ? [
+        hint('La mitjana de cada matèria inclou l’alumne i els companys amb una única nota numèrica en aquella matèria.'),
+        e('div', { class: 'comparison-scale', 'aria-hidden': 'true' }, e('span', {}, `−${spread}`), e('span', {}, '0'), e('span', {}, `+${spread}`)),
+        e('ul', { class: 'student-comparisons' }, comparisons.map(({ name, value, average, n, delta }) =>
+          e('li', {},
+            e('div', { class: 'comparison-label' }, e('strong', {}, name),
+              e('small', {}, `Nota ${num(value)} · grup ${num(average)} · ${n} alumnes`)),
+            e('span', { class: 'comparison-track', 'aria-hidden': 'true' },
+              e('meter', { min: 0, max: spread, value: Math.max(0, -delta), class: 'comparison-negative' }),
+              e('meter', { min: 0, max: spread, value: Math.max(0, delta) })),
+            e('strong', { class: Math.abs(delta) < .005 ? '' : delta < 0 ? 'fail' : 'ok' }, `${sign(delta)} p`)))),
+      ] : hint('No hi ha matèries amb prou notes comparables.')),
+    panel(e('h2', {}, 'Perfil per àmbits'),
+      hint('Cada àmbit mostra la mitjana de les matèries que s’hi han pogut classificar. El Treball de Recerca i les franges sense matèria queden a la taula de notes.'),
+      domains.length >= 3 ? studentRadar(domains) : hint(domains.length ?
+        'Calen tres àmbits amb notes per dibuixar la teranyina.' : 'No hi ha àmbits amb notes classificables.'),
+      domains.length ? e('div', { class: 'stats' }, domains.map(({ name, average, n }) =>
+        stat(`${name} · ${n} ${n === 1 ? 'nota' : 'notes'}`, num(average)))) : null),
+  ];
 }
 
 function studentView() {
   const student = session.students[ui.index];
   const total = totals(student);
-  const notes = metrics(student.grades);
+  const insights = studentAnalysis(student, session.students);
+  const { notes } = insights;
   const grades = student.grades.filter(grade => grade.state !== 'empty');
   const pending = grades.filter(grade => ['missing', 'review'].includes(grade.state) ||
     ['NP', 'PQ'].includes(grade.special)).length;
@@ -542,7 +649,8 @@ function studentView() {
       stat('No superades', total.count), stat('Pendents', pending),
       stat('Mitjana · notes disponibles', num(notes.average)), stat('Mediana', num(notes.median))),
     e('section', { class: 'panel student-panel' }, e('h2', {}, 'Qualificacions'),
-      studentGrades(grades)));
+      studentGrades(grades, notes)),
+    individualInsights(insights));
 }
 
 privacy.addEventListener('click', () => {
