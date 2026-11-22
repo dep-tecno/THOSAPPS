@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assignSubject, hasUnnamedOptative, headers, importAct, metrics, optativeMappings, summarize, totals } from '../grades.mjs';
+import { assignSubject, balanceCategory, hasUnnamedOptative, headers, importAct, metrics,
+  optativeMappings, subjectDistribution, summarize, totals } from '../grades.mjs';
 
 function workbook(optatives, options = {}) {
   const row = ['1', 'ID-SINTETIC', 'Alumne de prova', '3000', '1', options.catalan ?? '6', '8',
@@ -67,4 +68,27 @@ test('excludes duplicate student identifiers from a multipage workbook', () => {
   const act = importAct(sheets);
   assert.equal(act.students.length, 1);
   assert.equal(act.rejected.length, 1);
+});
+
+test('keeps provisional students out of complete balances and counts valid band grades', () => {
+  const patterns = [
+    ['OS11\n5', 'OS21\n6', 'OS31\n7'],
+    ['OS11\n4', 'OS21\n6', 'OS31\n3'],
+    ['OS11\n4', 'OS21\n2', 'OS31\n3'],
+    ['OS11\n5', 'OS21\nPQ', 'OS31\n7'],
+  ];
+  const sheets = patterns.map((optatives, i) => {
+    const [sheet] = workbook(optatives);
+    sheet.rows[1].cells[1] += i;
+    return sheet;
+  });
+  const { students } = importAct(sheets);
+  assert.deepEqual(students.map(student => balanceCategory(totals(student))), ['passed', 'some', 'many', 'provisional']);
+  assert.deepEqual(summarize(students).balances, { passed: 1, some: 1, many: 1, provisional: 1 });
+});
+
+test('puts cutoffs in the higher interval and excludes special and missing grades', () => {
+  const grades = [0, 3.99, 4, 4.99, 5, 6.99, 7, 8.99, 9, 10].map(value => ({ state: 'number', value }));
+  grades.push({ state: 'special', value: null }, { state: 'review', value: null });
+  assert.deepEqual(subjectDistribution(grades).map(bin => bin.count), [2, 2, 2, 2, 2]);
 });

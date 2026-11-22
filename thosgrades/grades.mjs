@@ -117,6 +117,34 @@ export function totals(student) {
   return { count, provisional, band: Math.min(count, 4) };
 }
 
+export const balanceLabels = {
+  passed: 'Tot aprovat',
+  some: '1–2 matèries no superades',
+  many: '3 o més matèries no superades',
+  provisional: 'Balanç provisional',
+};
+
+export function balanceCategory(total) {
+  if (total.provisional) return 'provisional';
+  if (total.count === 0) return 'passed';
+  if (total.count <= 2) return 'some';
+  return 'many';
+}
+
+export function subjectDistribution(grades) {
+  const bins = [
+    { label: '0–<4', limit: 4, count: 0 },
+    { label: '4–<5', limit: 5, count: 0 },
+    { label: '5–<7', limit: 7, count: 0 },
+    { label: '7–<9', limit: 9, count: 0 },
+    { label: '9–10', limit: Infinity, count: 0 },
+  ];
+  for (const grade of grades) {
+    if (grade.state === 'number') bins.find(bin => grade.value < bin.limit).count++;
+  }
+  return bins;
+}
+
 export function assignSubject(grades, name) {
   const subject = normalized(name);
   for (const grade of grades) {
@@ -171,11 +199,11 @@ export function metrics(grades) {
 export function summarize(students) {
   const grades = students.flatMap(student => student.grades);
   const distribution = [0, 0, 0, 0, 0];
-  let provisional = 0;
+  const balances = { passed: 0, some: 0, many: 0, provisional: 0 };
   for (const student of students) {
     const t = totals(student);
-    if (t.provisional) provisional++;
-    else distribution[t.band]++;
+    balances[balanceCategory(t)]++;
+    if (!t.provisional) distribution[t.band]++;
   }
   const groups = new Map();
   for (const grade of grades) {
@@ -185,5 +213,5 @@ export function summarize(students) {
     groups.get(key).grades.push(grade);
   }
   const subjectRows = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, 'ca'));
-  return { grades, distribution, provisional, subjectRows, ...metrics(grades) };
+  return { grades, distribution, balances, provisional: balances.provisional, subjectRows, ...metrics(grades) };
 }

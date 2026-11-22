@@ -1,6 +1,6 @@
 import { readWorkbook } from './xlsx.mjs';
-import { assignSubject, gradeLabel, hasUnnamedOptative, headers, importAct, metrics,
-  optativeMappings, optionalSubjects, states, summarize, totals } from './grades.mjs';
+import { assignSubject, balanceCategory, balanceLabels, gradeLabel, hasUnnamedOptative, headers, importAct, metrics,
+  optativeMappings, optionalSubjects, states, subjectDistribution, summarize, totals } from './grades.mjs';
 
 const root = document.querySelector('#main');
 const actions = document.querySelector('#session-actions');
@@ -9,7 +9,7 @@ const format = new Intl.NumberFormat('ca', { maximumFractionDigits: 2 });
 const num = value => value == null ? '—' : format.format(value);
 const ratio = (a, b) => b ? `${a} de ${b} (${num(100 * a / b)} %)` : '—';
 const ui = { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '', subject: '',
-  incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} };
+  subjectResult: '', detailSubject: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} };
 let session;
 let mappingDraft = new Map();
 let importSequence = 0;
@@ -72,7 +72,7 @@ function reset() {
   session = undefined;
   mappingDraft = new Map();
   Object.assign(ui, { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '',
-    subject: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} });
+    subject: '', subjectResult: '', detailSubject: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} });
   render(true);
 }
 
@@ -186,40 +186,87 @@ function groupContext(students) {
   return parts.filter(Boolean).join(' · ');
 }
 
+function openAct(filters = {}) {
+  Object.assign(ui, { tab: 'Acta', band: null, query: '', subject: '', subjectResult: '',
+    incidents: false, sort: 'acta', scroll: [0, 0] }, filters);
+  render();
+  document.querySelector('#group-act-title').focus();
+}
+
 function summary() {
   const { students, rejected } = session;
   const report = summarize(students);
   const special = report.grades.filter(grade => grade.state === 'special');
   const unknown = report.grades.filter(hasUnnamedOptative).length;
   const reviewCount = report.grades.filter(grade => grade.state === 'review').length;
-  const complete = students.length - report.provisional;
   function switchTab(tab) { ui.tab = tab; render(true); }
   const bodies = { Acta: () => act(students, report), Matèries: () => subjects(report),
     'Distribució de notes': () => distribution(report), Optatives: () => bands(report) };
   return e('section', {},
     e('h1', {}, 'Resum del grup'), hint(groupContext(students)),
     button('Torna a la revisió', () => openView('review')),
-    e('div', { class: 'stats' }, stat('Alumnes inclosos', students.length), stat('Notes numèriques', report.n),
-      stat('Matèries amb nota', report.subjectRows.filter(group => metrics(group.grades).n).length),
-      stat('Notes pendents de revisió', reviewCount), stat('Optatives sense nom', unknown),
-      stat('Estats d’avaluació', special.length)),
-    special.length ? hint(Object.entries(states).map(([id, title]) => [title, special.filter(g => g.special === id).length])
-      .filter(([, count]) => count).map(([title, count]) => `${title}: ${count}`).join(' · ')) : null,
-    rejected.length ? e('p', { class: 'notice' }, `${rejected.length} incidències d’importació amb registres o fulls exclosos.`) : null,
-    panel(e('h2', {}, 'Matèries no superades per alumne'),
-      hint(`Recompte sobre ${complete} de ${students.length} alumnes amb balanç complet segons les caselles llegides. El fitxer pot representar un fragment de l’acta.`),
-      e('div', { class: 'stats' }, report.distribution.map((count, i) =>
-        stat(`${i === 4 ? '4 o més' : i} no superades`, ratio(count, complete), () => {
-          ui.band = ui.band === i ? null : i;
-          switchTab('Acta');
-        }, ui.band === i)),
-      stat('Balanç provisional', report.provisional, () => {
-        ui.band = ui.band === 'provisional' ? null : 'provisional';
-        switchTab('Acta');
-      }, ui.band === 'provisional'))),
+    e('div', { class: 'stats balance-overview' }, Object.entries(balanceLabels).map(([key, label]) =>
+      stat(label, ratio(report.balances[key], students.length),
+        () => openAct({ band: ui.band === key ? null : key, sort: key === 'many' ? 'fail' : 'acta' }), ui.band === key))),
+    e('details', { class: 'coverage' },
+      e('summary', {}, `Cobertura de l’acta · ${students.length} alumnes · ${report.n} notes numèriques`),
+      hint(`El fitxer pot representar un fragment de l’acta. ${reviewCount} notes pendents de revisió, ${unknown} optatives sense nom i ${rejected.length} registres o fulls exclosos.`),
+      special.length ? hint(Object.entries(states).map(([id, title]) => [title, special.filter(g => g.special === id).length])
+        .filter(([, count]) => count).map(([title, count]) => `${title}: ${count}`).join(' · ')) : null),
+    e('div', { class: 'group-insights' },
+      panel(e('h2', {}, 'Matèries no superades per alumne'),
+        hint(`${students.length - report.provisional} de ${students.length} alumnes amb balanç complet segons les caselles llegides.`),
+        e('div', { class: 'stats' }, report.distribution.map((count, i) =>
+          stat(`${i === 4 ? '4 o més' : i} no superades`, ratio(count, students.length - report.provisional),
+            () => openAct({ band: ui.band === i ? null : i }), ui.band === i))),
+        e('div', { class: 'bar' },
+          button('Veure qui té més suspensos', () => openAct({ sort: 'fail' })),
+          button('Veure els balanços provisionals', () => openAct({ band: 'provisional' })))),
+      subjectInsight(report)),
     e('nav', { class: 'tabs', 'aria-label': 'Vistes del grup' }, Object.keys(bodies).map(tab =>
       button(tab, () => switchTab(tab), { 'aria-pressed': String(ui.tab === tab) }))),
     bodies[ui.tab]());
+}
+
+function subjectInsight(report) {
+  const subjects = report.subjectRows.map(group => ({ ...group, stats: metrics(group.grades) }))
+    .filter(group => group.stats.n)
+    .sort((a, b) => b.stats.failed - a.stats.failed ||
+      b.stats.failed / b.stats.n - a.stats.failed / a.stats.n || a.name.localeCompare(b.name, 'ca'));
+  const detail = e('div', { id: 'subject-insight-detail', 'aria-live': 'polite' });
+  const barMax = Math.max(1, ...subjects.map(group => group.stats.failed));
+  const bars = [];
+  function show(group) {
+    ui.detailSubject = group.name;
+    for (const [name, control] of bars) control.setAttribute('aria-pressed', String(name === group.name));
+    const n = group.stats.n;
+    detail.replaceChildren(e('h3', {}, group.name),
+      hint(`${n} notes numèriques · ${ratio(group.stats.failed, n)} no superades`),
+      e('ul', { class: 'plot', 'aria-label': 'Distribució de la matèria per trams' }, subjectDistribution(group.grades).map(bin =>
+        e('li', {}, e('span', {}, bin.label), e('meter', { min: 0, max: n, value: bin.count,
+          'aria-label': `${bin.label}: ${bin.count} notes` }), e('strong', {}, String(bin.count))))),
+      e('div', { class: 'bar' },
+        button('Veure les notes a l’acta', () => openAct({ subject: group.name })),
+        button('Veure els suspesos a l’acta', () => openAct({ subject: group.name, subjectResult: 'failed' }))));
+  }
+  const rows = subjects.map(group => {
+    const { n, failed } = group.stats;
+    const label = ratio(failed, n);
+    const control = button([
+      e('strong', {}, group.name), e('span', { class: 'subject-ratio' }, label),
+      e('meter', { min: 0, max: barMax, value: failed, 'aria-hidden': 'true' }),
+    ], () => { show(group); detail.scrollIntoView({ block: 'nearest' }); },
+    { class: 'subject-bar', 'aria-controls': 'subject-insight-detail', 'aria-pressed': 'false' });
+    bars.push([group.name, control]);
+    return e('li', {}, control);
+  });
+  const current = subjects.find(group => group.name === ui.detailSubject);
+  if (current) show(current);
+  return panel(e('h2', {}, 'Suspensos per matèria'),
+    subjects.length ? hint('Barres ordenades pel nombre de suspesos. Tria una matèria per veure com es reparteixen les notes.') :
+      hint('No hi ha notes numèriques amb la matèria identificada.'),
+    subjects.length ? e('ul', { class: 'subject-bars', 'aria-label': 'Matèries ordenades per nombre de suspesos' }, rows) : null,
+    detail);
 }
 
 function act(students, report) {
@@ -230,8 +277,9 @@ function act(students, report) {
   function fill() {
     const q = ui.query.toLocaleLowerCase('ca');
     const rows = students.map((student, index) => ({ student, index, total: totals(student) })).filter(({ student, index, total }) =>
-      (ui.band === null || (ui.band === 'provisional' ? total.provisional : !total.provisional && total.band === ui.band)) &&
-      (!ui.subject || student.grades.some(grade => grade.subject === ui.subject)) &&
+      (ui.band === null || (typeof ui.band === 'number' ? !total.provisional && total.band === ui.band : balanceCategory(total) === ui.band)) &&
+      (!ui.subject || student.grades.some(grade => grade.subject.toLocaleLowerCase('ca') === ui.subject.toLocaleLowerCase('ca') &&
+        (!ui.subjectResult || (grade.state === 'number' && grade.value < 5)))) &&
       (!ui.incidents || total.provisional) &&
       (!q || `${nameOf(student, index)} ${ui.hidden ? '' : student.ordinal}`.toLocaleLowerCase('ca').includes(q)));
     if (ui.sort === 'fail') rows.sort((a, b) => b.total.count - a.total.count || a.index - b.index);
@@ -255,23 +303,33 @@ function act(students, report) {
     grid.scrollTo(...ui.scroll);
   }
   filter.addEventListener('input', () => { ui.query = filter.value.trim(); ui.scroll = [0, 0]; fill(); });
-  const update = (key, value) => { ui[key] = value; ui.scroll = [0, 0]; fill(); };
-  const activeBand = ui.band === 'provisional' ? 'balanç provisional' : `${ui.band === 4 ? '4 o més' : ui.band} no superades`;
+  const update = (key, value) => {
+    ui[key] = value;
+    ui.scroll = [0, 0];
+    if (key === 'subject') { ui.subjectResult = ''; render(); }
+    else fill();
+  };
+  const activeBand = typeof ui.band === 'number' ? `${ui.band === 4 ? '4 o més' : ui.band} no superades` : balanceLabels[ui.band];
   fill();
-  return panel(e('h2', {}, 'Acta interactiva'),
+  return panel(e('h2', { id: 'group-act-title', tabindex: '-1' }, 'Acta interactiva'),
     e('div', { class: 'fields' }, field('Cerca', filter),
       field('Matèria', select([['', 'Totes'], ...report.subjectRows.map(({ name }) => [name, name])], ui.subject, value => update('subject', value))),
       field('Ordre', select([['acta', 'Ordre de l’acta'], ['fail', 'Més matèries no superades']], ui.sort, value => update('sort', value))),
       field('Registres', select([['', 'Tots'], ['pending', 'Amb balanç provisional']], ui.incidents ? 'pending' : '',
         value => update('incidents', Boolean(value))))),
     ui.band === null ? null : button(`Treu el filtre «${activeBand}»`, () => { ui.band = null; render(); }),
+    ui.subjectResult ? button(`Mostra tots els resultats de ${ui.subject}`, () => {
+      ui.subjectResult = '';
+      render();
+      document.querySelector('#group-act-title').focus();
+    }) : null,
     matches, wrap);
 }
 
 function subjects(report) {
   const list = report.subjectRows.map(group => {
     const m = metrics(group.grades);
-    const title = button(group.name, () => { ui.subject = group.name; ui.tab = 'Acta'; render(true); }, { class: 'link' });
+    const title = button(group.name, () => openAct({ subject: group.name }), { class: 'link' });
     return [title, String(m.n), String(m.passed), String(m.failed), ratio(m.passed, m.n), num(m.average), num(m.median),
       num(m.min), num(m.max), String(group.grades.filter(grade => grade.state === 'special').length),
       String(group.grades.filter(grade => ['missing', 'review'].includes(grade.state)).length)];
