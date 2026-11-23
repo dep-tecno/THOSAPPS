@@ -403,25 +403,20 @@ function analysis(students, report) {
   })).filter(profile => profile.n > 0);
   const names = profiles.map(profile => profile.name);
   const failures = failureConcentration(students);
-  const labels = ['0–<4', '4–<5', '5–<7', '7–<9', '9–10'];
+  const labels = ['Per sota de 4', 'A prop del 5 · 4–<5', 'Bé o suficient · 5–<7', 'Notable · 7–<9', 'Excel·lent · 9–10'];
+  const profilesTable = profiles.length ? table(['Matèria', ...labels], profiles.map(({ name, bins, n }) => [
+    e('div', { class: 'profile-name' }, button(name, () => openSubject(name), { class: 'link' }),
+      e('small', {}, `${n} ${n === 1 ? 'nota' : 'notes'}`)),
+    ...bins.map(({ count }, i) => e('div', { class: `profile-bin grade-bin-${i}` },
+      e('strong', {}, String(count)),
+      e('span', { class: 'profile-plot', 'aria-hidden': 'true' },
+        e('meter', { min: 0, max: n, value: count })))),
+  ]), false, 'Perfil de notes per matèria', true) : null;
+  profilesTable?.classList.add('subject-profiles');
   const profilesPanel = panel(e('h2', {}, 'Perfil de notes per matèria'),
-    profiles.length ? hint('Cada barra representa les notes numèriques de la matèria. Clica-la per obrir-ne la fitxa.') :
+    profiles.length ? hint('El número indica quantes notes hi ha a cada tram. L’alçada de la barra mostra quina part del total de la matèria representen.') :
       hint('No hi ha notes numèriques amb la matèria identificada.'),
-    profiles.length ? e('ul', { class: 'grade-legend', 'aria-label': 'Trams de notes' },
-      labels.map((label, i) => e('li', { class: `grade-bin-${i}` }, label))) : null,
-    e('ul', { class: 'profile-bars' }, profiles.map(({ name, bins, n }) => {
-      let cumulative = 0;
-      const layers = bins.map((bin, i) => {
-        cumulative += bin.count;
-        return e('meter', { min: 0, max: n, value: cumulative, class: `grade-bin-${i}` });
-      }).reverse();
-      const title = bins.map(bin => `${bin.label}: ${bin.count}`).join(' · ');
-      return e('li', {}, button([
-        e('strong', {}, name), e('span', { class: 'subject-ratio' }, `${n} notes`),
-        e('span', { class: 'stacked-grades', 'aria-hidden': 'true' }, layers),
-        e('small', { class: 'profile-counts' }, title),
-      ], () => openSubject(name), { class: 'subject-bar' }));
-    })));
+    profilesTable);
 
   const matrix = subjectPairs(students, names);
   const pairsPanel = panel(e('h2', {}, 'Coincidència de suspensos'),

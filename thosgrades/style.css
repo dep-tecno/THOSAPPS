@@ -99,8 +99,7 @@ input[type="file"]::file-selector-button {
 .subject-bar meter { grid-column: 1 / -1; }
 .subject-bar[aria-pressed="true"] { background: var(--soft); border-color: var(--accent); }
 .subject-ratio { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.profile-bars, .grade-legend { display: grid; gap: .4rem; padding: 0; list-style: none; }
-.grade-legend { display: flex; flex-wrap: wrap; gap: .45rem 1rem; }
+.grade-legend { display: flex; flex-wrap: wrap; gap: .45rem 1rem; padding: 0; list-style: none; }
 .grade-legend li { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); }
 .grade-legend li::before { content: ''; width: .72rem; height: .72rem; border-radius: .15rem; background: var(--bin); }
 .grade-bin-0 { --bin: #f17a70; }
@@ -108,11 +107,15 @@ input[type="file"]::file-selector-button {
 .grade-bin-2 { --bin: #f1cf85; }
 .grade-bin-3 { --bin: #55cbb4; }
 .grade-bin-4 { --bin: #8aeba4; }
-.stacked-grades { display: grid; grid-column: 1 / -1; border-radius: .3rem; overflow: hidden; background: var(--track); }
-.stacked-grades meter { grid-area: 1 / 1; height: .72rem; appearance: none; border: 0; background: transparent; --meter-fill: var(--bin); }
-.stacked-grades meter::-webkit-meter-bar { background: transparent; border-radius: 0; }
-.stacked-grades meter::-webkit-meter-optimum-value { border-radius: 0; }
-.profile-counts { grid-column: 1 / -1; font-variant-numeric: tabular-nums; }
+.subject-profiles th:not(:first-child), .subject-profiles td:not(:first-child) { text-align: center; }
+.subject-profiles td:first-child { vertical-align: middle; }
+.profile-name small { display: block; margin-top: .2rem; }
+.profile-bin { display: grid; justify-items: center; gap: .1rem; font-variant-numeric: tabular-nums; }
+.profile-bin strong { font-size: 1rem; }
+.profile-plot { display: grid; place-items: center; inline-size: 2.5rem; block-size: 2.5rem; }
+.profile-plot meter {
+  inline-size: 2.5rem; block-size: .75rem; transform: rotate(-90deg); --meter-fill: var(--bin);
+}
 button.pair-cell { padding: .28rem .42rem; white-space: nowrap; color: var(--warn); background: var(--warn-bg); }
 .subject-title { margin-top: .9rem; }
 #subject-insight-detail:not(:empty) { border-top: 1px solid var(--line); padding-top: .85rem; }
