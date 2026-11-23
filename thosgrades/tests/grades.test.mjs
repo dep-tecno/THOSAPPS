@@ -52,7 +52,8 @@ test('reads dash-separated marks and preserves missing or conflicting grades', (
   assert.equal(grades.find(grade => grade.subjectCode === 'ECO').state, 'missing');
   assert.equal(grades.find(grade => grade.subjectCode === 'HMO').special, 'PQ');
   assert.equal(grades.find(grade => grade.slot === 1).subject, 'Objectius de Desenvolupament Sostenible');
-  assert.equal(optativeMappings(act.students)[0].code, 'CFIS');
+  assert.equal(grades.find(grade => grade.slot === 2).subject, 'Física II');
+  assert.equal(optativeMappings(act.students).length, 0);
   assert.equal(grades.find(grade => grade.slot === 3).state, 'review');
 });
 
