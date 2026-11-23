@@ -56,6 +56,16 @@ test('reads dash-separated marks and preserves missing or conflicting grades', (
   assert.equal(grades.find(grade => grade.slot === 3).state, 'review');
 });
 
+test('reads an ungraded named optative when both dash-separated marks are blank', () => {
+  const { students } = importAct(workbook(['OS11 -\nESEM -', 'OS21 - 8\nESEM - 8', 'OS31 -\nESEM - 6']));
+  const [missing, valid, ambiguous] = students[0].grades.filter(grade => grade.slot);
+  assert.equal(missing.subject, 'Estada a l’empresa');
+  assert.equal(missing.state, 'missing');
+  assert.equal(valid.subject, missing.subject);
+  assert.equal(valid.value, 8);
+  assert.equal(ambiguous.state, 'review');
+});
+
 test('keeps a matching band grade but does not choose between two optative codes', () => {
   const { students } = importAct(workbook(['OS11\n8', 'OS21\n7\nCED\nCL\n7', 'OS31\n9']));
   const grade = students[0].grades.find(grade => grade.slot === 2);

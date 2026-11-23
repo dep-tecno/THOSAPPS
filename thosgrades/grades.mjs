@@ -10,7 +10,7 @@ export const optionalSubjects = {
   FI: 'Física', BMD: 'Biomedicina', REPCI: 'Reptes Científics', CED: 'Comerç Electrònic',
   PS: 'Problemàtiques socials', SLA: 'Segona llengua estrangera: Alemany', COAUD: 'Comunicació Audiovisual',
   LLPRO: 'Llenguatges de programació', IPO: 'Itinerari personal per a l’ocupabilitat', RO: 'Robòtica',
-  ODS: 'Objectius de Desenvolupament Sostenible',
+  ODS: 'Objectius de Desenvolupament Sostenible', ESEM: 'Estada a l’empresa',
 };
 const subjects = {
   IA1: 'Llengua Estrangera I: Anglès', MP1: 'Matemàtiques Aplicades CS I', ECO: 'Economia',
@@ -92,6 +92,12 @@ function readGrade(raw, column, source, modality, layout) {
     if (!new RegExp(`^O${expected}${slot}${layout.level}$`).test(band)) return { ...grade, state: 'review' };
     grade.band = band;
     if (lines.length === 1) return grade;
+    if (lines.length === 2 && code(first) && split(raw).every(line => /\s[-–—]$/.test(line))) {
+      grade.subjectCode = first;
+      grade.subject = Object.hasOwn(optionalSubjects, first) ? optionalSubjects[first] : '';
+      grade.origin = grade.subject ? 'catàleg' : 'acta';
+      return grade;
+    }
     if (!result(first)) return { ...grade, state: 'review' };
     value = first;
     if (lines.length > 2) {
