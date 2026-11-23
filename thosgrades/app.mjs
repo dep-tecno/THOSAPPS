@@ -3,6 +3,7 @@ import { assignColumn, assignSubject, balanceCategory, balanceLabels, failedBoth
   importAct, metrics, optativeMappings, optionalSubjects, states, subjectDistribution, subjectPairs,
   summarize, totals } from './grades.mjs';
 import { studentAnalysis } from './student-analysis.mjs';
+import { createActa } from './acta-export.mjs';
 
 const root = document.querySelector('#main');
 const actions = document.querySelector('#session-actions');
@@ -229,6 +230,25 @@ function openAct(filters = {}) {
   document.querySelector('#group-act-title').focus();
 }
 
+function downloadActa(status) {
+  try {
+    const modes = [...new Set(session.students.map(student => modalityLabel(student.modality)).filter(Boolean))];
+    const level = `${session.level === 2 ? '2n' : '1r'} de batxillerat`;
+    const subtitle = [level, modes.length === 1 ? modes[0] : ''].filter(Boolean).join(' · ');
+    const file = createActa(session.students, { context: ui.context, subtitle, anonymize: ui.hidden });
+    const group = ui.context.group?.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
+    const url = URL.createObjectURL(file);
+    const link = e('a', { href: url, download: `Acta de la junta${group ? ' - ' + group : ''}.docx`, hidden: '' });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    status.textContent = 'Acta preparada per descarregar.';
+  } catch {
+    status.textContent = 'No s’ha pogut generar el Word. Torna-ho a provar.';
+  }
+}
+
 function summary() {
   const { students, rejected } = session;
   const report = summarize(students);
@@ -239,6 +259,7 @@ function summary() {
   const bodies = { Acta: () => act(students, report), Matèries: () => subjects(report),
     'Distribució de notes': () => distribution(report), Optatives: () => bands(report),
     'Anàlisi del grup': () => analysis(students, report) };
+  const exportStatus = e('p', { class: 'export-status muted', role: 'status' });
   return e('section', {},
     e('h1', {}, 'Resum del grup'), hint(groupContext(students)),
     button('Torna a la revisió', () => openView('review')),
@@ -261,7 +282,10 @@ function summary() {
           button('Veure els balanços provisionals', () => openAct({ band: 'provisional' })))),
       subjectInsight(report)),
     e('nav', { class: 'tabs', 'aria-label': 'Vistes del grup' }, Object.keys(bodies).map(tab =>
-      button(tab, () => switchTab(tab), { 'aria-pressed': String(ui.tab === tab) }))),
+      button(tab, () => switchTab(tab), { 'aria-pressed': String(ui.tab === tab) })),
+    button('Genera l’acta', () => downloadActa(exportStatus), { class: 'primary acta-export',
+      title: ui.hidden ? 'Descarrega el Word anonimitzat' : 'Descarrega el Word amb els noms de l’acta' })),
+    exportStatus,
     bodies[ui.tab]());
 }
 

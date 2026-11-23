@@ -120,6 +120,8 @@ button.pair-cell { padding: .28rem .42rem; white-space: nowrap; color: var(--war
 .subject-title { margin-top: .9rem; }
 #subject-insight-detail:not(:empty) { border-top: 1px solid var(--line); padding-top: .85rem; }
 .tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
+.acta-export { margin-inline-start: .2rem; }
+.export-status:empty { display: none; }
 .table-wrap { max-height: min(64vh, 40rem); overflow: auto; border: 1px solid var(--line); border-radius: .6rem; margin-top: .85rem; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .88rem; }
 th, td { border-bottom: 1px solid var(--line); text-align: left; padding: .56rem .68rem; vertical-align: top; }
