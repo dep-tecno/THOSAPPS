@@ -11,10 +11,21 @@ const format = new Intl.NumberFormat('ca', { maximumFractionDigits: 2 });
 const num = value => value == null ? '—' : format.format(value);
 const ratio = (a, b) => b ? `${a} de ${b} (${num(100 * a / b)} %)` : '—';
 const ui = { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '', subject: '',
-  subjectResult: '', pair: null, detailSubject: '', selectedMatter: '', incidents: false, sort: 'acta', type: '', scroll: [0, 0], context: {} };
+  subjectResult: '', pair: null, detailSubject: '', selectedMatter: '', incidents: false, sort: 'acta', type: '',
+  scroll: [0, 0], actPageTop: 0, context: {} };
 let session;
 let mappingDraft = new Map();
 let importSequence = 0;
+
+function currentAcademicYear() {
+  const date = new Date();
+  const parts = new Intl.DateTimeFormat('ca', { timeZone: 'Europe/Madrid', year: 'numeric', month: 'numeric' })
+    .formatToParts(date);
+  const year = Number(parts.find(part => part.type === 'year').value);
+  const month = Number(parts.find(part => part.type === 'month').value);
+  const start = month >= 9 ? year : year - 1;
+  return `${start}–${String(start + 1).slice(-2)}`;
+}
 
 function e(tag, attrs = {}, ...content) {
   const node = document.createElement(tag);
@@ -79,7 +90,7 @@ function reset() {
   mappingDraft = new Map();
   Object.assign(ui, { view: 'upload', tab: 'Acta', hidden: false, index: 0, band: null, query: '',
     subject: '', subjectResult: '', pair: null, detailSubject: '', selectedMatter: '', incidents: false,
-    sort: 'acta', type: '', scroll: [0, 0], context: {} });
+    sort: 'acta', type: '', scroll: [0, 0], actPageTop: 0, context: {} });
   render(true);
 }
 
@@ -96,7 +107,7 @@ function upload() {
       const data = importAct(await readWorkbook(await file.arrayBuffer()));
       if (current !== importSequence) return;
       session = data;
-      ui.context = { ...data.context };
+      ui.context = { ...data.context, year: data.context.year || currentAcademicYear() };
       openView('review');
     } catch (error) {
       if (current !== importSequence) return;
@@ -114,7 +125,7 @@ function upload() {
 }
 
 function contextFields() {
-  const inputs = [['year', 'Curs acadèmic', '2025–26'], ['group', 'Grup', session.level === 2 ? '2n B' : '1r A'],
+  const inputs = [['year', 'Curs acadèmic', ''], ['group', 'Grup', session.level === 2 ? '2n B' : '1r A'],
     ['period', 'Avaluació', '1a avaluació'], ['date', 'Data de la sessió', '']];
   return e('div', { class: 'fields' }, inputs.map(([key, title, placeholder]) => {
     const input = e('input', { type: key === 'date' ? 'date' : 'text', maxlength: '80',
@@ -141,7 +152,7 @@ function review() {
       stat('Optatives sense nom', unnamed.length), stat('Notes per revisar', issues.filter(grade => grade.state === 'review').length),
       stat('Caselles sense nota', missing.length), stat('Registres exclosos', rejected.length)),
     panel(e('h2', {}, 'Dades de l’acta'),
-      hint('Revisa el curs, el grup i l’avaluació que es mostraran a la junta.'),
+      hint('Revisa el curs, el grup i l’avaluació. Si el curs no figura al fitxer, es proposa l’actual.'),
       contextFields()),
   ];
   if (unresolved.length) {
@@ -318,6 +329,7 @@ function act(students, report) {
       button(nameOf(student, index), () => {
         const current = wrap.firstElementChild;
         ui.scroll = [current.scrollLeft, current.scrollTop];
+        ui.actPageTop = window.scrollY;
         ui.index = index;
         openView('studentView');
       }, { class: 'link' }),
@@ -330,6 +342,7 @@ function act(students, report) {
             e('small', { class: 'cell-label' }, subjectLabel(grade)) : null, badge(grade))) : '—';
       }),
     ]), true);
+    grid.classList.add('full-act');
     wrap.replaceChildren(grid);
     grid.scrollTo(...ui.scroll);
   }
@@ -694,7 +707,12 @@ function studentView() {
       e('div', {}, e('h1', { tabindex: '-1' }, nameOf(student, ui.index)),
         hint(`Alumne ${ui.index + 1} de ${session.students.length}${total.provisional ? ' · Balanç provisional' : ''}`)),
       e('div', { class: 'bar' },
-        button('Torna al grup', () => openView('summary')),
+        button('Torna al grup', () => {
+          ui.view = 'summary';
+          render();
+          document.querySelector('#group-act-title').focus({ preventScroll: true });
+          window.scrollTo(0, ui.actPageTop);
+        }),
         button('← Anterior', () => move(-1), { disabled: ui.index === 0 ? '' : undefined }),
         button('Següent →', () => move(1), { disabled: ui.index + 1 === session.students.length ? '' : undefined }))),
     e('div', { class: 'stats student-stats' }, stat('Superades', notes.passed),
