@@ -40,6 +40,22 @@ test('recognizes IPO 1 as the confirmed IPO optative and validates the repeated 
   assert.equal(conflict.state, 'review');
 });
 
+test('reads dash-separated marks and preserves missing or conflicting grades', () => {
+  const book = workbook(['OS11 - 7\nODS - 7', 'OS21 – 8\nCFIS – 8', 'OS31 - 6\nIPO 1 - 7']);
+  const cells = book[0].rows[1].cells;
+  cells[7] = 'IA1 - 6';
+  cells[11] = 'ECO -';
+  cells[12] = 'HMO - PQ';
+  const act = importAct(book);
+  const grades = act.students[0].grades;
+  assert.equal(grades.find(grade => grade.subjectCode === 'IA1').value, 6);
+  assert.equal(grades.find(grade => grade.subjectCode === 'ECO').state, 'missing');
+  assert.equal(grades.find(grade => grade.subjectCode === 'HMO').special, 'PQ');
+  assert.equal(grades.find(grade => grade.slot === 1).subject, 'Objectius de Desenvolupament Sostenible');
+  assert.equal(optativeMappings(act.students)[0].code, 'CFIS');
+  assert.equal(grades.find(grade => grade.slot === 3).state, 'review');
+});
+
 test('keeps a matching band grade but does not choose between two optative codes', () => {
   const { students } = importAct(workbook(['OS11\n8', 'OS21\n7\nCED\nCL\n7', 'OS31\n9']));
   const grade = students[0].grades.find(grade => grade.slot === 2);
@@ -141,9 +157,9 @@ test('attributes numeric failures to complete or provisional balances exactly on
 
 test('imports a second-year workbook with a cover and a split additional-subject region', () => {
   const heading = [...secondHeaders.slice(0, -1), '', '', 'Altres', 'matèries', '', ''];
-  heading[13] = 'Opt.1';
+  heading[13] = 'Opt.';
   const row = ['1', 'ID-SINTETIC', 'Alumne de prova', '3000', '1', '6', '8', 'IA2\n7', '6', '8',
-    'LL2\n7', 'EDN\n9', 'GEO\n5', 'OS12\n4', '8', '', 'LC1', 'LS1', '', '', ''];
+    'LL2\n7', 'EDN\n9', 'GEO\n5', 'OS12 - 4\nODS - 4', '8', '', 'LC1', 'LS1', '', '', ''];
   const act = importAct([
     { name: 'Portada', rows: [
       { number: 1, cells: ["Acta de qualificacions de l’avaluació parcial 1", 'Curs acadèmic 2024/2025'] },

@@ -10,6 +10,7 @@ export const optionalSubjects = {
   FI: 'Física', BMD: 'Biomedicina', REPCI: 'Reptes Científics', CED: 'Comerç Electrònic',
   PS: 'Problemàtiques socials', SLA: 'Segona llengua estrangera: Alemany', COAUD: 'Comunicació Audiovisual',
   LLPRO: 'Llenguatges de programació', IPO: 'Itinerari personal per a l’ocupabilitat', RO: 'Robòtica',
+  ODS: 'Objectius de Desenvolupament Sostenible',
 };
 const subjects = {
   IA1: 'Llengua Estrangera I: Anglès', MP1: 'Matemàtiques Aplicades CS I', ECO: 'Economia',
@@ -56,7 +57,7 @@ const aliases = {
   'Mod. Ob.': ['Modalitat obligatòria', 'Matèria obligatòria de modalitat'],
   'Mod. 1': ['Modalitat 1'],
   'Mod. 2': ['Modalitat 2'],
-  'Opt. 1': ['Optativa 1', 'Optativa de la franja 1', 'Optativa'],
+  'Opt. 1': ['Opt.', 'Optativa 1', 'Optativa de la franja 1', 'Optativa'],
   'Opt. 2': ['Optativa 2', 'Optativa de la franja 2'],
   'Opt. 3': ['Optativa 3', 'Optativa de la franja 3'],
   'Rel': ['Religió'],
@@ -65,11 +66,19 @@ const aliases = {
 const headerNames = new Map([...new Set([...headers, ...secondHeaders])].flatMap(label =>
   [label, ...(aliases[label] ?? [])].map(alias => [headerKey(alias), label])));
 const split = value => String(value ?? '').split(/\r?\n/).map(normalized).filter(Boolean);
+function gradeLines(raw) {
+  return split(raw).flatMap(line => {
+    const pair = /^([A-Z][A-Z0-9]*(?: \d+)?)\s+[-–—](?:\s+(.+))?$/.exec(line);
+    if (!pair) return [line];
+    if (!pair[2]) return [pair[1]];
+    return result(pair[2]) ? [pair[1], pair[2]] : [line];
+  });
+}
 export const subjectKey = name => name.normalize('NFC').toLocaleLowerCase('ca');
 const sameResult = (a, b) => a === b || (score(a) && score(b) && Number(a.replace(',', '.')) === Number(b.replace(',', '.')));
 
 function readGrade(raw, column, source, modality, layout) {
-  const lines = split(raw);
+  const lines = gradeLines(raw);
   const slot = column >= 13 && column < 13 + layout.slots ? column - 12 : null;
   const grade = { column, source, raw: raw ?? '', slot, label: layout.headers[column],
     subject: layout.fixed[column] ?? '', subjectCode: '',
@@ -140,7 +149,7 @@ function detectLayout(tables, context) {
       }
       if (label !== 'Ll. Estr.' && !label?.startsWith('Opt. ')) continue;
       for (const row of rows) {
-        const first = split(row.cells[i])[0] ?? '';
+        const first = gradeLines(row.cells[i])[0] ?? '';
         const match = /^(?:IA|O[CS][123])([12])$/.exec(first);
         if (match) signals.add(Number(match[1]));
       }
