@@ -11,6 +11,7 @@ export const optionalSubjects = {
   PS: 'Problemàtiques socials', SLA: 'Segona llengua estrangera: Alemany', COAUD: 'Comunicació Audiovisual',
   LLPRO: 'Llenguatges de programació', IPO: 'Itinerari personal per a l’ocupabilitat', RO: 'Robòtica',
   ODS: 'Objectius de Desenvolupament Sostenible', ESEM: 'Estada a l’empresa',
+  LICAS: 'Literatura Castellana',
 };
 const subjects = {
   IA1: 'Llengua Estrangera I: Anglès', MP1: 'Matemàtiques Aplicades CS I', ECO: 'Economia',
