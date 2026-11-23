@@ -127,7 +127,8 @@ tr:last-child td { border-bottom: 0; }
 .act th.sticky, .act td.sticky { position: sticky; left: 0; min-width: 11rem; max-width: 16rem; box-shadow: 1px 0 var(--line); }
 .act th.sticky { z-index: 2; }
 .act td small, .cell-label { display: block; }
-.full-act, .full-subjects { max-height: none; overflow: visible; }
+.full-act { max-height: none; overflow: visible; }
+.full-subjects { border: 1px solid var(--line); border-radius: .6rem; margin-top: .85rem; }
 .full-subjects table { table-layout: fixed; }
 .full-subjects th, .full-subjects td { padding-inline: .45rem; white-space: normal; overflow-wrap: anywhere; }
 .full-subjects th:first-child { width: 25%; }
@@ -227,9 +228,19 @@ details summary { cursor: pointer; font-weight: 650; }
   .group-insights { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 @media (max-width: 900px) {
-  .full-act, .full-subjects { overflow-x: auto; }
+  .full-act { overflow-x: auto; }
   .full-act .act { min-width: 54rem; }
-  .full-subjects table { min-width: 47rem; }
+  .full-subjects thead {
+    position: absolute; inline-size: 1px; block-size: 1px; clip-path: inset(50%); overflow: hidden;
+  }
+  .full-subjects tbody { display: block; }
+  .full-subjects tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); }
+  .full-subjects tr + tr { border-top: 1px solid var(--line); }
+  .full-subjects td { display: block; border: 0; }
+  .full-subjects td:first-child { grid-column: 1 / -1; font-weight: 700; }
+  .full-subjects td:not(:first-child)::before {
+    content: attr(data-label); display: block; color: var(--muted); font-size: .75rem;
+  }
 }
 @media (max-width: 680px) {
   .student-grade-grid { grid-template-columns: minmax(0, 1fr); gap: .6rem; }

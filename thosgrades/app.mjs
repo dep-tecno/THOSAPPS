@@ -51,14 +51,16 @@ function stat(label, value, click, pressed) {
   return click ? button(children, click, { class: 'stat', 'aria-pressed': String(pressed) }) :
     e('div', { class: 'stat' }, children);
 }
-function table(labels, rows, act = false, regionLabel = act ? 'Acta interactiva' : 'Taula de resultats') {
-  return e('div', { class: 'table-wrap', tabindex: '0', role: 'region', 'aria-label': regionLabel },
+function table(labels, rows, act = false, regionLabel = act ? 'Acta interactiva' : 'Taula de resultats', full = false) {
+  return e('div', { class: full ? 'full-subjects' : 'table-wrap', tabindex: full ? undefined : '0',
+    role: 'region', 'aria-label': regionLabel },
     e('table', { class: act ? 'act' : '' },
       e('thead', {}, e('tr', {}, labels.map((label, i) => e('th', {
         scope: 'col', class: act && i === 0 ? 'sticky' : undefined,
       }, label)))),
       e('tbody', {}, rows.map(row => e('tr', {}, row.map((value, i) => e('td', {
         class: act && i === 0 ? 'sticky' : undefined,
+        'data-label': full ? labels[i] : undefined,
       }, value)))))));
 }
 
@@ -390,8 +392,7 @@ function subjects(report) {
   });
   const grid = table([
       'Matèria', 'Notes', 'Aprovats', 'Suspesos', '% aprovats', 'Mitjana', 'Mediana', 'Mínim', 'Màxim', 'Estats', 'Pendents',
-    ], list);
-  grid.classList.add('full-subjects');
+    ], list, false, 'Resultats per matèria', true);
   return panel(e('h2', { id: 'subject-list-title', tabindex: '-1' }, 'Resultats per matèria'),
     hint('Tria una matèria per obrir-ne la fitxa estadística. Els percentatges es calculen sobre les notes numèriques.'), grid);
 }
