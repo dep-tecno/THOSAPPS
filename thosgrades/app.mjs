@@ -388,10 +388,12 @@ function subjects(report) {
       num(m.min), num(m.max), String(group.grades.filter(grade => grade.state === 'special').length),
       String(group.grades.filter(grade => ['missing', 'review'].includes(grade.state)).length)];
   });
-  return panel(e('h2', { id: 'subject-list-title', tabindex: '-1' }, 'Resultats per matèria'),
-    hint('Tria una matèria per obrir-ne la fitxa estadística. Els percentatges es calculen sobre les notes numèriques.'), table([
+  const grid = table([
       'Matèria', 'Notes', 'Aprovats', 'Suspesos', '% aprovats', 'Mitjana', 'Mediana', 'Mínim', 'Màxim', 'Estats', 'Pendents',
-    ], list));
+    ], list);
+  grid.classList.add('full-subjects');
+  return panel(e('h2', { id: 'subject-list-title', tabindex: '-1' }, 'Resultats per matèria'),
+    hint('Tria una matèria per obrir-ne la fitxa estadística. Els percentatges es calculen sobre les notes numèriques.'), grid);
 }
 
 function analysis(students, report) {

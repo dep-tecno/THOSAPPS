@@ -127,7 +127,10 @@ tr:last-child td { border-bottom: 0; }
 .act th.sticky, .act td.sticky { position: sticky; left: 0; min-width: 11rem; max-width: 16rem; box-shadow: 1px 0 var(--line); }
 .act th.sticky { z-index: 2; }
 .act td small, .cell-label { display: block; }
-.full-act { max-height: none; overflow: visible; }
+.full-act, .full-subjects { max-height: none; overflow: visible; }
+.full-subjects table { table-layout: fixed; }
+.full-subjects th, .full-subjects td { padding-inline: .45rem; white-space: normal; overflow-wrap: anywhere; }
+.full-subjects th:first-child { width: 25%; }
 .full-act .act { table-layout: fixed; }
 .full-act th, .full-act td { padding-inline: .45rem; overflow-wrap: anywhere; }
 .full-act th { white-space: normal; }
@@ -224,8 +227,9 @@ details summary { cursor: pointer; font-weight: 650; }
   .group-insights { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 @media (max-width: 900px) {
-  .full-act { overflow-x: auto; }
+  .full-act, .full-subjects { overflow-x: auto; }
   .full-act .act { min-width: 54rem; }
+  .full-subjects table { min-width: 47rem; }
 }
 @media (max-width: 680px) {
   .student-grade-grid { grid-template-columns: minmax(0, 1fr); gap: .6rem; }
