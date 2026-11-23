@@ -125,11 +125,11 @@ function upload() {
 }
 
 function contextFields() {
-  const inputs = [['year', 'Curs acadèmic', ''], ['group', 'Grup', session.level === 2 ? '2n B' : '1r A'],
-    ['period', 'Avaluació', '1a avaluació'], ['date', 'Data de la sessió', '']];
-  return e('div', { class: 'fields' }, inputs.map(([key, title, placeholder]) => {
-    const input = e('input', { type: key === 'date' ? 'date' : 'text', maxlength: '80',
-      placeholder, oninput: event => { ui.context[key] = event.target.value.trim(); } });
+  const inputs = [['year', 'Curs acadèmic'], ['group', 'Grup', 'Escriu el grup'],
+    ['period', 'Avaluació', 'Escriu l’avaluació'], ['date', 'Data de la sessió']];
+  return e('div', { class: 'fields act-context' }, inputs.map(([key, title, placeholder]) => {
+    const input = e('input', { id: `act-${key}`, type: key === 'date' ? 'date' : 'text', maxlength: '80',
+      autocomplete: 'off', placeholder, oninput: event => { ui.context[key] = event.target.value; } });
     input.value = ui.context[key] ?? '';
     return field(title, input);
   }));
@@ -152,7 +152,7 @@ function review() {
       stat('Optatives sense nom', unnamed.length), stat('Notes per revisar', issues.filter(grade => grade.state === 'review').length),
       stat('Caselles sense nota', missing.length), stat('Registres exclosos', rejected.length)),
     panel(e('h2', {}, 'Dades de l’acta'),
-      hint('Revisa el curs, el grup i l’avaluació. Si el curs no figura al fitxer, es proposa l’actual.'),
+      hint('Pots editar els quatre camps abans de continuar. Si el curs no figura al fitxer, es proposa l’actual.'),
       contextFields()),
   ];
   if (unresolved.length) {
@@ -214,7 +214,7 @@ function modalityLabel(code) {
 function groupContext(students) {
   const mode = new Set(students.map(student => student.modality));
   const date = ui.context.date;
-  const parts = [`${session.level === 2 ? '2n' : '1r'} de batxillerat`, ui.context.year, ui.context.group, ui.context.period,
+  const parts = [`${session.level === 2 ? '2n' : '1r'} de batxillerat`, ui.context.year?.trim(), ui.context.group?.trim(), ui.context.period?.trim(),
     date ? new Intl.DateTimeFormat('ca', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(date)) : '',
     mode.size === 1 ? modalityLabel([...mode][0]) : 'Diverses modalitats'];
   return parts.filter(Boolean).join(' · ');

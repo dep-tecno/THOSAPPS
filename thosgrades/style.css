@@ -57,6 +57,9 @@ p, li { line-height: 1.5; }
 .upload input { max-width: 100%; }
 .bar, .fields { display: flex; flex-wrap: wrap; gap: .65rem; align-items: end; }
 .fields label { flex: 1 1 12rem; }
+.act-context input:not([type="checkbox"]):not([type="file"]) { background: var(--raised); border-color: #66728a; cursor: text; }
+.act-context input:focus-visible { border-color: var(--accent); outline-width: 2px; outline-offset: 1px; }
+.act-context input::placeholder { color: var(--muted); font-weight: 400; }
 label { display: grid; gap: .3rem; font-weight: 600; font-size: .9rem; }
 .mapping-name { width: 100%; max-width: 24rem; }
 button, input, select { font: inherit; }
