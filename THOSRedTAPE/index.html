@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ca">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THOSBUROCRÀCIA · Tràmits docents</title>
+<style>
+  :root{font-family:system-ui,sans-serif;color:#193631;background:#eff4f2}
+  *{box-sizing:border-box}body{margin:0}main{max-width:960px;margin:auto;padding:clamp(24px,5vw,64px)}
+  header{display:flex;align-items:center;gap:14px;border-bottom:1px solid #c4d2cc;padding-bottom:18px}
+  header span{font-size:28px}header strong{font-size:18px;letter-spacing:.02em}
+  h1{font-size:clamp(30px,5vw,48px);line-height:1.12;margin:52px 0 16px;max-width:680px}
+  .intro{font-size:18px;color:#45665a;max-width:640px;margin-bottom:34px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(310px,100%),1fr));gap:20px}
+  .card{border:1px solid #c7d9cf;background:white;border-radius:20px;padding:28px;box-shadow:0 6px 22px #1936310b;display:flex;flex-direction:column;min-height:270px}
+  .card h2{font-size:24px;line-height:1.25;margin:14px 0 10px}.card p{color:#45665a;margin:0 0 24px}
+  .tag{font-size:13px;font-weight:700;color:#126451;background:#e1f2e9;border-radius:20px;padding:5px 12px;align-self:flex-start}
+  .card.soon .tag{color:#657269;background:#eef1ee}.card.soon{background:#f9fbf9}
+  a.button{display:inline-block;align-self:flex-start;margin-top:auto;background:#155c50;color:white;text-decoration:none;font-weight:700;border-radius:10px;padding:12px 18px;transition:transform .18s,box-shadow .18s}
+  a.button:hover{transform:translateY(-2px);box-shadow:0 6px 15px #155c5030}a.button:focus-visible{outline:3px solid #91b8aa;outline-offset:3px}
+  footer{margin-top:36px;color:#567165;font-size:14px}
+  @media(prefers-reduced-motion:reduce){a.button{transition:none}}
+</style>
+<main>
+  <header><span aria-hidden="true">📄</span><strong>THOSBUROCRÀCIA</strong></header>
+  <h1>Quin document docent vols preparar?</h1>
+  <p class="intro">Escull un tràmit. L’assistent et proposarà el contingut i podràs revisar-lo abans de descarregar un Word editable.</p>
+  <section class="cards" aria-label="Documents disponibles">
+    <article class="card">
+      <span class="tag">Disponible · ESO i BATX</span>
+      <h2>Fitxa d’inici</h2>
+      <p>Presenta a l’alumnat les competències, les situacions d’aprenentatge, el calendari i l’avaluació de la matèria.</p>
+      <a class="button" href="fitxa-inici.html">Preparar la Fitxa d’inici →</a>
+    </article>
+    <article class="card soon">
+      <span class="tag">En preparació</span>
+      <h2>Seguiment de les matèries per grup</h2>
+      <p>Recull la temporització, els resultats i les propostes de millora d’un grup d’ESO.</p>
+    </article>
+  </section>
+  <footer>Els documents es preparen al teu dispositiu.</footer>
+</main>
+</html>
+
