@@ -1,0 +1,29 @@
+<!doctype html><html lang="ca"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>THOSBUROCRÀCIA · Fitxa d’inici</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eff4f2;color:#193631;font:16px/1.55 system-ui,sans-serif}#fitxa{max-width:850px;margin:auto;padding:clamp(14px,4vw,42px)}header,nav,.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}header{border-bottom:1px solid #c4d2cc;padding-bottom:14px}header small{margin-left:auto}progress{width:100%;height:7px;accent-color:#157462}h1{font-size:clamp(25px,4vw,36px);line-height:1.15}h2{font-size:20px}article,details.box{background:white;border:1px solid #c9d9d2;border-radius:16px;padding:clamp(14px,3vw,24px);margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(215px,100%),1fr));gap:12px}label{display:block}input:not([type=checkbox]),select,textarea{display:block;width:100%;font:inherit;padding:9px;border:1px solid #879c95;border-radius:7px;background:white;color:#193631}textarea{min-height:80px}summary,button{cursor:pointer}button{font:inherit;background:white;border:1px solid #94aaa1;border-radius:8px;padding:8px 14px;color:#24453c}button.primary{background:#155c50;color:white}button:active{transform:scale(.97)}fieldset{border:0;padding:0;margin:0}summary{font-weight:600}label.pick{border:1px solid #becdc5;border-radius:10px;padding:10px;margin:6px 0;background:white;transition:background .18s,border-color .18s}label.pick:has(:checked){background:#e4f2ec;border-color:#548977}details[open]>div,main.enter{animation:appear .2s ease-out}main.enter .card-enter{animation:card-enter .22s ease-out both;animation-delay:var(--card-delay,0ms)}@keyframes card-enter{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes appear{from{transform:translateY(6px);opacity:.4}to{transform:none;opacity:1}}.weight-chart{display:flex;width:100%;height:24px;overflow:hidden;border-radius:8px;background:#e7eee9;margin:14px 0 8px}.weight-segment{display:block;height:100%;flex:none;transition:width .22s ease}.segment-0{background:#166457}.segment-1{background:#388a6d}.segment-2{background:#81ad75}.segment-3{background:#c4ac69}.segment-4{background:#7b99ad}.weight-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(140px,2fr) 88px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #e2eae5}.weight-row input[type=range]{width:100%;padding:0;border:0;background:transparent;accent-color:#166457;cursor:pointer}.weight-row .weight-value{display:flex;align-items:center;gap:4px}.weight-row input[type=number]{width:60px;padding:5px;text-align:right}.weight-error{color:#a24819}@media(max-width:560px){.weight-row{grid-template-columns:minmax(0,1fr) 78px}.weight-row>label:first-child{grid-column:1/-1}.weight-row input[type=range]{min-width:0}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}nav{margin-top:18px}#notice{color:#8a340b}small{color:#46675b}a{color:#07594c}
+
+
+progress::-webkit-progress-value{transition:width .22s ease}
+label.pick{transition:background-color .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+label.pick:hover{transform:translateY(-1px)}
+label.pick:has(:checked){box-shadow:inset 3px 0 #166457}
+#screen{view-transition-name:wizard-screen}
+::view-transition-old(wizard-screen){animation:wizard-out .16s ease-in both}
+::view-transition-new(wizard-screen){animation:wizard-in .22s ease-out both}
+@keyframes wizard-out{to{opacity:0;transform:translateY(-8px) scale(.99)}}
+@keyframes wizard-in{from{opacity:0;transform:translateY(10px) scale(.99)}}
+details{interpolate-size:allow-keywords}
+details::details-content{block-size:0;opacity:0;overflow:hidden;transition:block-size .22s ease,opacity .18s ease}
+details[open]::details-content{block-size:auto;opacity:1}
+.evaluation-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0 18px}
+.evaluation-choice{min-height:70px;text-align:left;transition:transform .18s ease,background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.evaluation-choice:hover{transform:translateY(-2px)}
+.evaluation-choice[aria-pressed=true]{background:#e4f2ec;border-color:#166457;box-shadow:0 0 0 2px #9cc8b5}
+button:not(:disabled){transition:transform .16s ease,background-color .16s ease,box-shadow .16s ease}
+button:not(:disabled):hover{box-shadow:0 3px 10px #19363124}
+@media(max-width:580px){.evaluation-choices{grid-template-columns:1fr}.evaluation-choice{min-height:52px}}
+@media(prefers-reduced-motion:reduce){::view-transition-old(wizard-screen),::view-transition-new(wizard-screen){animation:none}details::details-content{transition:none}}
+.saber-picker{max-height:380px;overflow:auto;padding:4px 8px 4px 2px;border:1px solid #d7e2dc;border-radius:10px;margin-top:10px}
+</style>
+<div id="fitxa"><header><strong>THOSBUROCRÀCIA</strong><small>Fitxa d’inici · ESO/BAT</small></header><p id="count"></p><progress max="7" value="1"></progress><main id="screen"></main><p id="notice" role="status"></p><nav><button id="back">← Enrere</button><button id="forward" class="primary">Continuar →</button></nav></div>
+<script src="fitxa-dades.js"></script><script src="fitxa-word.js"></script><script src="fitxa-historia.js"></script><script src="fitxa-cataleg-eso.js"></script><script src="fitxa-cataleg-batx.js"></script><script src="fitxa-cataleg-batx-171.js"></script><script src="fitxa-assistent.js"></script></html>
